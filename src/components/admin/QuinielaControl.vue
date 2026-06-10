@@ -128,19 +128,23 @@ async function revertToScheduled() {
 }
 
 async function reopenMatch() {
-  if (!confirm('¿Reactivar el partido? Se anulará la puntuación y podrás corregir goles y marcador.')) {
+  if (
+    !confirm(
+      '¿Reactivar el partido? Volverá a programado, se anulará la puntuación y se borrarán goles y marcador.',
+    )
+  ) {
     return
   }
   saving.value = true
   error.value = ''
   const { error: err } = await supabase
     .from('matches')
-    .update({ status: 'live' })
+    .update({ status: 'scheduled' })
     .eq('id', props.match.id)
   saving.value = false
   if (err) error.value = err.message
   else {
-    message.value = 'Partido reactivado — corrige datos y vuelve a finalizar'
+    message.value = 'Partido reactivado — quedó como programado'
     await refreshMatch()
   }
 }
@@ -268,7 +272,7 @@ async function finishMatch() {
 
     <template v-if="isFinished">
       <p class="text-center text-xs text-slate-500">
-        Partido cerrado. Reactívalo para corregir goles o marcador.
+        Partido cerrado. Reactívalo para dejarlo como programado y reabrir predicciones.
       </p>
       <button
         type="button"

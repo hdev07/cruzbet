@@ -62,7 +62,7 @@ begin
 end;
 $$;
 
--- Al reabrir un partido: anula puntuación y recalcula perfiles afectados
+-- Al reabrir un partido finalizado: anula puntuación y recalcula perfiles
 create or replace function public.on_match_reopened()
 returns trigger
 language plpgsql
@@ -99,7 +99,7 @@ create trigger match_reopened_trigger
   before update on public.matches
   for each row execute function public.on_match_reopened();
 
--- Deshacer inicio accidental: live → scheduled (borra goles y resetea marcador)
+-- Volver a programado: live o finished → scheduled (borra goles y resetea marcador)
 create or replace function public.on_match_reverted_to_scheduled()
 returns trigger
 language plpgsql
@@ -107,7 +107,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if OLD.status != 'live' or NEW.status != 'scheduled' then
+  if NEW.status != 'scheduled' or OLD.status not in ('live', 'finished') then
     return NEW;
   end if;
 
