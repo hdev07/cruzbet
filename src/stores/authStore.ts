@@ -38,16 +38,6 @@ export const useAuthStore = defineStore('auth', () => {
 
     const oauthCallback = hasOAuthCallbackInUrl()
 
-    supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
-      user.value = session?.user ?? null
-      if (user.value) await fetchProfile(user.value.id)
-      else profile.value = null
-
-      if (oauthCallback && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-        cleanupOAuthUrl()
-      }
-    })
-
     const { data, error } = await supabase.auth.getSession()
     if (error) console.error('Error al restaurar sesión:', error.message)
 
@@ -57,6 +47,20 @@ export const useAuthStore = defineStore('auth', () => {
     if (oauthCallback && data.session) {
       cleanupOAuthUrl()
     }
+
+    // No usar async/await aquí: bloquea getSession() y deja la app sin montar tras OAuth.
+    supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+      user.value = session?.user ?? null
+      if (user.value) {
+        void fetchProfile(user.value.id)
+      } else {
+        profile.value = null
+      }
+
+      if (oauthCallback && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+        cleanupOAuthUrl()
+      }
+    })
   }
 
   async function loginWithGoogle() {
