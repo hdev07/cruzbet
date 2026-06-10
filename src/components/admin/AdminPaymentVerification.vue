@@ -179,7 +179,7 @@ async function toggleVerified(participant: MatchParticipant) {
       <span>Predicciones</span>
     </div>
 
-    <div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+    <div class="app-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
       <p v-if="loading" class="flex items-center gap-2 px-4 py-6 text-sm text-slate-400">
         <Loader2 class="h-4 w-4 animate-spin" />
         Cargando...

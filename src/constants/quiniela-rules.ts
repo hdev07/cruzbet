@@ -64,6 +64,21 @@ export const SCORE_SCORING_RULES = [
   { label: 'No aciertas marcador, pero sí quién gana o empate', points: 10 },
 ] as const
 
+/** Tip en la sección de predicciones del partido */
+export const PREDICTION_FILL_TIP = {
+  title: 'Tip',
+  message: `Puedes poner hasta ${MAX_GOAL_PREDICTIONS_PER_MATCH} goles y ${MAX_SCORE_PREDICTIONS_PER_MATCH} marcadores. Si llenas todas las oportunidades tienes más chances de ganar puntos. No te obligan, pero sí conviene.`,
+  allFilled: `¡Ya llenaste todo! (${MAX_GOAL_PREDICTIONS_PER_MATCH} goles y ${MAX_SCORE_PREDICTIONS_PER_MATCH} marcadores). Buena jugada.`,
+  goalsRemaining: (n: number) =>
+    n === 1
+      ? 'Te falta 1 gol más — agrégalo para no dejar puntos en la mesa.'
+      : `Te faltan ${n} goles más — puedes agregarlos con el botón de abajo.`,
+  scoresRemaining: (n: number) =>
+    n === 1
+      ? 'Te falta 1 marcador más — agrégalo para tener otra chance de sumar.'
+      : `Te faltan ${n} marcadores más — puedes agregarlos con el botón de abajo.`,
+} as const
+
 export const PREDICTION_LIMITS = [
   { label: 'Predicciones de gol por partido (máximo)', value: MAX_GOAL_PREDICTIONS_PER_MATCH },
   { label: 'Predicciones de marcador por partido (máximo)', value: MAX_SCORE_PREDICTIONS_PER_MATCH },

@@ -27,3 +27,41 @@ body {
     background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(233, 69, 96, 0.08), transparent);
   }
 }
+
+/* Scrollbars — mismo estilo en página y paneles internos */
+html,
+.app-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(233, 69, 96, 0.5) rgba(255, 255, 255, 0.06);
+}
+
+html::-webkit-scrollbar,
+.app-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html::-webkit-scrollbar-track,
+.app-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb,
+.app-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(233, 69, 96, 0.45);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.app-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(233, 69, 96, 0.7);
+  background-clip: padding-box;
+}
+
+html::-webkit-scrollbar-corner,
+.app-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}

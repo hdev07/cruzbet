@@ -277,7 +277,7 @@ onUnmounted(() => {
       <ul
         v-if="isOpen"
         ref="listRef"
-        class="absolute z-20 mt-1 max-h-52 w-full origin-top overflow-y-auto rounded-xl border border-white/10 bg-[#16162a] py-1 shadow-xl shadow-black/40"
+        class="app-scrollbar absolute z-20 mt-1 max-h-52 w-full origin-top overflow-y-auto rounded-xl border border-white/10 bg-[#16162a] py-1 shadow-xl shadow-black/40"
         role="listbox"
       >
         <li

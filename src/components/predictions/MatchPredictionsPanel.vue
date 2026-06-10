@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { CheckCircle2, Pencil, Plus, Trash2 } from '@lucide/vue'
+import { CheckCircle2, Lightbulb, Pencil, Plus, Trash2 } from '@lucide/vue'
 import {
   ENTRY_FEE_MXN,
   MAX_GOAL_PREDICTIONS_PER_MATCH,
   MAX_SCORE_PREDICTIONS_PER_MATCH,
+  PREDICTION_FILL_TIP,
   PREDICTION_SAVE_ALERT,
 } from '@/constants/quiniela-rules'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
@@ -64,6 +65,17 @@ const canAddGoal = computed(
 const canAddScore = computed(
   () => props.canPredict && scorePredictions.value.length < MAX_SCORE_PREDICTIONS_PER_MATCH,
 )
+
+const goalsRemaining = computed(
+  () => MAX_GOAL_PREDICTIONS_PER_MATCH - goalPredictions.value.length,
+)
+const scoresRemaining = computed(
+  () => MAX_SCORE_PREDICTIONS_PER_MATCH - scorePredictions.value.length,
+)
+const allOpportunitiesFilled = computed(
+  () => goalsRemaining.value === 0 && scoresRemaining.value === 0,
+)
+const showFillTip = computed(() => props.canPredict)
 
 const teamOptions = computed(() => [
   {
@@ -261,6 +273,24 @@ async function removePrediction(id: number) {
       <p class="mt-2 text-xs text-slate-500">
         Hasta {{ MAX_GOAL_PREDICTIONS_PER_MATCH }} goles y {{ MAX_SCORE_PREDICTIONS_PER_MATCH }} marcadores por partido.
       </p>
+
+      <div
+        v-if="showFillTip && allOpportunitiesFilled"
+        class="mt-3 flex gap-2 rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-3 py-2.5 text-sm text-mundial-green"
+      >
+        <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0" />
+        <p>{{ PREDICTION_FILL_TIP.allFilled }}</p>
+      </div>
+      <div
+        v-else-if="showFillTip"
+        class="mt-3 flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-100"
+      >
+        <Lightbulb class="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+        <div>
+          <p class="font-semibold text-amber-200">{{ PREDICTION_FILL_TIP.title }}</p>
+          <p class="mt-0.5 text-amber-100/90">{{ PREDICTION_FILL_TIP.message }}</p>
+        </div>
+      </div>
     </div>
 
     <section class="rounded-xl border border-white/10 bg-white/5 p-5">
@@ -279,6 +309,13 @@ async function removePrediction(id: number) {
           Agregar
         </button>
       </div>
+
+      <p
+        v-if="canAddGoal && goalsRemaining > 0"
+        class="mb-3 rounded-lg bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90"
+      >
+        💡 {{ PREDICTION_FILL_TIP.goalsRemaining(goalsRemaining) }}
+      </p>
 
       <p v-if="!goalPredictions.length" class="text-sm text-slate-500">
         Aún no tienes predicciones de gol.
@@ -386,6 +423,13 @@ async function removePrediction(id: number) {
           Agregar
         </button>
       </div>
+
+      <p
+        v-if="canAddScore && scoresRemaining > 0"
+        class="mb-3 rounded-lg bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90"
+      >
+        💡 {{ PREDICTION_FILL_TIP.scoresRemaining(scoresRemaining) }}
+      </p>
 
       <p v-if="!scorePredictions.length" class="text-sm text-slate-500">
         Aún no tienes predicciones de marcador.

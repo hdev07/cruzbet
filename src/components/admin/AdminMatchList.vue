@@ -94,7 +94,7 @@ function formatDate(match: Match) {
       </label>
     </header>
 
-    <ul class="min-h-0 flex-1 overflow-y-auto p-2">
+    <ul class="app-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
       <li v-if="!filteredMatches.length" class="px-3 py-8 text-center text-sm text-slate-500">
         No hay partidos con estos filtros.
       </li>

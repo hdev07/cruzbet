@@ -66,7 +66,7 @@ const emit = defineEmits<{
           </div>
         </div>
 
-        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+        <div class="app-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
           <template v-if="sections?.length">
             <section
               v-for="section in sections"
