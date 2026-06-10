@@ -1,11 +1,14 @@
 {
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ],
   "crons": [
     {
-      "path": "/api/cron/score-goals",
-      "schedule": "* * * * *"
+      "path": "/api/cron-cada-minuto",
+      "schedule": "0 0 * * *"
     }
   ]
 }
