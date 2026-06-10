@@ -14,6 +14,7 @@ import type { Match, MatchParticipant } from '@/types'
 
 const props = defineProps<{
   match: Match
+  mobile?: boolean
 }>()
 
 type PaymentFilter = 'all' | 'verified' | 'pending'
@@ -109,13 +110,20 @@ async function toggleVerified(participant: MatchParticipant) {
 </script>
 
 <template>
-  <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5">
-    <header class="shrink-0 space-y-3 border-b border-white/10 px-4 py-3">
+  <section
+    class="flex min-h-0 flex-col overflow-hidden"
+    :class="
+      mobile
+        ? 'rounded-none border-0 bg-transparent'
+        : 'rounded-xl border border-white/10 bg-white/5'
+    "
+  >
+    <header class="shrink-0 space-y-3 border-b border-white/10 pb-3" :class="mobile ? '' : 'px-4 py-3'">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="font-semibold text-slate-100">Depósitos y predicciones</h2>
         <button
           type="button"
-          class="rounded-lg border border-white/15 px-2.5 py-1 text-xs text-slate-300 hover:bg-white/5"
+          class="rounded-lg border border-white/15 px-3 py-2 text-xs text-slate-300 hover:bg-white/5 md:px-2.5 md:py-1"
           :disabled="loading"
           @click="loadParticipants"
         >
@@ -130,23 +138,23 @@ async function toggleVerified(participant: MatchParticipant) {
         <span class="text-mundial-accent">${{ stats.pool }} MXN</span> bolsa
       </p>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <div class="relative min-w-[160px] flex-1">
-          <Search class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+      <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div class="relative min-w-0 flex-1">
+          <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
             v-model="userSearch"
             type="search"
             placeholder="Buscar usuario..."
-            class="w-full rounded-lg border border-white/10 bg-mundial-dark py-2 pl-8 pr-3 text-sm"
+            class="w-full rounded-lg border border-white/10 bg-mundial-dark py-3 pl-10 pr-3 text-base md:py-2 md:text-sm"
           />
         </div>
 
-        <div class="flex gap-1">
+        <div class="flex gap-1.5">
           <button
             v-for="f in ([['all', 'Todos'], ['pending', 'Pend.'], ['verified', 'OK']] as const)"
             :key="f[0]"
             type="button"
-            class="rounded-lg px-2.5 py-1.5 text-xs font-medium"
+            class="flex-1 rounded-lg px-3 py-2.5 text-xs font-medium sm:flex-none sm:px-2.5 sm:py-1.5"
             :class="
               paymentFilter === f[0]
                 ? 'bg-mundial-accent text-white'
@@ -159,10 +167,10 @@ async function toggleVerified(participant: MatchParticipant) {
         </div>
 
         <label class="flex items-center gap-1.5 text-xs text-slate-400">
-          <ArrowUpDown class="h-3 w-3" />
+          <ArrowUpDown class="h-3 w-3 shrink-0" />
           <select
             v-model="sortKey"
-            class="rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-xs"
+            class="min-w-0 flex-1 rounded-lg border border-white/10 bg-mundial-dark px-2 py-2.5 text-xs sm:flex-none sm:py-1.5"
           >
             <option value="status">Pendientes primero</option>
             <option value="username">Nombre A-Z</option>
@@ -173,37 +181,50 @@ async function toggleVerified(participant: MatchParticipant) {
       </div>
     </header>
 
-    <div class="grid shrink-0 grid-cols-[100px_1fr_2fr] gap-3 border-b border-white/10 bg-slate-900/80 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-      <span>Depósito</span>
-      <span>Usuario</span>
-      <span>Predicciones</span>
-    </div>
-
-    <div class="app-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-      <p v-if="loading" class="flex items-center gap-2 px-4 py-6 text-sm text-slate-400">
+    <!-- Vista móvil: tarjetas -->
+    <div v-if="mobile" class="app-scrollbar min-h-0 flex-1 overflow-y-auto pt-3">
+      <p v-if="loading" class="flex items-center gap-2 py-6 text-sm text-slate-400">
         <Loader2 class="h-4 w-4 animate-spin" />
         Cargando...
       </p>
 
-      <p v-else-if="!participants.length" class="px-4 py-6 text-sm text-slate-500">
+      <p v-else-if="!participants.length" class="py-6 text-sm text-slate-500">
         Nadie ha registrado predicciones para este partido.
       </p>
 
-      <p v-else-if="!filteredParticipants.length" class="px-4 py-6 text-sm text-slate-500">
+      <p v-else-if="!filteredParticipants.length" class="py-6 text-sm text-slate-500">
         No hay resultados con los filtros actuales.
       </p>
 
-      <ul v-else class="divide-y divide-white/5">
+      <ul v-else class="space-y-3">
         <li
           v-for="participant in filteredParticipants"
           :key="participant.user_id"
-          class="grid grid-cols-[100px_1fr_2fr] items-start gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
-          :class="participant.verified ? 'bg-mundial-green/[0.03]' : 'bg-amber-500/[0.02]'"
+          class="rounded-xl border border-white/10 p-4"
+          :class="participant.verified ? 'bg-mundial-green/[0.04]' : 'bg-amber-500/[0.04]'"
         >
-          <div>
+          <div class="mb-3 flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-semibold text-slate-100">
+                {{ participant.profiles?.username ?? 'Sin nombre' }}
+              </p>
+              <p
+                v-if="match.status === 'finished'"
+                class="mt-0.5 text-sm font-bold tabular-nums text-mundial-accent"
+              >
+                {{ participant.total_points }} pts
+              </p>
+              <span
+                v-if="participant.complete === false"
+                class="mt-1 inline-block rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300"
+              >
+                Incompleto
+              </span>
+            </div>
+
             <button
               type="button"
-              class="inline-flex w-full items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold disabled:opacity-50"
+              class="inline-flex min-w-[7rem] shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 py-3 text-sm font-semibold disabled:opacity-50"
               :class="
                 participant.verified
                   ? 'border-mundial-green/40 bg-mundial-green/10 text-mundial-green'
@@ -214,47 +235,115 @@ async function toggleVerified(participant: MatchParticipant) {
             >
               <Loader2
                 v-if="togglingUserId === participant.user_id"
-                class="h-3.5 w-3.5 animate-spin"
+                class="h-4 w-4 animate-spin"
               />
-              <CheckCircle2 v-else-if="participant.verified" class="h-3.5 w-3.5 shrink-0" />
-              <CircleDashed v-else class="h-3.5 w-3.5 shrink-0" />
-              <span class="truncate">{{ participant.verified ? 'OK' : 'Pend.' }}</span>
+              <CheckCircle2 v-else-if="participant.verified" class="h-4 w-4 shrink-0" />
+              <CircleDashed v-else class="h-4 w-4 shrink-0" />
+              {{ participant.verified ? 'Pagado' : 'Pendiente' }}
             </button>
           </div>
 
-          <div class="min-w-0">
-            <p class="truncate font-medium text-slate-100">
-              {{ participant.profiles?.username ?? 'Sin nombre' }}
-              <span
-                v-if="participant.complete === false"
-                class="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"
-              >
-                Incompleto
-              </span>
-            </p>
-            <p
-              v-if="match.status === 'finished'"
-              class="mt-0.5 text-xs font-bold tabular-nums text-mundial-accent"
-            >
-              {{ participant.total_points }} pts
-            </p>
-          </div>
-
-          <p class="min-w-0 text-sm leading-relaxed text-slate-300">
+          <p class="text-sm leading-relaxed text-slate-300">
             {{ predictionsText(participant) }}
           </p>
         </li>
       </ul>
     </div>
 
-    <footer class="shrink-0 border-t border-white/10 px-4 py-2 text-xs text-slate-500">
+    <!-- Vista desktop: tabla -->
+    <template v-else>
+      <div
+        class="grid shrink-0 grid-cols-[100px_1fr_2fr] gap-3 border-b border-white/10 bg-slate-900/80 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+      >
+        <span>Depósito</span>
+        <span>Usuario</span>
+        <span>Predicciones</span>
+      </div>
+
+      <div class="app-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <p v-if="loading" class="flex items-center gap-2 px-4 py-6 text-sm text-slate-400">
+          <Loader2 class="h-4 w-4 animate-spin" />
+          Cargando...
+        </p>
+
+        <p v-else-if="!participants.length" class="px-4 py-6 text-sm text-slate-500">
+          Nadie ha registrado predicciones para este partido.
+        </p>
+
+        <p v-else-if="!filteredParticipants.length" class="px-4 py-6 text-sm text-slate-500">
+          No hay resultados con los filtros actuales.
+        </p>
+
+        <ul v-else class="divide-y divide-white/5">
+          <li
+            v-for="participant in filteredParticipants"
+            :key="participant.user_id"
+            class="grid grid-cols-[100px_1fr_2fr] items-start gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
+            :class="participant.verified ? 'bg-mundial-green/[0.03]' : 'bg-amber-500/[0.02]'"
+          >
+            <div>
+              <button
+                type="button"
+                class="inline-flex w-full items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold disabled:opacity-50"
+                :class="
+                  participant.verified
+                    ? 'border-mundial-green/40 bg-mundial-green/10 text-mundial-green'
+                    : 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+                "
+                :disabled="togglingUserId === participant.user_id"
+                @click="toggleVerified(participant)"
+              >
+                <Loader2
+                  v-if="togglingUserId === participant.user_id"
+                  class="h-3.5 w-3.5 animate-spin"
+                />
+                <CheckCircle2 v-else-if="participant.verified" class="h-3.5 w-3.5 shrink-0" />
+                <CircleDashed v-else class="h-3.5 w-3.5 shrink-0" />
+                <span class="truncate">{{ participant.verified ? 'OK' : 'Pend.' }}</span>
+              </button>
+            </div>
+
+            <div class="min-w-0">
+              <p class="truncate font-medium text-slate-100">
+                {{ participant.profiles?.username ?? 'Sin nombre' }}
+                <span
+                  v-if="participant.complete === false"
+                  class="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"
+                >
+                  Incompleto
+                </span>
+              </p>
+              <p
+                v-if="match.status === 'finished'"
+                class="mt-0.5 text-xs font-bold tabular-nums text-mundial-accent"
+              >
+                {{ participant.total_points }} pts
+              </p>
+            </div>
+
+            <p class="min-w-0 text-sm leading-relaxed text-slate-300">
+              {{ predictionsText(participant) }}
+            </p>
+          </li>
+        </ul>
+      </div>
+    </template>
+
+    <footer
+      class="shrink-0 border-t border-white/10 pt-2 text-xs text-slate-500"
+      :class="mobile ? 'mt-3' : 'px-4 py-2'"
+    >
       {{ filteredParticipants.length }} de {{ participants.length }} participantes
       <span v-if="match.status === 'finished' && participants.length && stats.verified === 0">
         · Sin depósitos verificados: no hay ganador
       </span>
     </footer>
 
-    <p v-if="error" class="shrink-0 border-t border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-300">
+    <p
+      v-if="error"
+      class="shrink-0 border-t border-red-500/20 bg-red-500/10 py-2 text-sm text-red-300"
+      :class="mobile ? 'mt-2 rounded-lg px-3' : 'px-4'"
+    >
       {{ error }}
     </p>
   </section>

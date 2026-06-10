@@ -10,8 +10,13 @@ const search = defineModel<string>('search', { default: '' })
 const statusFilter = defineModel<'all' | MatchStatus>('statusFilter', { default: 'all' })
 const onlyWithParticipants = defineModel<boolean>('onlyWithParticipants', { default: true })
 
-const { participantCounts } = defineProps<{
+const { participantCounts, mobileFullScreen } = defineProps<{
   participantCounts: Record<string, number>
+  mobileFullScreen?: boolean
+}>()
+
+const emit = defineEmits<{
+  select: [matchId: string]
 }>()
 
 const matchStore = useMatchStore()
@@ -43,6 +48,7 @@ const matchesWithParticipants = computed(() =>
 
 function selectMatch(matchId: string) {
   selectedMatchId.value = matchId
+  emit('select', matchId)
 }
 
 function formatDate(match: Match) {
@@ -57,10 +63,13 @@ function formatDate(match: Match) {
 </script>
 
 <template>
-  <aside class="flex h-full min-h-0 flex-col rounded-xl border border-white/10 bg-white/5">
+  <aside
+    class="flex min-h-0 flex-col rounded-xl border border-white/10 bg-white/5"
+    :class="mobileFullScreen ? 'h-full rounded-none border-x-0 border-t-0' : 'h-full'"
+  >
     <header class="shrink-0 border-b border-white/10 p-4">
-      <p class="text-sm font-medium text-slate-200">Partidos</p>
-      <p class="mt-1 text-xs text-slate-500">
+      <p v-if="!mobileFullScreen" class="text-sm font-medium text-slate-200">Partidos</p>
+      <p class="text-xs text-slate-500" :class="mobileFullScreen ? '' : 'mt-1'">
         {{ matchesWithParticipants }} con quiniela · {{ matchStore.matches.length }} total
       </p>
 
@@ -68,15 +77,15 @@ function formatDate(match: Match) {
         v-model="search"
         type="search"
         placeholder="Buscar equipo..."
-        class="mt-3 w-full rounded-lg border border-white/10 bg-mundial-dark px-3 py-2 text-sm"
+        class="mt-3 w-full rounded-lg border border-white/10 bg-mundial-dark px-3 py-3 text-base md:py-2 md:text-sm"
       />
 
-      <div class="mt-3 flex flex-wrap gap-1.5">
+      <div class="mt-3 flex flex-wrap gap-2">
         <button
           v-for="f in ([['all', 'Todos'], ['scheduled', 'Prog.'], ['live', 'Vivo'], ['finished', 'Fin.']] as const)"
           :key="f[0]"
           type="button"
-          class="rounded-md px-2 py-1 text-[11px] font-medium"
+          class="rounded-lg px-3 py-2 text-xs font-medium md:rounded-md md:px-2 md:py-1 md:text-[11px]"
           :class="statusFilter === f[0] ? 'bg-mundial-accent text-white' : 'bg-white/10 text-slate-400'"
           @click="statusFilter = f[0]"
         >
@@ -84,7 +93,7 @@ function formatDate(match: Match) {
         </button>
       </div>
 
-      <label class="mt-3 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
+      <label class="mt-3 flex cursor-pointer items-center gap-2 py-1 text-sm text-slate-400 md:text-xs">
         <input
           v-model="onlyWithParticipants"
           type="checkbox"
@@ -102,7 +111,7 @@ function formatDate(match: Match) {
       <li v-for="match in filteredMatches" :key="match.id" class="mb-1.5">
         <button
           type="button"
-          class="w-full rounded-lg border p-3 text-left transition"
+          class="w-full rounded-xl border p-4 text-left transition md:rounded-lg md:p-3"
           :class="
             selectedMatchId === match.id
               ? 'border-mundial-accent bg-mundial-accent/10 ring-1 ring-mundial-accent/50'
@@ -128,9 +137,9 @@ function formatDate(match: Match) {
               v-if="match.home_team?.flag_url"
               :src="match.home_team.flag_url"
               :alt="match.home_team.name"
-              class="h-5 w-7 shrink-0 rounded-sm object-cover"
+              class="h-6 w-8 shrink-0 rounded-sm object-cover md:h-5 md:w-7"
             />
-            <span class="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">
+            <span class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-200 md:text-xs">
               {{ match.home_team?.name ?? 'Local' }}
             </span>
             <span class="shrink-0 text-sm font-bold tabular-nums text-mundial-accent">
@@ -139,7 +148,7 @@ function formatDate(match: Match) {
               </template>
               <template v-else>vs</template>
             </span>
-            <span class="min-w-0 flex-1 truncate text-right text-xs font-semibold text-slate-200">
+            <span class="min-w-0 flex-1 truncate text-right text-sm font-semibold text-slate-200 md:text-xs">
               {{ match.away_team?.name ?? 'Visitante' }}
             </span>
             <img

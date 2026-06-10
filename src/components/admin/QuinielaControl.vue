@@ -6,6 +6,7 @@ import type { Match, MatchEvent } from '@/types'
 
 const props = defineProps<{
   match: Match
+  mobile?: boolean
 }>()
 
 const matchStore = useMatchStore()
@@ -25,6 +26,21 @@ const editMinute = ref(1)
 const editSecond = ref(0)
 const editTeamId = ref('')
 
+const btnPrimary = computed(() =>
+  props.mobile
+    ? 'w-full rounded-xl py-3.5 text-base font-semibold disabled:opacity-50'
+    : 'w-full rounded-lg py-2.5 text-sm font-semibold disabled:opacity-50',
+)
+const btnSecondary = computed(() =>
+  props.mobile
+    ? 'w-full rounded-xl py-3 text-sm font-medium disabled:opacity-50'
+    : 'w-full rounded-lg py-2 text-xs font-medium disabled:opacity-50',
+)
+const formGrid = computed(() =>
+  props.mobile ? 'grid grid-cols-1 gap-3 sm:grid-cols-3' : 'grid grid-cols-3 gap-2',
+)
+const inputClass =
+  'mt-1.5 w-full rounded-lg border border-white/10 bg-mundial-dark px-3 py-2.5 text-base md:py-1.5 md:text-sm'
 const canManage = computed(() => props.match.status === 'live')
 const isFinished = computed(() => props.match.status === 'finished')
 
@@ -259,11 +275,11 @@ async function finishMatch() {
 </script>
 
 <template>
-  <div class="space-y-3">
+  <div class="space-y-4">
     <button
       v-if="match.status === 'scheduled'"
       type="button"
-      class="w-full rounded-lg bg-mundial-green py-2.5 text-sm font-semibold disabled:opacity-50"
+      :class="[btnPrimary, 'bg-mundial-green']"
       :disabled="saving"
       @click="startLive"
     >
@@ -271,12 +287,12 @@ async function finishMatch() {
     </button>
 
     <template v-if="isFinished">
-      <p class="text-center text-xs text-slate-500">
+      <p class="text-center text-sm text-slate-500">
         Partido cerrado. Reactívalo para dejarlo como programado y reabrir predicciones.
       </p>
       <button
         type="button"
-        class="w-full rounded-lg border border-amber-500/40 bg-amber-500/10 py-2.5 text-sm font-semibold text-amber-200 disabled:opacity-50"
+        :class="[btnPrimary, 'border border-amber-500/40 bg-amber-500/10 text-amber-200']"
         :disabled="saving"
         @click="reopenMatch"
       >
@@ -296,42 +312,39 @@ async function finishMatch() {
           class="rounded-lg border border-white/5 bg-white/5 p-2"
         >
           <template v-if="editingEventId === event.id && canManage">
-            <div class="grid grid-cols-3 gap-2">
-              <label class="block text-xs">
+            <div :class="formGrid">
+              <label class="block text-sm md:text-xs">
                 Equipo
-                <select
-                  v-model="editTeamId"
-                  class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
-                >
+                <select v-model="editTeamId" :class="inputClass">
                   <option :value="match.home_team_id">{{ match.home_team?.name }}</option>
                   <option :value="match.away_team_id">{{ match.away_team?.name }}</option>
                 </select>
               </label>
-              <label class="block text-xs">
+              <label class="block text-sm md:text-xs">
                 Minuto
                 <input
                   v-model.number="editMinute"
                   type="number"
                   min="1"
                   max="120"
-                  class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
+                  :class="inputClass"
                 />
               </label>
-              <label class="block text-xs">
+              <label class="block text-sm md:text-xs">
                 Segundos
                 <input
                   v-model.number="editSecond"
                   type="number"
                   min="0"
                   max="59"
-                  class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
+                  :class="inputClass"
                 />
               </label>
             </div>
-            <div class="mt-2 flex gap-2">
+            <div class="mt-3 flex gap-2">
               <button
                 type="button"
-                class="flex-1 rounded-lg bg-mundial-accent py-1.5 text-xs font-semibold disabled:opacity-50"
+                class="flex-1 rounded-xl bg-mundial-accent py-3 text-sm font-semibold disabled:opacity-50 md:rounded-lg md:py-1.5 md:text-xs"
                 :disabled="saving"
                 @click="saveEditGoal"
               >
@@ -339,7 +352,7 @@ async function finishMatch() {
               </button>
               <button
                 type="button"
-                class="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-slate-400"
+                class="rounded-xl border border-white/20 px-4 py-3 text-sm text-slate-400 md:rounded-lg md:py-1.5 md:text-xs"
                 :disabled="saving"
                 @click="cancelEditGoal"
               >
@@ -353,10 +366,10 @@ async function finishMatch() {
                 {{ teamLabel(event.team_id) }} —
                 {{ formatGoalTime(event.minute, event.event_second ?? 0) }}
               </span>
-              <div v-if="canManage" class="flex gap-1">
+              <div v-if="canManage" class="flex shrink-0 gap-1">
                 <button
                   type="button"
-                  class="rounded px-2 py-1 text-[11px] text-slate-400 hover:bg-white/10"
+                  class="rounded-lg px-3 py-2 text-xs text-slate-400 hover:bg-white/10 md:px-2 md:py-1 md:text-[11px]"
                   :disabled="saving"
                   @click="startEditGoal(event)"
                 >
@@ -364,7 +377,7 @@ async function finishMatch() {
                 </button>
                 <button
                   type="button"
-                  class="rounded px-2 py-1 text-[11px] text-red-400 hover:bg-red-500/10"
+                  class="rounded-lg px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 md:px-2 md:py-1 md:text-[11px]"
                   :disabled="saving"
                   @click="deleteGoal(event)"
                 >
@@ -380,51 +393,51 @@ async function finishMatch() {
     <template v-if="canManage">
       <button
         type="button"
-        class="w-full rounded-lg border border-red-500/30 bg-red-500/10 py-2 text-xs font-medium text-red-300 disabled:opacity-50"
+        :class="[btnSecondary, 'border border-red-500/30 bg-red-500/10 text-red-300']"
         :disabled="saving"
         @click="revertToScheduled"
       >
         Deshacer inicio (volver a programado)
       </button>
 
-      <section class="space-y-3 rounded-lg border border-white/10 bg-black/20 p-3">
+      <section class="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4 md:rounded-lg md:p-3">
         <h3 class="text-sm font-semibold">Marcador y minuto</h3>
-        <div class="grid grid-cols-3 gap-2">
-          <label class="block text-xs">
+        <div :class="formGrid">
+          <label class="block text-sm md:text-xs">
             Min
             <input
               v-model.number="currentMinute"
               type="number"
               min="0"
               max="120"
-              class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
+              :class="inputClass"
             />
           </label>
-          <label class="block text-xs">
+          <label class="block text-sm md:text-xs">
             Local
             <input
               v-model.number="homeScore"
               type="number"
               min="0"
-              class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
+              :class="inputClass"
             />
           </label>
-          <label class="block text-xs">
+          <label class="block text-sm md:text-xs">
             Visita
             <input
               v-model.number="awayScore"
               type="number"
               min="0"
-              class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
+              :class="inputClass"
             />
           </label>
         </div>
-        <p class="text-[11px] text-slate-500">
+        <p class="text-xs text-slate-500">
           Si registras o editas goles, el marcador se sincroniza solo. Puedes ajustarlo manualmente si hace falta.
         </p>
         <button
           type="button"
-          class="w-full rounded-lg bg-slate-600 py-2 text-xs font-semibold disabled:opacity-50"
+          :class="[btnSecondary, 'bg-slate-600 font-semibold text-white']"
           :disabled="saving"
           @click="updateLiveState"
         >
@@ -432,37 +445,34 @@ async function finishMatch() {
         </button>
       </section>
 
-      <section class="space-y-3 rounded-lg border border-mundial-accent/30 bg-mundial-accent/5 p-3">
+      <section class="space-y-3 rounded-xl border border-mundial-accent/30 bg-mundial-accent/5 p-4 md:rounded-lg md:p-3">
         <h3 class="text-sm font-semibold text-mundial-accent">Registrar gol</h3>
-        <div class="grid grid-cols-3 gap-2">
-          <label class="block text-xs">
+        <div :class="formGrid">
+          <label class="block text-sm md:text-xs">
             Equipo
-            <select
-              v-model="goalTeamId"
-              class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
-            >
+            <select v-model="goalTeamId" :class="inputClass">
               <option :value="match.home_team_id">{{ match.home_team?.name }}</option>
               <option :value="match.away_team_id">{{ match.away_team?.name }}</option>
             </select>
           </label>
-          <label class="block text-xs">
+          <label class="block text-sm md:text-xs">
             Minuto
             <input
               v-model.number="goalMinute"
               type="number"
               min="1"
               max="120"
-              class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
+              :class="inputClass"
             />
           </label>
-          <label class="block text-xs">
+          <label class="block text-sm md:text-xs">
             Segundos
             <input
               v-model.number="goalSecond"
               type="number"
               min="0"
               max="59"
-              class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
+              :class="inputClass"
             />
           </label>
         </div>
@@ -471,7 +481,7 @@ async function finishMatch() {
         </p>
         <button
           type="button"
-          class="w-full rounded-lg bg-mundial-accent py-2 text-xs font-semibold disabled:opacity-50"
+          :class="[btnPrimary, 'bg-mundial-accent']"
           :disabled="saving"
           @click="registerGoal"
         >
@@ -481,7 +491,10 @@ async function finishMatch() {
 
       <button
         type="button"
-        class="w-full rounded-lg border border-white/20 py-2 text-xs text-slate-400 hover:bg-white/5"
+        :class="[
+          btnPrimary,
+          'border-2 border-white/30 bg-white/5 text-slate-200 hover:bg-white/10',
+        ]"
         :disabled="saving"
         @click="finishMatch"
       >

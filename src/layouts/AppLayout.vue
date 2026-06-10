@@ -46,7 +46,10 @@ function isNavActive(item: QuinielaNavItem): boolean {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col pb-[4.5rem] md:pb-0">
+  <div
+    class="flex min-h-screen flex-col"
+    :class="route.meta.hideBottomNav ? 'pb-0' : 'pb-[4.5rem] md:pb-0'"
+  >
     <header class="sticky top-0 z-40 border-b border-white/10 bg-mundial-dark/95 backdrop-blur">
       <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6 lg:max-w-7xl lg:px-8">
         <RouterLink to="/" class="shrink-0 text-lg font-bold text-mundial-accent lg:text-xl">
@@ -129,7 +132,7 @@ function isNavActive(item: QuinielaNavItem): boolean {
     </main>
 
     <nav
-      v-if="route.path !== '/login'"
+      v-if="route.path !== '/login' && !route.meta.hideBottomNav"
       class="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-mundial-dark/95 backdrop-blur md:hidden"
     >
       <div class="mx-auto flex w-full max-w-xl">

@@ -12,11 +12,11 @@ const auth = useAuthStore()
 <template>
   <div class="mx-auto w-full lg:max-w-4xl">
     <div class="mb-8 text-center lg:mb-10">
-      <h1 class="text-2xl font-bold lg:text-4xl">{{ APP_NAME }}</h1>
-      <p class="mx-auto mt-2 max-w-md text-sm text-slate-300 lg:text-base">
+      <h1 class="text-3xl font-bold tracking-tight text-slate-100 lg:text-4xl">{{ APP_NAME }}</h1>
+      <p class="mx-auto mt-3 max-w-md text-base text-slate-300 lg:text-lg">
         {{ APP_TAGLINE }}
       </p>
-      <p class="mt-2 text-sm text-slate-500">
+      <p class="mx-auto mt-2 max-w-lg text-sm text-slate-500">
         Adivina quién gana. La quiniela base es la principal; la de por partido es extra.
       </p>
     </div>
@@ -36,6 +36,13 @@ const auth = useAuthStore()
       </RouterLink>
     </div>
 
+    <header class="mb-4 text-center">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-mundial-green">
+        Empieza aquí
+      </p>
+      <h2 class="text-xl font-bold text-slate-100 lg:text-2xl">Elige tu quiniela</h2>
+    </header>
+
     <!-- Quiniela base — principal -->
     <RouterLink
       :to="QUINIELA_MODE_BASE.homePath"
@@ -50,7 +57,7 @@ const auth = useAuthStore()
         </span>
       </div>
 
-      <h2 class="text-xl font-bold text-slate-100 lg:text-2xl">{{ QUINIELA_MODE_BASE.title }}</h2>
+      <h3 class="text-2xl font-bold text-slate-100">{{ QUINIELA_MODE_BASE.title }}</h3>
       <p class="mt-2 text-sm text-slate-300 lg:text-base">{{ QUINIELA_MODE_BASE.tagline }}</p>
 
       <ul class="mt-4 space-y-2 text-sm text-slate-400">
@@ -70,7 +77,7 @@ const auth = useAuthStore()
 
     <!-- Quiniela por partido — secundaria -->
     <div class="mb-8">
-      <p class="mb-3 text-center text-xs font-medium uppercase tracking-wide text-slate-500">
+      <p class="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-slate-500">
         También puedes jugar
       </p>
 
@@ -87,7 +94,7 @@ const auth = useAuthStore()
           </span>
         </div>
 
-        <h2 class="text-lg font-bold text-slate-200">{{ QUINIELA_MODE_PARTIDO.title }}</h2>
+        <h3 class="text-xl font-bold text-slate-100">{{ QUINIELA_MODE_PARTIDO.title }}</h3>
         <p class="mt-1 text-sm text-slate-400">{{ QUINIELA_MODE_PARTIDO.tagline }}</p>
 
         <ul class="mt-3 space-y-1.5 text-sm text-slate-500">

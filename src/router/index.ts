@@ -89,7 +89,7 @@ const router = createRouter({
     {
       path: '/admin',
       component: () => import('@/views/AdminPanel.vue'),
-      meta: { layout: 'mobile', requiresAdmin: true, title: 'Admin' },
+      meta: { layout: 'mobile', requiresAdmin: true, title: 'Admin', hideBottomNav: true },
     },
     { path: '/partido/:id', redirect: (to: RouteLocationGeneric) => `/match/${to.params.id}` },
     { path: '/:pathMatch(.*)*', redirect: '/' },
