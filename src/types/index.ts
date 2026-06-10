@@ -88,3 +88,19 @@ export interface Prediction {
 export interface PredictionWithMatch extends Prediction {
   match?: Match
 }
+
+export interface MatchPayment {
+  user_id: string
+  match_id: string
+  verified: boolean
+  verified_at?: string | null
+  created_at?: string
+}
+
+export interface MatchParticipant {
+  user_id: string
+  verified: boolean
+  profiles?: Pick<Profile, 'username' | 'avatar'>
+  predictions: Prediction[]
+  total_points: number
+}

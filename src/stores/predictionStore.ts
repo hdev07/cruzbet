@@ -7,7 +7,7 @@ import {
 } from '@/constants/quiniela-rules'
 import { totalPredictionPoints } from '@/lib/predictionDisplay'
 import { isMatchOpenForPredictions } from '@/lib/matchRules'
-import type { Match, Prediction, PredictionType, PredictionWithMatch } from '@/types'
+import type { Match, MatchParticipant, Prediction, PredictionType, PredictionWithMatch } from '@/types'
 
 const MATCH_SELECT = '*, home_team:teams!home_team_id(*), away_team:teams!away_team_id(*)'
 
@@ -24,6 +24,7 @@ export interface SaveScorePredictionInput {
 export interface MatchRankingEntry {
   user_id: string
   points: number
+  verified: boolean
   profiles?: { username: string | null; avatar: string | null }
 }
 
@@ -261,16 +262,24 @@ export const usePredictionStore = defineStore('prediction', () => {
     }
   }
 
-  async function fetchMatchRanking(matchId: string): Promise<MatchRankingEntry[]> {
-    const { data: preds, error: err } = await supabase
-      .from('predictions')
-      .select('*')
-      .eq('match_id', matchId)
+  async function fetchMatchRanking(
+    matchId: string,
+    options?: { verifiedOnly?: boolean },
+  ): Promise<MatchRankingEntry[]> {
+    const verifiedOnly = options?.verifiedOnly ?? true
+
+    const [{ data: preds, error: err }, { data: payments }] = await Promise.all([
+      supabase.from('predictions').select('*').eq('match_id', matchId),
+      supabase.from('match_payments').select('user_id, verified').eq('match_id', matchId),
+    ])
 
     if (err) throw err
     if (!preds?.length) return []
 
     const typedPreds = preds as Prediction[]
+    const verifiedMap = new Map(
+      (payments ?? []).map((p: { user_id: string; verified: boolean }) => [p.user_id, p.verified]),
+    )
     const userIds = [...new Set(typedPreds.map((p) => p.user_id))]
     const { data: profiles } = await supabase
       .from('profiles')
@@ -290,16 +299,80 @@ export const usePredictionStore = defineStore('prediction', () => {
     return [...totals.entries()]
       .map(([user_id, points]) => {
         const profile = profileMap.get(user_id)
+        const verified = verifiedMap.get(user_id) ?? false
         return {
           user_id,
           points,
+          verified,
           profiles: profile
             ? { username: profile.username, avatar: profile.avatar }
             : undefined,
         }
       })
+      .filter((entry) => !verifiedOnly || entry.verified)
       .sort((a, b) => b.points - a.points)
       .slice(0, 20)
+  }
+
+  async function fetchMatchParticipants(matchId: string): Promise<MatchParticipant[]> {
+    const [{ data: preds, error: err }, { data: payments }] = await Promise.all([
+      supabase.from('predictions').select('*').eq('match_id', matchId).order('created_at'),
+      supabase.from('match_payments').select('user_id, verified').eq('match_id', matchId),
+    ])
+
+    if (err) throw err
+    if (!preds?.length) return []
+
+    const typedPreds = preds as Prediction[]
+    const verifiedMap = new Map(
+      (payments ?? []).map((p: { user_id: string; verified: boolean }) => [p.user_id, p.verified]),
+    )
+    const userIds = [...new Set(typedPreds.map((p) => p.user_id))]
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username, avatar')
+      .in('id', userIds)
+
+    type ParticipantProfile = { id: string; username: string | null; avatar: string | null }
+    const profileMap = new Map<string, ParticipantProfile>(
+      ((profiles ?? []) as ParticipantProfile[]).map((p) => [p.id, p]),
+    )
+    const grouped = new Map<string, Prediction[]>()
+
+    for (const pred of typedPreds) {
+      const list = grouped.get(pred.user_id) ?? []
+      list.push(pred)
+      grouped.set(pred.user_id, list)
+    }
+
+    return [...grouped.entries()]
+      .map(([user_id, predictions]) => {
+        const profile = profileMap.get(user_id)
+        const total_points = predictions.reduce((sum, p) => sum + totalPredictionPoints(p), 0)
+        return {
+          user_id,
+          verified: verifiedMap.get(user_id) ?? false,
+          profiles: profile
+            ? { username: profile.username, avatar: profile.avatar }
+            : undefined,
+          predictions,
+          total_points,
+        }
+      })
+      .sort((a, b) => b.total_points - a.total_points)
+  }
+
+  async function setPaymentVerified(
+    userId: string,
+    matchId: string,
+    verified: boolean,
+  ): Promise<void> {
+    const { error: err } = await supabase.rpc('admin_set_payment_verified', {
+      p_user_id: userId,
+      p_match_id: matchId,
+      p_verified: verified,
+    })
+    if (err) throw err
   }
 
   async function fetchUserPredictions(userId: string): Promise<PredictionWithMatch[]> {
@@ -335,6 +408,8 @@ export const usePredictionStore = defineStore('prediction', () => {
     updateScorePrediction,
     deletePrediction,
     fetchMatchRanking,
+    fetchMatchParticipants,
+    setPaymentVerified,
     fetchUserPredictions,
   }
 })

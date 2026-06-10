@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { supabase } from '@/lib/supabase'
+import AdminPaymentVerification from '@/components/admin/AdminPaymentVerification.vue'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchStatus } from '@/types'
 
@@ -291,6 +292,8 @@ async function finishMatch() {
       <p v-if="selectedMatch.status === 'finished'" class="text-center text-sm text-slate-400">
         Partido cerrado. Los usuarios ya no pueden predecir.
       </p>
+
+      <AdminPaymentVerification :match="selectedMatch" />
     </template>
 
     <p v-if="message" class="text-sm text-mundial-green">{{ message }}</p>

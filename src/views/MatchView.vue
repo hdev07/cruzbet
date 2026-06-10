@@ -18,6 +18,7 @@ const matchId = route.params.id as string
 
 const myPredictions = ref<Prediction[]>([])
 const matchRanking = ref<MatchRankingEntry[]>([])
+const hasVerifiedWinner = computed(() => matchRanking.value.length > 0)
 
 const { events } = useRealtime(matchId)
 const match = computed(() => matchStore.currentMatch)
@@ -149,11 +150,17 @@ async function loadPredictionData() {
           </section>
 
           <section
-            v-if="matchRanking.length && match.status === 'finished'"
+            v-if="match.status === 'finished'"
             class="rounded-xl border border-white/10 bg-white/5 p-4 lg:p-5"
           >
             <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Top del partido</h2>
-            <ol class="space-y-2">
+            <p
+              v-if="!hasVerifiedWinner"
+              class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200"
+            >
+              Sin ganador: aún no hay participantes con depósito verificado.
+            </p>
+            <ol v-else class="space-y-2">
               <li
                 v-for="(entry, index) in matchRanking"
                 :key="entry.user_id"
