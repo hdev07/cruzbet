@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ChevronRight, Radio } from '@lucide/vue'
+import { ChevronRight, Radio, Users } from '@lucide/vue'
 import type { Match } from '@/types'
 
-defineProps<{ match: Match; showPredictBadge?: boolean }>()
+defineProps<{ match: Match; showPredictBadge?: boolean; participantCount?: number }>()
 
 const phaseLabels: Record<string, string> = {
   group: 'Grupos',
@@ -65,6 +65,14 @@ const phaseLabels: Record<string, string> = {
 
     <p v-if="match.venue" class="mt-2 text-center text-xs text-slate-500">
       {{ match.venue }}
+    </p>
+
+    <p
+      v-if="participantCount"
+      class="mt-2 flex items-center justify-center gap-1 text-xs text-slate-400"
+    >
+      <Users class="h-3.5 w-3.5 shrink-0" />
+      {{ participantCount }} {{ participantCount === 1 ? 'participante' : 'participantes' }}
     </p>
 
     <div v-if="showPredictBadge" class="mt-3 text-center">

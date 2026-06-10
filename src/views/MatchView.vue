@@ -3,10 +3,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { ChevronLeft, Radio, Trophy } from '@lucide/vue'
 import { useRealtime } from '@/composables/useRealtime'
+import { formatGoalEventTime } from '@/lib/predictionMinutes'
 import { formatKickoff, isMatchOpenForPredictions, predictionsCloseMessage } from '@/lib/matchRules'
 import { useAuthStore } from '@/stores/authStore'
 import { useMatchStore } from '@/stores/matchStore'
 import { usePredictionStore, type MatchRankingEntry } from '@/stores/predictionStore'
+import QuinielaModeBanner from '@/components/layout/QuinielaModeBanner.vue'
 import MatchPredictionsPanel from '@/components/predictions/MatchPredictionsPanel.vue'
 import type { Prediction } from '@/types'
 
@@ -49,9 +51,14 @@ async function loadPredictionData() {
 
 <template>
   <div>
-    <RouterLink to="/" class="mb-4 inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+    <QuinielaModeBanner />
+
+    <RouterLink
+      to="/quiniela-partido"
+      class="mb-4 inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white"
+    >
       <ChevronLeft class="h-4 w-4" />
-      Volver
+      Volver a partidos
     </RouterLink>
 
     <p v-if="matchStore.loading" class="text-slate-400">Cargando partido...</p>
@@ -144,7 +151,9 @@ async function loadPredictionData() {
                 class="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-slate-300"
               >
                 <span>{{ goal.teams?.name ?? 'Equipo' }}</span>
-                <span class="font-semibold tabular-nums text-mundial-accent">{{ goal.minute }}'</span>
+                <span class="font-semibold tabular-nums text-mundial-accent">
+                  {{ formatGoalEventTime(goal.minute, goal.extra_time, goal.event_second ?? 0) }}
+                </span>
               </li>
             </ul>
           </section>

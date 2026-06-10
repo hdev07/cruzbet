@@ -30,12 +30,12 @@ async function loginWithGoogle() {
       <Target class="mx-auto mb-2 h-14 w-14 text-mundial-accent" :stroke-width="1.5" />
       <h1 class="mb-2 text-3xl font-bold text-mundial-accent">{{ APP_NAME }}</h1>
       <p class="mb-8 text-slate-400">
-        {{ APP_TAGLINE }} — predice goles y marcadores antes del partido
+        {{ APP_TAGLINE }} — predice el primer gol y el ganador antes del partido
       </p>
 
       <p class="mb-6 text-sm text-slate-500">
         Cuota: <strong class="text-slate-300">${{ ENTRY_FEE_MXN }} MXN</strong> por partido.
-        <RouterLink to="/reglas" class="text-mundial-accent hover:underline">Ver reglas y pago</RouterLink>
+        <RouterLink to="/" class="text-mundial-accent hover:underline">Ver quinielas y reglas</RouterLink>
       </p>
 
       <button

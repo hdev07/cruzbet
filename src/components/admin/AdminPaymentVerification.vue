@@ -225,6 +225,12 @@ async function toggleVerified(participant: MatchParticipant) {
           <div class="min-w-0">
             <p class="truncate font-medium text-slate-100">
               {{ participant.profiles?.username ?? 'Sin nombre' }}
+              <span
+                v-if="participant.complete === false"
+                class="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"
+              >
+                Incompleto
+              </span>
             </p>
             <p
               v-if="match.status === 'finished'"

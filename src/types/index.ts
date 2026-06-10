@@ -52,6 +52,7 @@ export interface MatchEvent {
   event_type: EventType
   minute: number
   extra_time: number
+  event_second?: number
   metadata: Record<string, unknown>
   created_at?: string
   players?: Pick<Player, 'name' | 'number'>
@@ -68,13 +69,16 @@ export interface Profile {
 
 export type PredictionType = 'goal' | 'score'
 
+export type PredictedWinner = 'home' | 'draw' | 'away'
+
 export interface Prediction {
   id: number
   user_id: string
   match_id: string
   prediction_type: PredictionType
   predicted_minute: number | null
-  predicted_team: 'home' | 'away' | null
+  predicted_team?: 'home' | 'away' | null
+  predicted_winner?: PredictedWinner | null
   predicted_home_score?: number | null
   predicted_away_score?: number | null
   created_at?: string
@@ -103,4 +107,46 @@ export interface MatchParticipant {
   profiles?: Pick<Profile, 'username' | 'avatar'>
   predictions: Prediction[]
   total_points: number
+  complete?: boolean
+}
+
+export interface BaseQuinielaRound {
+  id: string
+  round_number: number
+  title: string
+  match_count: number
+  points_per_hit: number
+  created_at?: string
+}
+
+export interface BaseQuinielaRoundMatch {
+  id: string
+  round_id: string
+  match_id: string
+  position: number
+  match?: Match
+}
+
+export interface BasePrediction {
+  id: number
+  user_id: string
+  round_id: string
+  match_id: string
+  predicted_winner: PredictedWinner
+  points: number
+  scored_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface BaseRoundLeaderboardEntry {
+  round_id: string
+  user_id: string
+  username: string | null
+  avatar: string | null
+  predictions_count: number
+  correct_count: number
+  total_points: number
+  match_count: number
+  is_complete: boolean
 }

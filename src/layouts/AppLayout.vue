@@ -1,20 +1,48 @@
 <script setup lang="ts">
-import type { Component } from 'vue'
+import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { ClipboardList, Home, Trophy, User } from '@lucide/vue'
+import { Home, User } from '@lucide/vue'
 import InstallPrompt from '@/components/shared/InstallPrompt.vue'
 import { APP_NAME } from '@/constants/branding'
+import {
+  BASE_NAV,
+  detectQuinielaMode,
+  PARTIDO_NAV,
+  type QuinielaNavItem,
+} from '@/constants/quiniela-modes'
 import { useAuthStore } from '@/stores/authStore'
 
 const route = useRoute()
 const auth = useAuthStore()
 
-const navItems: { to: string; label: string; icon: Component }[] = [
+const hubNav: QuinielaNavItem[] = [
   { to: '/', label: 'Inicio', icon: Home },
-  { to: '/reglas', label: 'Reglas', icon: ClipboardList },
-  { to: '/ranking', label: 'Ranking', icon: Trophy },
   { to: '/perfil', label: 'Perfil', icon: User },
 ]
+
+const activeMode = computed(() => detectQuinielaMode(route.path))
+
+const navItems = computed((): QuinielaNavItem[] => {
+  if (activeMode.value === 'partido') return PARTIDO_NAV
+  if (activeMode.value === 'base') return BASE_NAV
+  return hubNav
+})
+
+function isNavActive(item: QuinielaNavItem): boolean {
+  if (item.to === '/') return route.path === '/'
+  if (item.to === '/quiniela-partido') {
+    return route.path === '/quiniela-partido' || route.path.startsWith('/match/')
+  }
+  if (item.to === '/quiniela-base') {
+    const sub = route.path.slice('/quiniela-base/'.length)
+    const isRoundDetail =
+      route.path.startsWith('/quiniela-base/') &&
+      sub.length > 0 &&
+      !['ranking', 'reglas', 'historial'].includes(sub)
+    return route.path === '/quiniela-base' || isRoundDetail
+  }
+  return route.path === item.to || route.path.startsWith(`${item.to}/`)
+}
 </script>
 
 <template>
@@ -35,7 +63,7 @@ const navItems: { to: string; label: string; icon: Component }[] = [
             :to="item.to"
             class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition"
             :class="
-              route.path === item.to
+              isNavActive(item)
                 ? 'bg-mundial-accent/15 text-mundial-accent'
                 : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
             "
@@ -107,11 +135,11 @@ const navItems: { to: string; label: string; icon: Component }[] = [
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
-          class="flex flex-1 flex-col items-center gap-0.5 py-3 text-xs transition"
-          :class="route.path === item.to ? 'text-mundial-accent' : 'text-slate-400'"
+          class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] transition"
+          :class="isNavActive(item) ? 'text-mundial-accent' : 'text-slate-400'"
         >
           <component :is="item.icon" class="h-5 w-5" :stroke-width="2" />
-          <span>{{ item.label }}</span>
+          <span class="truncate px-0.5">{{ item.label }}</span>
         </RouterLink>
       </div>
     </nav>

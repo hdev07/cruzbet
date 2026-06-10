@@ -3,17 +3,22 @@ import { ref } from 'vue'
 import { Check, CircleDot, Copy } from '@lucide/vue'
 import {
   ENTRY_FEE_MXN,
+  GOAL_MINUTE_GRID_LOGIC,
+  GOAL_SECOND_SCORING_LOGIC,
   HOW_IT_WORKS,
   PAYMENT_INFO,
   PAYMENT_NOTES,
   GLOBAL_WINNER_LOGIC,
   MATCH_WINNER_LOGIC,
-  MULTIPLE_PREDICTIONS_LOGIC,
+  PREDICTIONS_LOGIC,
   PREDICTION_LIMITS,
   SCORE_SCORING_RULES,
   SCORING_RULES,
+  WINNER_PREDICTION_LOGIC,
 } from '@/constants/quiniela-rules'
+import QuinielaModeBanner from '@/components/layout/QuinielaModeBanner.vue'
 import SimpleRuleExampleCard from '@/components/shared/SimpleRuleExampleCard.vue'
+import { QUINIELA_MODE_PARTIDO } from '@/constants/quiniela-modes'
 
 const copiedField = ref<string | null>(null)
 
@@ -32,9 +37,11 @@ async function copyValue(value: string, field: string) {
 
 <template>
   <div>
+    <QuinielaModeBanner />
+
     <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Reglas y pagos</h1>
     <p class="mb-6 text-sm text-slate-400 lg:text-base">
-      Cuota de ${{ ENTRY_FEE_MXN }} MXN por partido · depósito a cuenta bancaria
+      {{ QUINIELA_MODE_PARTIDO.title }} · ${{ ENTRY_FEE_MXN }} MXN por partido · depósito a cuenta bancaria
     </p>
 
     <section class="mb-8">
@@ -131,12 +138,12 @@ async function copyValue(value: string, field: string) {
 
     <section class="mb-8">
       <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-accent">
-        {{ MULTIPLE_PREDICTIONS_LOGIC.title }}
+        {{ PREDICTIONS_LOGIC.title }}
       </h2>
-      <p class="mb-4 text-sm text-slate-400">{{ MULTIPLE_PREDICTIONS_LOGIC.summary }}</p>
+      <p class="mb-4 text-sm text-slate-400">{{ PREDICTIONS_LOGIC.summary }}</p>
       <ol class="mb-6 space-y-3">
         <li
-          v-for="(step, index) in MULTIPLE_PREDICTIONS_LOGIC.steps"
+          v-for="(step, index) in PREDICTIONS_LOGIC.steps"
           :key="step.title"
           class="flex gap-3 rounded-xl border border-mundial-accent/20 bg-mundial-accent/5 p-4"
         >
@@ -151,25 +158,126 @@ async function copyValue(value: string, field: string) {
           </div>
         </li>
       </ol>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
+        {{ GOAL_MINUTE_GRID_LOGIC.title }}
+      </h2>
+      <p class="mb-4 text-sm text-slate-400">{{ GOAL_MINUTE_GRID_LOGIC.summary }}</p>
+      <div class="mb-4 grid gap-3 sm:grid-cols-2">
+        <div
+          v-for="half in GOAL_MINUTE_GRID_LOGIC.halves"
+          :key="half.title"
+          class="rounded-xl border border-white/10 bg-white/5 p-4"
+        >
+          <p class="font-semibold text-slate-200">{{ half.title }}</p>
+          <p class="mt-1 text-sm text-slate-400">{{ half.description }}</p>
+        </div>
+      </div>
+      <ul class="space-y-2 text-sm text-slate-400">
+        <li v-for="note in GOAL_MINUTE_GRID_LOGIC.notes" :key="note" class="flex gap-2">
+          <CircleDot class="mt-0.5 h-4 w-4 shrink-0 text-mundial-accent" />
+          <span>{{ note }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-amber-400">
+        {{ GOAL_SECOND_SCORING_LOGIC.title }}
+      </h2>
+      <div class="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+        <p class="text-sm text-amber-100">{{ GOAL_SECOND_SCORING_LOGIC.summary }}</p>
+        <p class="mt-2 text-sm font-semibold text-amber-200">{{ GOAL_SECOND_SCORING_LOGIC.rule }}</p>
+      </div>
+      <div class="mb-4 overflow-x-auto rounded-xl border border-white/10">
+        <table class="w-full min-w-[320px] border-collapse text-sm">
+          <thead>
+            <tr class="bg-black/30 text-left text-xs uppercase tracking-wider text-slate-400">
+              <th class="border border-white/10 px-3 py-2">Gol real</th>
+              <th class="border border-white/10 px-3 py-2">Cuenta como</th>
+              <th class="border border-white/10 px-3 py-2">Gana puntos…</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in GOAL_SECOND_SCORING_LOGIC.examples"
+              :key="row.goal"
+              class="text-slate-300"
+            >
+              <td class="border border-white/10 px-3 py-2 font-mono tabular-nums">{{ row.goal }}</td>
+              <td class="border border-white/10 px-3 py-2 font-semibold text-mundial-accent">
+                {{ row.effective }}
+              </td>
+              <td class="border border-white/10 px-3 py-2 text-slate-400">{{ row.whoWins }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="space-y-2 text-sm text-slate-400">
+        <li v-for="note in GOAL_SECOND_SCORING_LOGIC.notes" :key="note" class="flex gap-2">
+          <CircleDot class="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <span>{{ note }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-green">
+        {{ WINNER_PREDICTION_LOGIC.title }}
+      </h2>
+      <p class="mb-4 text-sm text-slate-400">{{ WINNER_PREDICTION_LOGIC.summary }}</p>
+      <div class="mb-4 overflow-x-auto rounded-xl border border-white/10">
+        <table class="w-full min-w-[280px] border-collapse text-sm">
+          <thead>
+            <tr>
+              <th
+                v-for="opt in WINNER_PREDICTION_LOGIC.options"
+                :key="opt.code"
+                class="border border-white/10 bg-black/30 px-3 py-3 text-center"
+              >
+                <span class="block text-xl font-bold text-mundial-green">{{ opt.code }}</span>
+                <span class="mt-0.5 block text-xs font-normal text-slate-400">{{ opt.label }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td
+                v-for="opt in WINNER_PREDICTION_LOGIC.options"
+                :key="`desc-${opt.code}`"
+                class="border border-white/10 px-3 py-3 text-center text-slate-400"
+              >
+                {{ opt.description }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="space-y-2 text-sm text-slate-400">
+        <li v-for="note in WINNER_PREDICTION_LOGIC.notes" :key="note" class="flex gap-2">
+          <CircleDot class="mt-0.5 h-4 w-4 shrink-0 text-mundial-green" />
+          <span>{{ note }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
       <div class="mb-8 space-y-4">
-        <h3 class="text-base font-bold text-mundial-accent">Ejemplos de goles (súper fácil)</h3>
-        <p class="text-sm text-slate-400">
-          Tú dijiste → Pasó esto → Ganas X puntos. Así de simple.
-        </p>
+        <h3 class="text-base font-bold text-mundial-accent">Ejemplos del primer gol</h3>
+        <p class="text-sm text-slate-400">Tú dijiste → Pasó esto → Ganas X puntos.</p>
         <SimpleRuleExampleCard
-          v-for="example in MULTIPLE_PREDICTIONS_LOGIC.goalExamples"
+          v-for="example in PREDICTIONS_LOGIC.goalExamples"
           :key="example.id"
           :example="example"
         />
       </div>
 
       <div class="space-y-4">
-        <h3 class="text-base font-bold text-mundial-green">Ejemplos de marcadores (súper fácil)</h3>
-        <p class="text-sm text-slate-400">
-          Igual: cada marcador que pones se revisa solo. Abajo te lo explicamos con ejemplos.
-        </p>
+        <h3 class="text-base font-bold text-mundial-green">Ejemplos del ganador (L / E / V)</h3>
         <SimpleRuleExampleCard
-          v-for="example in MULTIPLE_PREDICTIONS_LOGIC.scoreExamples"
+          v-for="example in PREDICTIONS_LOGIC.scoreExamples"
           :key="example.id"
           :example="example"
         />
@@ -200,7 +308,7 @@ async function copyValue(value: string, field: string) {
 
       <section>
         <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
-          Puntos — predicción de gol
+          Puntos — minuto del primer gol
         </h2>
         <ul class="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
           <li
@@ -267,7 +375,7 @@ async function copyValue(value: string, field: string) {
 
     <section>
       <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        Puntos — marcador final
+        Puntos — ganador (L/E/V)
       </h2>
       <ul class="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
         <li
@@ -280,8 +388,8 @@ async function copyValue(value: string, field: string) {
         </li>
       </ul>
       <p class="mt-3 text-sm text-slate-400">
-        Cuando acaba el partido revisamos todo lo que pusiste. Lo que aciertas suma. Lo que fallas vale 0.
-        No te quitamos puntos por equivocarte.
+        Al terminar el partido se revisan ambas predicciones por separado. Lo que aciertas suma; lo que fallas vale 0.
+        El minuto del gol usa la regla de 30 segundos para obtener el minuto efectivo antes de calcular puntos.
       </p>
     </section>
   </div>

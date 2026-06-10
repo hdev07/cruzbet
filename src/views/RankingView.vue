@@ -2,16 +2,19 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ChevronRight } from '@lucide/vue'
+import { BASE_QUINIELA_LOGIC } from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
+import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import { useRankingStore } from '@/stores/rankingStore'
 import { GLOBAL_WINNER_LOGIC, MATCH_WINNER_LOGIC, SCORE_SCORING_RULES, SCORING_RULES } from '@/constants/quiniela-rules'
 
 const auth = useAuthStore()
 const ranking = useRankingStore()
-const activeTab = ref<'global' | 'match'>('global')
+const baseStore = useBaseQuinielaStore()
+const activeTab = ref<'global' | 'match' | 'base'>('global')
 
 onMounted(async () => {
-  await ranking.fetchGlobalRanking()
+  await Promise.all([ranking.fetchGlobalRanking(), baseStore.fetchRounds()])
   if (auth.user) await auth.fetchProfile(auth.user.id)
 })
 </script>
@@ -29,13 +32,20 @@ onMounted(async () => {
       <p class="text-3xl font-bold text-mundial-accent">{{ auth.profile.points }}</p>
     </div>
 
-    <div class="mb-4 flex gap-2 rounded-lg bg-white/5 p-1 lg:max-w-md">
+    <div class="mb-4 flex gap-2 rounded-lg bg-white/5 p-1 lg:max-w-lg">
       <button
         class="flex-1 rounded-md py-2 text-sm font-medium transition"
         :class="activeTab === 'global' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
         @click="activeTab = 'global'"
       >
         Global
+      </button>
+      <button
+        class="flex-1 rounded-md py-2 text-sm font-medium transition"
+        :class="activeTab === 'base' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
+        @click="activeTab = 'base'"
+      >
+        Quiniela base
       </button>
       <button
         class="flex-1 rounded-md py-2 text-sm font-medium transition"
@@ -93,6 +103,43 @@ onMounted(async () => {
       </ol>
     </template>
 
+    <template v-else-if="activeTab === 'base'">
+      <p class="mb-4 text-sm text-slate-400">{{ BASE_QUINIELA_LOGIC.summary }}</p>
+
+      <div
+        v-if="!baseStore.rounds.length"
+        class="rounded-xl border border-dashed border-white/20 p-8 text-center text-slate-400"
+      >
+        Aún no hay jornadas de quiniela base.
+      </div>
+
+      <div v-else class="space-y-2 lg:max-w-2xl">
+        <RouterLink
+          v-for="round in baseStore.rounds"
+          :key="round.id"
+          :to="`/quiniela-base/${round.id}`"
+          class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-mundial-accent/40"
+        >
+          <span
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mundial-accent/15 text-sm font-bold text-mundial-accent"
+          >
+            {{ round.round_number }}
+          </span>
+          <span class="flex-1 font-medium">{{ round.title }}</span>
+          <span class="text-xs text-slate-500">Ver ranking</span>
+          <ChevronRight class="h-4 w-4 text-slate-500" />
+        </RouterLink>
+      </div>
+
+      <RouterLink
+        to="/quiniela-base"
+        class="mt-4 inline-flex items-center gap-1 text-sm text-mundial-accent hover:underline"
+      >
+        Ir a quiniela base
+        <ChevronRight class="h-4 w-4" />
+      </RouterLink>
+    </template>
+
     <div
       v-else
       class="rounded-xl border border-dashed border-white/20 p-8 text-center text-slate-400"
@@ -108,7 +155,10 @@ onMounted(async () => {
         <div>
           <p class="mb-1 font-semibold text-slate-300">{{ MATCH_WINNER_LOGIC.title }}</p>
           <p class="mb-3">{{ MATCH_WINNER_LOGIC.summary }}</p>
-          <p class="mb-2 font-semibold text-slate-400">Puntos — predicción de gol (cada una)</p>
+          <p class="mb-2 font-semibold text-slate-400">Puntos — minuto del primer gol</p>
+          <p class="mb-2 text-slate-500">
+            Solo minuto exacto o «No habrá goles» (0-0). Regla de 30 s para el minuto efectivo.
+          </p>
           <ul class="space-y-1">
             <li v-for="rule in SCORING_RULES" :key="rule.label">
               {{ rule.label }}: <strong class="text-slate-300">{{ rule.points }} pts</strong>
@@ -118,7 +168,7 @@ onMounted(async () => {
         <div>
           <p class="mb-1 font-semibold text-slate-300">{{ GLOBAL_WINNER_LOGIC.title }}</p>
           <p class="mb-4">{{ GLOBAL_WINNER_LOGIC.summary }}</p>
-          <p class="mb-2 font-semibold text-slate-400">Puntos — marcador final</p>
+          <p class="mb-2 font-semibold text-slate-400">Puntos — ganador (L/E/V)</p>
           <ul class="space-y-1">
             <li v-for="rule in SCORE_SCORING_RULES" :key="rule.label">
               {{ rule.label }}: <strong class="text-slate-300">{{ rule.points }} pts</strong>

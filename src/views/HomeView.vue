@@ -1,96 +1,105 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight } from '@lucide/vue'
-import { useHomeRealtime } from '@/composables/useHomeRealtime'
+import { ChevronRight, Grid3x3, Zap } from '@lucide/vue'
+import HomeLandingRules from '@/components/home/HomeLandingRules.vue'
+import { QUINIELA_MODE_BASE, QUINIELA_MODE_PARTIDO } from '@/constants/quiniela-modes'
 import { APP_NAME, APP_TAGLINE } from '@/constants/branding'
-import { ENTRY_FEE_MXN } from '@/constants/quiniela-rules'
-import { isMatchOpenForPredictions } from '@/lib/matchRules'
-import MatchCard from '@/components/shared/MatchCard.vue'
 import { useAuthStore } from '@/stores/authStore'
-import { useMatchStore } from '@/stores/matchStore'
 
 const auth = useAuthStore()
-const matchStore = useMatchStore()
-
-useHomeRealtime()
-
-const openForPredictions = computed(() =>
-  matchStore.matches.filter((m) => isMatchOpenForPredictions(m)).slice(0, 10),
-)
 </script>
 
 <template>
   <div>
-    <div class="mb-6 lg:mb-8">
-      <h1 class="text-2xl font-bold lg:text-3xl">{{ APP_NAME }}</h1>
-      <p class="mt-1 text-sm text-slate-400 lg:text-base">
-        {{ APP_TAGLINE }} — predice goles y marcadores antes del inicio
+    <div class="mb-8 text-center lg:mb-10">
+      <h1 class="text-2xl font-bold lg:text-4xl">{{ APP_NAME }}</h1>
+      <p class="mx-auto mt-2 max-w-md text-sm text-slate-400 lg:text-base">
+        {{ APP_TAGLINE }}
       </p>
-      <RouterLink
-        to="/reglas"
-        class="mt-2 inline-flex items-center gap-1 text-sm text-mundial-accent hover:underline lg:text-base"
-      >
-        ${{ ENTRY_FEE_MXN }} MXN por partido · Ver reglas y datos de pago
-        <ChevronRight class="h-4 w-4" />
-      </RouterLink>
+      <p class="mt-1 text-xs text-slate-500">
+        Predice, compite en el ranking y gana la bolsa de cada partido o jornada
+      </p>
     </div>
 
     <div
       v-if="!auth.isLoggedIn"
-      class="mb-6 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-4 text-center lg:p-6"
+      class="mb-8 rounded-xl border border-white/10 bg-white/5 p-4 text-center"
     >
-      <p class="mb-3 text-sm text-slate-300 lg:text-base">Inicia sesión para guardar tus predicciones</p>
+      <p class="mb-3 text-sm text-slate-300">Inicia sesión para guardar predicciones y ver tu historial</p>
       <RouterLink
         to="/login"
-        class="inline-block rounded-lg bg-mundial-accent px-4 py-2 text-sm font-semibold lg:px-6 lg:py-2.5"
+        class="inline-block rounded-lg bg-mundial-accent px-5 py-2 text-sm font-semibold"
       >
         Entrar con Google
       </RouterLink>
     </div>
 
-    <div
-      class="space-y-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:space-y-0"
-      :class="{ 'lg:grid-cols-1': !openForPredictions.length }"
-    >
-      <section v-if="openForPredictions.length">
-        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-accent lg:text-base">
-          Abiertos para predecir
-        </h2>
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-          <MatchCard v-for="match in openForPredictions" :key="match.id" :match="match" show-predict-badge />
-        </div>
-      </section>
+    <HomeLandingRules />
 
-      <section>
-        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-green lg:text-base">
-          En vivo
-        </h2>
-
-        <p v-if="matchStore.loading" class="text-slate-400">Cargando...</p>
-
-        <div
-          v-else-if="!matchStore.liveMatches.length"
-          class="rounded-xl border border-dashed border-white/20 p-6 text-center lg:p-8"
-        >
-          <p class="mb-1 font-medium text-slate-300">Ningún partido en vivo ahora</p>
-          <p class="text-sm text-slate-500">
-            Los partidos aparecen aquí automáticamente a la hora programada.
-          </p>
-          <RouterLink
-            v-if="auth.isAdmin"
-            to="/admin"
-            class="mt-3 inline-flex items-center gap-1 text-sm text-mundial-accent hover:underline"
-          >
-            Ir al admin
-            <ChevronRight class="h-4 w-4" />
-          </RouterLink>
-        </div>
-
-        <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-          <MatchCard v-for="match in matchStore.liveMatches" :key="match.id" :match="match" />
-        </div>
-      </section>
+    <div class="mb-4 text-center">
+      <h2 class="text-lg font-bold text-slate-100 lg:text-xl">Elige tu quiniela</h2>
+      <p class="mt-1 text-sm text-slate-500">Cada modalidad tiene su propio ranking, reglas e historial</p>
     </div>
+
+    <div class="grid gap-4 lg:grid-cols-2 lg:gap-6">
+      <RouterLink
+        :to="QUINIELA_MODE_PARTIDO.homePath"
+        class="group flex flex-col rounded-2xl border-2 border-mundial-accent/30 bg-gradient-to-br from-mundial-accent/10 to-transparent p-6 transition hover:border-mundial-accent/60 hover:shadow-lg hover:shadow-mundial-accent/10"
+      >
+        <div class="mb-4 flex items-start justify-between gap-3">
+          <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-mundial-accent/20">
+            <Zap class="h-7 w-7 text-mundial-accent" />
+          </span>
+          <span class="rounded-full bg-mundial-accent px-3 py-1 text-xs font-bold text-white">
+            {{ QUINIELA_MODE_PARTIDO.entryLabel }}
+          </span>
+        </div>
+
+        <h2 class="text-xl font-bold text-slate-100">{{ QUINIELA_MODE_PARTIDO.title }}</h2>
+        <p class="mt-1 text-sm text-slate-400">{{ QUINIELA_MODE_PARTIDO.tagline }}</p>
+
+        <ul class="mt-4 space-y-2 text-sm text-slate-400">
+          <li v-for="feature in QUINIELA_MODE_PARTIDO.features" :key="feature" class="flex gap-2">
+            <span class="text-mundial-accent">·</span>
+            <span>{{ feature }}</span>
+          </li>
+        </ul>
+
+        <p class="mt-5 flex items-center gap-1 text-sm font-semibold text-mundial-accent group-hover:underline">
+          Entrar
+          <ChevronRight class="h-4 w-4" />
+        </p>
+      </RouterLink>
+
+      <RouterLink
+        :to="QUINIELA_MODE_BASE.homePath"
+        class="group flex flex-col rounded-2xl border-2 border-mundial-green/30 bg-gradient-to-br from-mundial-green/10 to-transparent p-6 transition hover:border-mundial-green/60 hover:shadow-lg hover:shadow-mundial-green/10"
+      >
+        <div class="mb-4 flex items-start justify-between gap-3">
+          <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-mundial-green/20">
+            <Grid3x3 class="h-7 w-7 text-mundial-green" />
+          </span>
+          <span class="rounded-full bg-mundial-green px-3 py-1 text-xs font-bold text-mundial-dark">
+            {{ QUINIELA_MODE_BASE.entryLabel }}
+          </span>
+        </div>
+
+        <h2 class="text-xl font-bold text-slate-100">{{ QUINIELA_MODE_BASE.title }}</h2>
+        <p class="mt-1 text-sm text-slate-400">{{ QUINIELA_MODE_BASE.tagline }}</p>
+
+        <ul class="mt-4 space-y-2 text-sm text-slate-400">
+          <li v-for="feature in QUINIELA_MODE_BASE.features" :key="feature" class="flex gap-2">
+            <span class="text-mundial-green">·</span>
+            <span>{{ feature }}</span>
+          </li>
+        </ul>
+
+        <p class="mt-5 flex items-center gap-1 text-sm font-semibold text-mundial-green group-hover:underline">
+          Entrar
+          <ChevronRight class="h-4 w-4" />
+        </p>
+      </RouterLink>
+    </div>
+
   </div>
 </template>

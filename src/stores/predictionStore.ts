@@ -5,20 +5,26 @@ import {
   MAX_GOAL_PREDICTIONS_PER_MATCH,
   MAX_SCORE_PREDICTIONS_PER_MATCH,
 } from '@/constants/quiniela-rules'
-import { totalPredictionPoints } from '@/lib/predictionDisplay'
+import { isValidGoalMinutePrediction } from '@/lib/predictionMinutes'
+import { hasCompletePredictions, totalPredictionPoints } from '@/lib/predictionDisplay'
 import { isMatchOpenForPredictions } from '@/lib/matchRules'
-import type { Match, MatchParticipant, Prediction, PredictionType, PredictionWithMatch } from '@/types'
+import type {
+  Match,
+  MatchParticipant,
+  PredictedWinner,
+  Prediction,
+  PredictionType,
+  PredictionWithMatch,
+} from '@/types'
 
 const MATCH_SELECT = '*, home_team:teams!home_team_id(*), away_team:teams!away_team_id(*)'
 
 export interface SaveGoalPredictionInput {
   minute: number
-  team: 'home' | 'away'
 }
 
-export interface SaveScorePredictionInput {
-  homeScore: number
-  awayScore: number
+export interface SaveWinnerPredictionInput {
+  winner: PredictedWinner
 }
 
 export interface MatchRankingEntry {
@@ -59,56 +65,43 @@ export const usePredictionStore = defineStore('prediction', () => {
     const closed = assertMatchOpen(match)
     if (closed) return closed
 
-    if (!Number.isInteger(input.minute) || input.minute < 1 || input.minute > 120) {
-      return 'El minuto debe ser entre 1 y 120'
+    if (!Number.isInteger(input.minute) || !isValidGoalMinutePrediction(input.minute)) {
+      return 'Elige un minuto en la grilla o marca "No habrá goles"'
     }
 
     if (!editingId && existingGoals.length >= MAX_GOAL_PREDICTIONS_PER_MATCH) {
-      return `Máximo ${MAX_GOAL_PREDICTIONS_PER_MATCH} predicciones de gol por partido`
+      return `Máximo ${MAX_GOAL_PREDICTIONS_PER_MATCH} predicción de minuto del primer gol por partido`
     }
 
     const duplicate = existingGoals.some(
-      (p) =>
-        p.id !== editingId &&
-        p.predicted_minute === input.minute &&
-        p.predicted_team === input.team,
+      (p) => p.id !== editingId && p.predicted_minute === input.minute,
     )
-    if (duplicate) return 'Ya tienes esa predicción de gol'
+    if (duplicate) return 'Ya tienes esa predicción de minuto'
 
     return null
   }
 
-  function validateScorePrediction(
+  function validateWinnerPrediction(
     match: Match,
-    input: SaveScorePredictionInput,
+    input: SaveWinnerPredictionInput,
     existingScores: Prediction[],
     editingId?: number,
   ): string | null {
     const closed = assertMatchOpen(match)
     if (closed) return closed
 
-    if (
-      !Number.isInteger(input.homeScore) ||
-      !Number.isInteger(input.awayScore) ||
-      input.homeScore < 0 ||
-      input.homeScore > 20 ||
-      input.awayScore < 0 ||
-      input.awayScore > 20
-    ) {
-      return 'Cada marcador debe ser un entero entre 0 y 20'
+    if (!['home', 'draw', 'away'].includes(input.winner)) {
+      return 'Elige L (local), E (empate) o V (visita)'
     }
 
     if (!editingId && existingScores.length >= MAX_SCORE_PREDICTIONS_PER_MATCH) {
-      return `Máximo ${MAX_SCORE_PREDICTIONS_PER_MATCH} predicciones de marcador por partido`
+      return `Máximo ${MAX_SCORE_PREDICTIONS_PER_MATCH} predicción de ganador por partido`
     }
 
     const duplicate = existingScores.some(
-      (p) =>
-        p.id !== editingId &&
-        p.predicted_home_score === input.homeScore &&
-        p.predicted_away_score === input.awayScore,
+      (p) => p.id !== editingId && p.predicted_winner === input.winner,
     )
-    if (duplicate) return 'Ya tienes esa predicción de marcador'
+    if (duplicate) return 'Ya tienes esa predicción de ganador'
 
     return null
   }
@@ -131,15 +124,14 @@ export const usePredictionStore = defineStore('prediction', () => {
           match_id: match.id,
           prediction_type: 'goal' satisfies PredictionType,
           predicted_minute: input.minute,
-          predicted_team: input.team,
         })
         .select()
         .single()
 
       if (err) {
-        if (err.code === '23505') throw new Error('Ya tienes esa predicción de gol')
+        if (err.code === '23505') throw new Error('Ya tienes una predicción de minuto para este partido')
         if (err.message?.includes('Máximo')) {
-          throw new Error(`Máximo ${MAX_GOAL_PREDICTIONS_PER_MATCH} predicciones de gol por partido`)
+          throw new Error('Máximo 1 predicción de minuto del primer gol por partido')
         }
         throw err
       }
@@ -150,13 +142,13 @@ export const usePredictionStore = defineStore('prediction', () => {
     }
   }
 
-  async function saveScorePrediction(
+  async function saveWinnerPrediction(
     match: Match,
     userId: string,
-    input: SaveScorePredictionInput,
+    input: SaveWinnerPredictionInput,
     existingScores: Prediction[],
   ): Promise<Prediction> {
-    const validationError = validateScorePrediction(match, input, existingScores)
+    const validationError = validateWinnerPrediction(match, input, existingScores)
     if (validationError) throw new Error(validationError)
 
     saving.value = true
@@ -167,16 +159,15 @@ export const usePredictionStore = defineStore('prediction', () => {
           user_id: userId,
           match_id: match.id,
           prediction_type: 'score' satisfies PredictionType,
-          predicted_home_score: input.homeScore,
-          predicted_away_score: input.awayScore,
+          predicted_winner: input.winner,
         })
         .select()
         .single()
 
       if (err) {
-        if (err.code === '23505') throw new Error('Ya tienes esa predicción de marcador')
-        if (err.message?.includes('Máximo 2')) {
-          throw new Error('Máximo 2 predicciones de marcador por partido')
+        if (err.code === '23505') throw new Error('Ya tienes una predicción de ganador para este partido')
+        if (err.message?.includes('Máximo')) {
+          throw new Error('Máximo 1 predicción de ganador por partido')
         }
         throw err
       }
@@ -202,14 +193,13 @@ export const usePredictionStore = defineStore('prediction', () => {
         .from('predictions')
         .update({
           predicted_minute: input.minute,
-          predicted_team: input.team,
         })
         .eq('id', predictionId)
         .select()
         .single()
 
       if (err) {
-        if (err.code === '23505') throw new Error('Ya tienes esa predicción de gol')
+        if (err.code === '23505') throw new Error('Ya tienes esa predicción de minuto')
         throw err
       }
 
@@ -219,13 +209,13 @@ export const usePredictionStore = defineStore('prediction', () => {
     }
   }
 
-  async function updateScorePrediction(
+  async function updateWinnerPrediction(
     match: Match,
     predictionId: number,
-    input: SaveScorePredictionInput,
+    input: SaveWinnerPredictionInput,
     existingScores: Prediction[],
   ): Promise<Prediction> {
-    const validationError = validateScorePrediction(match, input, existingScores, predictionId)
+    const validationError = validateWinnerPrediction(match, input, existingScores, predictionId)
     if (validationError) throw new Error(validationError)
 
     saving.value = true
@@ -233,15 +223,14 @@ export const usePredictionStore = defineStore('prediction', () => {
       const { data, error: err } = await supabase
         .from('predictions')
         .update({
-          predicted_home_score: input.homeScore,
-          predicted_away_score: input.awayScore,
+          predicted_winner: input.winner,
         })
         .eq('id', predictionId)
         .select()
         .single()
 
       if (err) {
-        if (err.code === '23505') throw new Error('Ya tienes esa predicción de marcador')
+        if (err.code === '23505') throw new Error('Ya tienes esa predicción de ganador')
         throw err
       }
 
@@ -292,10 +281,20 @@ export const usePredictionStore = defineStore('prediction', () => {
     const profileMap = new Map<string, RankingProfile>(
       ((profiles ?? []) as RankingProfile[]).map((p) => [p.id, p]),
     )
-    const totals = new Map<string, number>()
-
+    const grouped = new Map<string, Prediction[]>()
     for (const p of typedPreds) {
-      totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + totalPredictionPoints(p))
+      const list = grouped.get(p.user_id) ?? []
+      list.push(p)
+      grouped.set(p.user_id, list)
+    }
+
+    const totals = new Map<string, number>()
+    for (const [user_id, userPreds] of grouped) {
+      if (!hasCompletePredictions(userPreds)) continue
+      totals.set(
+        user_id,
+        userPreds.reduce((sum, p) => sum + totalPredictionPoints(p), 0),
+      )
     }
 
     return [...totals.entries()]
@@ -317,19 +316,29 @@ export const usePredictionStore = defineStore('prediction', () => {
   }
 
   async function fetchParticipantCountsByMatch(): Promise<Record<string, number>> {
-    const { data, error } = await supabase.from('predictions').select('match_id, user_id')
+    const { data, error } = await supabase
+      .from('predictions')
+      .select('match_id, user_id, prediction_type')
     if (error) throw error
 
-    const byMatch = new Map<string, Set<string>>()
+    const byMatch = new Map<string, Map<string, { goal: boolean; score: boolean }>>()
     for (const row of data ?? []) {
       const matchId = row.match_id as string
       const userId = row.user_id as string
-      if (!byMatch.has(matchId)) byMatch.set(matchId, new Set())
-      byMatch.get(matchId)!.add(userId)
+      const type = row.prediction_type as string | null
+      if (!byMatch.has(matchId)) byMatch.set(matchId, new Map())
+      const users = byMatch.get(matchId)!
+      if (!users.has(userId)) users.set(userId, { goal: false, score: false })
+      const flags = users.get(userId)!
+      if (type === 'goal' || type == null) flags.goal = true
+      if (type === 'score') flags.score = true
     }
 
     return Object.fromEntries(
-      [...byMatch.entries()].map(([matchId, users]) => [matchId, users.size]),
+      [...byMatch.entries()].map(([matchId, users]) => [
+        matchId,
+        [...users.values()].filter((flags) => flags.goal && flags.score).length,
+      ]),
     )
   }
 
@@ -367,7 +376,10 @@ export const usePredictionStore = defineStore('prediction', () => {
     return [...grouped.entries()]
       .map(([user_id, predictions]) => {
         const profile = profileMap.get(user_id)
-        const total_points = predictions.reduce((sum, p) => sum + totalPredictionPoints(p), 0)
+        const complete = hasCompletePredictions(predictions)
+        const total_points = complete
+          ? predictions.reduce((sum, p) => sum + totalPredictionPoints(p), 0)
+          : 0
         return {
           user_id,
           verified: verifiedMap.get(user_id) ?? false,
@@ -376,6 +388,7 @@ export const usePredictionStore = defineStore('prediction', () => {
             : undefined,
           predictions,
           total_points,
+          complete,
         }
       })
       .sort((a, b) => b.total_points - a.total_points)
@@ -422,14 +435,17 @@ export const usePredictionStore = defineStore('prediction', () => {
     saving,
     fetchMyPredictions,
     saveGoalPrediction,
-    saveScorePrediction,
+    saveWinnerPrediction,
     updateGoalPrediction,
-    updateScorePrediction,
+    updateWinnerPrediction,
     deletePrediction,
     fetchMatchRanking,
     fetchParticipantCountsByMatch,
     fetchMatchParticipants,
     setPaymentVerified,
     fetchUserPredictions,
+    // Alias para compatibilidad si algo aún los usa
+    saveScorePrediction: saveWinnerPrediction,
+    updateScorePrediction: updateWinnerPrediction,
   }
 })

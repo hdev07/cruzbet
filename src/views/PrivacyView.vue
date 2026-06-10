@@ -34,7 +34,7 @@ const lastUpdated = '9 de junio de 2026'
             acumulados y avatar (si lo proporciona Google).
           </li>
           <li>
-            <strong class="text-slate-300">Actividad:</strong> predicciones de goles y marcadores,
+            <strong class="text-slate-300">Actividad:</strong> predicciones de minuto del primer gol y ganador,
             historial de participación y posición en el ranking.
           </li>
           <li>

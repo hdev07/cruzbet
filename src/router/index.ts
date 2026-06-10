@@ -12,23 +12,60 @@ const router = createRouter({
     {
       path: '/',
       component: () => import('@/views/HomeView.vue'),
-      meta: { layout: 'mobile' },
+      meta: { layout: 'mobile', title: 'Inicio' },
+    },
+    {
+      path: '/quiniela-partido',
+      component: () => import('@/views/partido/PartidoHomeView.vue'),
+      meta: { layout: 'mobile', title: 'Partidos', quinielaMode: 'partido' },
+    },
+    {
+      path: '/quiniela-partido/ranking',
+      component: () => import('@/views/partido/PartidoRankingView.vue'),
+      meta: { layout: 'mobile', title: 'Ranking', quinielaMode: 'partido' },
+    },
+    {
+      path: '/quiniela-partido/reglas',
+      component: () => import('@/views/RulesView.vue'),
+      meta: { layout: 'mobile', title: 'Reglas', quinielaMode: 'partido' },
+    },
+    {
+      path: '/quiniela-partido/historial',
+      component: () => import('@/views/partido/PartidoHistorialView.vue'),
+      meta: { layout: 'mobile', title: 'Historial', requiresAuth: true, quinielaMode: 'partido' },
     },
     {
       path: '/match/:id',
       component: () => import('@/views/MatchView.vue'),
-      meta: { layout: 'mobile', title: 'Partido' },
+      meta: { layout: 'mobile', title: 'Partido', quinielaMode: 'partido' },
     },
     {
-      path: '/ranking',
-      component: () => import('@/views/RankingView.vue'),
-      meta: { layout: 'mobile', title: 'Ranking' },
+      path: '/quiniela-base',
+      component: () => import('@/views/BaseQuinielaListView.vue'),
+      meta: { layout: 'mobile', title: 'Quiniela base', quinielaMode: 'base' },
     },
     {
-      path: '/reglas',
-      component: () => import('@/views/RulesView.vue'),
-      meta: { layout: 'mobile', title: 'Reglas' },
+      path: '/quiniela-base/ranking',
+      component: () => import('@/views/base/BaseRankingView.vue'),
+      meta: { layout: 'mobile', title: 'Ranking', quinielaMode: 'base' },
     },
+    {
+      path: '/quiniela-base/reglas',
+      component: () => import('@/views/base/BaseRulesView.vue'),
+      meta: { layout: 'mobile', title: 'Reglas', quinielaMode: 'base' },
+    },
+    {
+      path: '/quiniela-base/historial',
+      component: () => import('@/views/base/BaseHistorialView.vue'),
+      meta: { layout: 'mobile', title: 'Historial', requiresAuth: true, quinielaMode: 'base' },
+    },
+    {
+      path: '/quiniela-base/:id',
+      component: () => import('@/views/BaseQuinielaRoundView.vue'),
+      meta: { layout: 'mobile', title: 'Jornada', quinielaMode: 'base' },
+    },
+    { path: '/ranking', redirect: '/quiniela-partido/ranking' },
+    { path: '/reglas', redirect: '/quiniela-partido/reglas' },
     {
       path: '/perfil',
       component: () => import('@/views/ProfileView.vue'),

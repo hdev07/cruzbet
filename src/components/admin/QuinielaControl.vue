@@ -15,6 +15,7 @@ const homeScore = ref(0)
 const awayScore = ref(0)
 const goalTeamId = ref('')
 const goalMinute = ref(1)
+const goalSecond = ref(0)
 const saving = ref(false)
 const message = ref('')
 const error = ref('')
@@ -24,6 +25,7 @@ function syncForm(match: Match) {
   homeScore.value = match.home_score
   awayScore.value = match.away_score
   goalMinute.value = Math.max((match.current_minute ?? 0) + 1, 1)
+  goalSecond.value = 0
   goalTeamId.value = match.home_team_id
 }
 
@@ -79,6 +81,7 @@ async function registerGoal() {
     event_type: 'goal',
     minute: goalMinute.value,
     extra_time: 0,
+    event_second: goalSecond.value,
     metadata: { type: 'foot' },
   })
   saving.value = false
@@ -86,7 +89,10 @@ async function registerGoal() {
     error.value = err.message
     return
   }
-  message.value = `Gol al ${goalMinute.value}' registrado`
+  message.value =
+    goalSecond.value > 0
+      ? `Gol al ${goalMinute.value}:${String(goalSecond.value).padStart(2, '0')} registrado`
+      : `Gol al ${goalMinute.value}' registrado`
   await matchStore.fetchMatches()
 }
 
@@ -163,7 +169,7 @@ async function finishMatch() {
 
       <section class="space-y-3 rounded-lg border border-mundial-accent/30 bg-mundial-accent/5 p-3">
         <h3 class="text-sm font-semibold text-mundial-accent">Registrar gol</h3>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-3 gap-2">
           <label class="block text-xs">
             Equipo
             <select
@@ -184,7 +190,20 @@ async function finishMatch() {
               class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
             />
           </label>
+          <label class="block text-xs">
+            Segundos
+            <input
+              v-model.number="goalSecond"
+              type="number"
+              min="0"
+              max="59"
+              class="mt-1 w-full rounded-lg border border-white/10 bg-mundial-dark px-2 py-1.5 text-sm"
+            />
+          </label>
         </div>
+        <p class="text-xs text-slate-500">
+          Desde el segundo 30 cuenta como el siguiente minuto para puntuar (ej. 34:45 → casillero 35).
+        </p>
         <button
           type="button"
           class="w-full rounded-lg bg-mundial-accent py-2 text-xs font-semibold disabled:opacity-50"
