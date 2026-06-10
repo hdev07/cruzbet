@@ -148,7 +148,8 @@ async function finishMatch() {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:space-y-0">
+    <div class="space-y-6 lg:sticky lg:top-24">
     <div class="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
       <p>
         <strong class="text-slate-200">{{ matchStore.matches.length }} partidos</strong> del seed
@@ -190,7 +191,9 @@ async function finishMatch() {
         </option>
       </select>
     </label>
+    </div>
 
+    <div class="space-y-6">
     <template v-if="selectedMatch">
       <header class="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
         <p class="mb-1 text-xs text-slate-400">
@@ -292,5 +295,6 @@ async function finishMatch() {
 
     <p v-if="message" class="text-sm text-mundial-green">{{ message }}</p>
     <p v-if="error" class="text-sm text-red-400">{{ error }}</p>
+    </div>
   </div>
 </template>

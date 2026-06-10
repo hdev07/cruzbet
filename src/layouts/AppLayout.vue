@@ -18,18 +18,38 @@ const navItems: { to: string; label: string; icon: Component }[] = [
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col pb-20">
+  <div class="flex min-h-screen flex-col pb-20 lg:pb-0">
     <header class="sticky top-0 z-40 border-b border-white/10 bg-mundial-dark/95 backdrop-blur">
-      <div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
-        <RouterLink to="/" class="text-lg font-bold text-mundial-accent">
+      <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:px-8">
+        <RouterLink to="/" class="shrink-0 text-lg font-bold text-mundial-accent lg:text-xl">
           {{ APP_NAME }}
         </RouterLink>
 
-        <div v-if="auth.isLoggedIn" class="flex items-center gap-2">
+        <nav
+          v-if="route.path !== '/login'"
+          class="hidden flex-1 items-center justify-center gap-1 lg:flex"
+        >
+          <RouterLink
+            v-for="item in navItems"
+            :key="item.to"
+            :to="item.to"
+            class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition"
+            :class="
+              route.path === item.to
+                ? 'bg-mundial-accent/15 text-mundial-accent'
+                : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+            "
+          >
+            <component :is="item.icon" class="h-4 w-4" :stroke-width="2" />
+            {{ item.label }}
+          </RouterLink>
+        </nav>
+
+        <div v-if="auth.isLoggedIn" class="flex shrink-0 items-center gap-2 lg:gap-3">
           <RouterLink
             v-if="auth.isAdmin"
             to="/admin"
-            class="rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold text-slate-300"
+            class="rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold text-slate-300 lg:px-3 lg:py-1.5 lg:text-sm"
           >
             Admin
           </RouterLink>
@@ -42,25 +62,31 @@ const navItems: { to: string; label: string; icon: Component }[] = [
               v-if="auth.profile?.avatar"
               :src="auth.profile.avatar"
               :alt="auth.profile.username ?? 'Usuario'"
-              class="h-8 w-8 rounded-full border border-white/20"
+              class="h-8 w-8 rounded-full border border-white/20 lg:h-9 lg:w-9"
             />
-            <span v-else class="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs">
+            <span
+              v-else
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs lg:h-9 lg:w-9"
+            >
               {{ auth.profile?.username?.[0]?.toUpperCase() ?? '?' }}
+            </span>
+            <span class="hidden text-sm font-medium lg:inline">
+              {{ auth.profile?.username ?? 'Perfil' }}
             </span>
           </RouterLink>
         </div>
 
-        <div v-else-if="route.path !== '/login'" class="flex items-center gap-2">
+        <div v-else-if="route.path !== '/login'" class="flex shrink-0 items-center gap-2">
           <RouterLink
             v-if="auth.isAdmin"
             to="/admin"
-            class="rounded-lg bg-white/10 px-2 py-1.5 text-xs font-semibold"
+            class="rounded-lg bg-white/10 px-2 py-1.5 text-xs font-semibold lg:px-3 lg:text-sm"
           >
             Admin
           </RouterLink>
           <RouterLink
             to="/login"
-            class="rounded-lg bg-mundial-accent px-3 py-1.5 text-sm font-semibold"
+            class="rounded-lg bg-mundial-accent px-3 py-1.5 text-sm font-semibold lg:px-4 lg:py-2"
           >
             Entrar
           </RouterLink>
@@ -68,13 +94,13 @@ const navItems: { to: string; label: string; icon: Component }[] = [
       </div>
     </header>
 
-    <main class="mx-auto w-full max-w-lg flex-1 px-4 py-6">
+    <main class="mx-auto w-full max-w-lg flex-1 px-4 py-6 lg:max-w-7xl lg:px-8 lg:py-8">
       <slot />
     </main>
 
     <nav
       v-if="route.path !== '/login'"
-      class="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-mundial-dark/95 backdrop-blur"
+      class="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-mundial-dark/95 backdrop-blur lg:hidden"
     >
       <div class="mx-auto flex max-w-lg">
         <RouterLink

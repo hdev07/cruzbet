@@ -30,8 +30,8 @@ async function copyValue(value: string, field: string) {
 
 <template>
   <div>
-    <h1 class="mb-2 text-2xl font-bold">Reglas y pagos</h1>
-    <p class="mb-6 text-sm text-slate-400">
+    <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Reglas y pagos</h1>
+    <p class="mb-6 text-sm text-slate-400 lg:text-base">
       Cuota de ${{ ENTRY_FEE_MXN }} MXN por partido · depósito a cuenta bancaria
     </p>
 
@@ -127,85 +127,89 @@ async function copyValue(value: string, field: string) {
       </div>
     </section>
 
-    <section class="mb-8">
-      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        Límites por partido
-      </h2>
-      <ul class="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
-        <li
-          v-for="limit in PREDICTION_LIMITS"
-          :key="limit.label"
-          class="flex items-center justify-between gap-3"
-        >
-          <span class="text-slate-400">{{ limit.label }}</span>
-          <strong class="tabular-nums text-mundial-accent">{{ limit.value }}</strong>
-        </li>
-      </ul>
-    </section>
-
-    <section class="mb-8">
-      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        Puntos — predicción de gol
-      </h2>
-      <ul class="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
-        <li
-          v-for="rule in SCORING_RULES"
-          :key="rule.label"
-          class="flex items-center justify-between gap-3"
-        >
-          <span class="text-slate-400">{{ rule.label }}</span>
-          <strong class="tabular-nums text-mundial-accent">{{ rule.points }} pts</strong>
-        </li>
-      </ul>
-    </section>
-
-    <section class="mb-8">
-      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-green">
-        {{ MATCH_WINNER_LOGIC.title }}
-      </h2>
-      <p class="mb-4 text-sm text-slate-400">{{ MATCH_WINNER_LOGIC.summary }}</p>
-      <ol class="space-y-3">
-        <li
-          v-for="(step, index) in MATCH_WINNER_LOGIC.steps"
-          :key="step.title"
-          class="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4"
-        >
-          <span
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-mundial-green/20 text-sm font-bold text-mundial-green"
+    <div class="mb-8 grid gap-8 lg:grid-cols-2">
+      <section>
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
+          Límites por partido
+        </h2>
+        <ul class="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
+          <li
+            v-for="limit in PREDICTION_LIMITS"
+            :key="limit.label"
+            class="flex items-center justify-between gap-3"
           >
-            {{ index + 1 }}
-          </span>
-          <div>
-            <p class="font-semibold text-slate-200">{{ step.title }}</p>
-            <p class="mt-0.5 text-sm text-slate-400">{{ step.description }}</p>
-          </div>
-        </li>
-      </ol>
-    </section>
+            <span class="text-slate-400">{{ limit.label }}</span>
+            <strong class="tabular-nums text-mundial-accent">{{ limit.value }}</strong>
+          </li>
+        </ul>
+      </section>
 
-    <section class="mb-8">
-      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
-        {{ GLOBAL_WINNER_LOGIC.title }}
-      </h2>
-      <p class="mb-4 text-sm text-slate-400">{{ GLOBAL_WINNER_LOGIC.summary }}</p>
-      <ol class="space-y-3">
-        <li
-          v-for="(step, index) in GLOBAL_WINNER_LOGIC.steps"
-          :key="step.title"
-          class="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4"
-        >
-          <span
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-slate-300"
+      <section>
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
+          Puntos — predicción de gol
+        </h2>
+        <ul class="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
+          <li
+            v-for="rule in SCORING_RULES"
+            :key="rule.label"
+            class="flex items-center justify-between gap-3"
           >
-            {{ index + 1 }}
-          </span>
-          <div>
-            <p class="font-semibold text-slate-200">{{ step.title }}</p>
-            <p class="mt-0.5 text-sm text-slate-400">{{ step.description }}</p>
-          </div>
-        </li>
-      </ol>
-    </section>
+            <span class="text-slate-400">{{ rule.label }}</span>
+            <strong class="tabular-nums text-mundial-accent">{{ rule.points }} pts</strong>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="mb-8 grid gap-8 lg:grid-cols-2">
+      <section>
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-green">
+          {{ MATCH_WINNER_LOGIC.title }}
+        </h2>
+        <p class="mb-4 text-sm text-slate-400">{{ MATCH_WINNER_LOGIC.summary }}</p>
+        <ol class="space-y-3">
+          <li
+            v-for="(step, index) in MATCH_WINNER_LOGIC.steps"
+            :key="step.title"
+            class="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4"
+          >
+            <span
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-mundial-green/20 text-sm font-bold text-mundial-green"
+            >
+              {{ index + 1 }}
+            </span>
+            <div>
+              <p class="font-semibold text-slate-200">{{ step.title }}</p>
+              <p class="mt-0.5 text-sm text-slate-400">{{ step.description }}</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
+          {{ GLOBAL_WINNER_LOGIC.title }}
+        </h2>
+        <p class="mb-4 text-sm text-slate-400">{{ GLOBAL_WINNER_LOGIC.summary }}</p>
+        <ol class="space-y-3">
+          <li
+            v-for="(step, index) in GLOBAL_WINNER_LOGIC.steps"
+            :key="step.title"
+            class="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4"
+          >
+            <span
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-slate-300"
+            >
+              {{ index + 1 }}
+            </span>
+            <div>
+              <p class="font-semibold text-slate-200">{{ step.title }}</p>
+              <p class="mt-0.5 text-sm text-slate-400">{{ step.description }}</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+    </div>
 
     <section>
       <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">

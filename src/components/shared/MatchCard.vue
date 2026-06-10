@@ -16,7 +16,7 @@ const phaseLabels: Record<string, string> = {
 <template>
   <RouterLink
     :to="`/match/${match.id}`"
-    class="block rounded-xl border border-white/10 bg-white/5 p-4 transition hover:border-mundial-accent/50 hover:bg-white/10"
+    class="block rounded-xl border border-white/10 bg-white/5 p-4 transition hover:border-mundial-accent/50 hover:bg-white/10 lg:p-5"
     :class="{ 'ring-2 ring-mundial-green animate-pulse': match.status === 'live' }"
   >
     <div class="mb-2 flex items-center justify-between text-xs text-slate-400">

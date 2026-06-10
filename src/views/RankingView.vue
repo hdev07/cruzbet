@@ -18,18 +18,18 @@ onMounted(async () => {
 
 <template>
   <div>
-    <h1 class="mb-2 text-2xl font-bold">Ranking</h1>
-    <p class="mb-6 text-sm text-slate-400">Compite con otros predictores</p>
+    <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Ranking</h1>
+    <p class="mb-6 text-sm text-slate-400 lg:text-base">Compite con otros predictores</p>
 
     <div
       v-if="auth.isLoggedIn && auth.profile"
-      class="mb-6 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-4"
+      class="mb-6 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-4 lg:max-w-sm lg:p-6"
     >
       <p class="text-xs text-slate-400">Tus puntos</p>
       <p class="text-3xl font-bold text-mundial-accent">{{ auth.profile.points }}</p>
     </div>
 
-    <div class="mb-4 flex gap-2 rounded-lg bg-white/5 p-1">
+    <div class="mb-4 flex gap-2 rounded-lg bg-white/5 p-1 lg:max-w-md">
       <button
         class="flex-1 rounded-md py-2 text-sm font-medium transition"
         :class="activeTab === 'global' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
@@ -56,7 +56,7 @@ onMounted(async () => {
         Aún no hay puntos. ¡Sé el primero en predecir!
       </div>
 
-      <ol v-else class="space-y-2">
+      <ol v-else class="space-y-2 lg:max-w-2xl">
         <li
           v-for="(player, index) in ranking.leaders"
           :key="player.id"
@@ -103,24 +103,30 @@ onMounted(async () => {
       </p>
     </div>
 
-    <div class="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-slate-500">
-      <p class="mb-1 font-semibold text-slate-300">{{ MATCH_WINNER_LOGIC.title }}</p>
-      <p class="mb-3">{{ MATCH_WINNER_LOGIC.summary }}</p>
-      <p class="mb-1 font-semibold text-slate-300">{{ GLOBAL_WINNER_LOGIC.title }}</p>
-      <p class="mb-4">{{ GLOBAL_WINNER_LOGIC.summary }}</p>
-      <p class="mb-2 font-semibold text-slate-400">Puntos — predicción de gol (cada una)</p>
-      <ul class="space-y-1">
-        <li v-for="rule in SCORING_RULES" :key="rule.label">
-          {{ rule.label }}: <strong class="text-slate-300">{{ rule.points }} pts</strong>
-        </li>
-      </ul>
-      <p class="mb-2 mt-4 font-semibold text-slate-400">Puntos — marcador final</p>
-      <ul class="space-y-1">
-        <li v-for="rule in SCORE_SCORING_RULES" :key="rule.label">
-          {{ rule.label }}: <strong class="text-slate-300">{{ rule.points }} pts</strong>
-        </li>
-      </ul>
-      <RouterLink to="/reglas" class="mt-3 inline-flex items-center gap-1 text-mundial-accent hover:underline">
+    <div class="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-slate-500 lg:p-6 lg:text-sm">
+      <div class="lg:grid lg:grid-cols-2 lg:gap-6">
+        <div>
+          <p class="mb-1 font-semibold text-slate-300">{{ MATCH_WINNER_LOGIC.title }}</p>
+          <p class="mb-3">{{ MATCH_WINNER_LOGIC.summary }}</p>
+          <p class="mb-2 font-semibold text-slate-400">Puntos — predicción de gol (cada una)</p>
+          <ul class="space-y-1">
+            <li v-for="rule in SCORING_RULES" :key="rule.label">
+              {{ rule.label }}: <strong class="text-slate-300">{{ rule.points }} pts</strong>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <p class="mb-1 font-semibold text-slate-300">{{ GLOBAL_WINNER_LOGIC.title }}</p>
+          <p class="mb-4">{{ GLOBAL_WINNER_LOGIC.summary }}</p>
+          <p class="mb-2 font-semibold text-slate-400">Puntos — marcador final</p>
+          <ul class="space-y-1">
+            <li v-for="rule in SCORE_SCORING_RULES" :key="rule.label">
+              {{ rule.label }}: <strong class="text-slate-300">{{ rule.points }} pts</strong>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <RouterLink to="/reglas" class="mt-4 inline-flex items-center gap-1 text-mundial-accent hover:underline">
         Ver reglas completas y pagos
         <ChevronRight class="h-4 w-4" />
       </RouterLink>

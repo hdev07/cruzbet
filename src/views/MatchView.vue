@@ -57,100 +57,116 @@ async function loadPredictionData() {
     <p v-else-if="!match" class="text-red-300">Partido no encontrado</p>
 
     <template v-else>
-      <header class="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
-        <p class="mb-1 inline-flex items-center justify-center gap-1 text-xs text-slate-400">
-          <Trophy class="h-3.5 w-3.5" />
-          Mundial 2026
-        </p>
-        <p
-          v-if="match.status === 'live'"
-          class="mb-3 inline-flex items-center gap-1.5 rounded-full bg-mundial-green px-3 py-0.5 text-sm font-semibold"
-        >
-          <Radio class="h-3.5 w-3.5 animate-pulse" />
-          EN VIVO · {{ match.current_minute ?? 0 }}'
-        </p>
-        <p v-else-if="match.status === 'finished'" class="mb-3 text-sm text-slate-400">Finalizado</p>
-        <p v-else-if="kickoffLabel" class="mb-3 text-sm text-slate-400">
-          Inicio: {{ kickoffLabel }}
-        </p>
-        <p v-else class="mb-3 text-sm text-slate-400">Programado</p>
+      <div class="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
+        <div class="lg:col-span-2">
+          <header class="rounded-xl border border-white/10 bg-white/5 p-6 text-center lg:p-8">
+            <p class="mb-1 inline-flex items-center justify-center gap-1 text-xs text-slate-400">
+              <Trophy class="h-3.5 w-3.5" />
+              Mundial 2026
+            </p>
+            <p
+              v-if="match.status === 'live'"
+              class="mb-3 inline-flex items-center gap-1.5 rounded-full bg-mundial-green px-3 py-0.5 text-sm font-semibold"
+            >
+              <Radio class="h-3.5 w-3.5 animate-pulse" />
+              EN VIVO · {{ match.current_minute ?? 0 }}'
+            </p>
+            <p v-else-if="match.status === 'finished'" class="mb-3 text-sm text-slate-400">Finalizado</p>
+            <p v-else-if="kickoffLabel" class="mb-3 text-sm text-slate-400">
+              Inicio: {{ kickoffLabel }}
+            </p>
+            <p v-else class="mb-3 text-sm text-slate-400">Programado</p>
 
-        <div class="flex items-center justify-center gap-4">
-          <div class="flex flex-1 flex-col items-center gap-2">
-            <img
-              v-if="match.home_team?.flag_url"
-              :src="match.home_team.flag_url"
-              :alt="match.home_team.name"
-              class="h-12 w-12 object-contain"
-            />
-            <p class="text-sm font-bold">{{ match.home_team?.name }}</p>
-          </div>
-          <p class="text-4xl font-bold tabular-nums">{{ match.home_score }} - {{ match.away_score }}</p>
-          <div class="flex flex-1 flex-col items-center gap-2">
-            <img
-              v-if="match.away_team?.flag_url"
-              :src="match.away_team.flag_url"
-              :alt="match.away_team.name"
-              class="h-12 w-12 object-contain"
-            />
-            <p class="text-sm font-bold">{{ match.away_team?.name }}</p>
-          </div>
-        </div>
-      </header>
+            <div class="flex items-center justify-center gap-4 lg:gap-8">
+              <div class="flex flex-1 flex-col items-center gap-2">
+                <img
+                  v-if="match.home_team?.flag_url"
+                  :src="match.home_team.flag_url"
+                  :alt="match.home_team.name"
+                  class="h-12 w-12 object-contain lg:h-16 lg:w-16"
+                />
+                <p class="text-sm font-bold lg:text-base">{{ match.home_team?.name }}</p>
+              </div>
+              <p class="text-4xl font-bold tabular-nums lg:text-5xl">
+                {{ match.home_score }} - {{ match.away_score }}
+              </p>
+              <div class="flex flex-1 flex-col items-center gap-2">
+                <img
+                  v-if="match.away_team?.flag_url"
+                  :src="match.away_team.flag_url"
+                  :alt="match.away_team.name"
+                  class="h-12 w-12 object-contain lg:h-16 lg:w-16"
+                />
+                <p class="text-sm font-bold lg:text-base">{{ match.away_team?.name }}</p>
+              </div>
+            </div>
+          </header>
 
-      <div
-        v-if="!auth.isLoggedIn"
-        class="mt-6 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-6 text-center"
-      >
-        <p class="mb-4 text-sm text-slate-300">Inicia sesión para hacer tu predicción</p>
-        <RouterLink to="/login" class="inline-block rounded-lg bg-mundial-accent px-6 py-2 font-semibold">
-          Entrar con Google
-        </RouterLink>
-      </div>
-
-      <template v-else>
-        <MatchPredictionsPanel
-          v-if="canPredict || hasPredictions"
-          class="mt-6"
-          :match="match"
-          :user-id="userId"
-          :predictions="myPredictions"
-          :can-predict="!!canPredict"
-          :edit-hint="editHint"
-          @updated="loadPredictionData"
-        />
-
-        <div
-          v-else
-          class="mt-6 rounded-xl border border-white/10 bg-white/5 p-6 text-center text-slate-400"
-        >
-          Las predicciones cerraron al iniciar este partido.
-        </div>
-      </template>
-
-      <section v-if="goals.length" class="mt-6">
-        <h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">Goles</h2>
-        <ul class="space-y-1 text-sm">
-          <li v-for="goal in goals" :key="goal.id" class="text-slate-300">
-            {{ goal.minute }}' — {{ goal.teams?.name ?? 'Equipo' }}
-          </li>
-        </ul>
-      </section>
-
-      <section v-if="matchRanking.length && match.status === 'finished'" class="mt-8">
-        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Top del partido</h2>
-        <ol class="space-y-2">
-          <li
-            v-for="(entry, index) in matchRanking"
-            :key="entry.user_id"
-            class="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+          <div
+            v-if="!auth.isLoggedIn"
+            class="mt-6 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-6 text-center lg:p-8"
           >
-            <span class="w-5 text-sm text-slate-500">{{ index + 1 }}</span>
-            <span class="flex-1 text-sm">{{ entry.profiles?.username ?? 'Anónimo' }}</span>
-            <span class="font-bold tabular-nums text-mundial-accent">{{ entry.points }}</span>
-          </li>
-        </ol>
-      </section>
+            <p class="mb-4 text-sm text-slate-300">Inicia sesión para hacer tu predicción</p>
+            <RouterLink to="/login" class="inline-block rounded-lg bg-mundial-accent px-6 py-2 font-semibold">
+              Entrar con Google
+            </RouterLink>
+          </div>
+
+          <template v-else>
+            <MatchPredictionsPanel
+              v-if="canPredict || hasPredictions"
+              class="mt-6"
+              :match="match"
+              :user-id="userId"
+              :predictions="myPredictions"
+              :can-predict="!!canPredict"
+              :edit-hint="editHint"
+              @updated="loadPredictionData"
+            />
+
+            <div
+              v-else
+              class="mt-6 rounded-xl border border-white/10 bg-white/5 p-6 text-center text-slate-400 lg:p-8"
+            >
+              Las predicciones cerraron al iniciar este partido.
+            </div>
+          </template>
+        </div>
+
+        <aside class="mt-6 space-y-6 lg:mt-0">
+          <section v-if="goals.length" class="rounded-xl border border-white/10 bg-white/5 p-4 lg:p-5">
+            <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Goles</h2>
+            <ul class="space-y-2 text-sm">
+              <li
+                v-for="goal in goals"
+                :key="goal.id"
+                class="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-slate-300"
+              >
+                <span>{{ goal.teams?.name ?? 'Equipo' }}</span>
+                <span class="font-semibold tabular-nums text-mundial-accent">{{ goal.minute }}'</span>
+              </li>
+            </ul>
+          </section>
+
+          <section
+            v-if="matchRanking.length && match.status === 'finished'"
+            class="rounded-xl border border-white/10 bg-white/5 p-4 lg:p-5"
+          >
+            <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Top del partido</h2>
+            <ol class="space-y-2">
+              <li
+                v-for="(entry, index) in matchRanking"
+                :key="entry.user_id"
+                class="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+              >
+                <span class="w-5 text-sm text-slate-500">{{ index + 1 }}</span>
+                <span class="flex-1 text-sm">{{ entry.profiles?.username ?? 'Anónimo' }}</span>
+                <span class="font-bold tabular-nums text-mundial-accent">{{ entry.points }}</span>
+              </li>
+            </ol>
+          </section>
+        </aside>
+      </div>
     </template>
   </div>
 </template>

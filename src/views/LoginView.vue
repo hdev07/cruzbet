@@ -25,8 +25,8 @@ async function loginWithGoogle() {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center bg-mundial-dark px-6">
-    <div class="w-full max-w-sm text-center">
+  <div class="flex min-h-screen flex-col items-center justify-center bg-mundial-dark px-6 lg:px-8">
+    <div class="w-full max-w-sm text-center lg:max-w-md lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/5 lg:p-10 lg:shadow-xl">
       <Target class="mx-auto mb-2 h-14 w-14 text-mundial-accent" :stroke-width="1.5" />
       <h1 class="mb-2 text-3xl font-bold text-mundial-accent">{{ APP_NAME }}</h1>
       <p class="mb-8 text-slate-400">

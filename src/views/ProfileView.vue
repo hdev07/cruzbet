@@ -38,9 +38,10 @@ async function handleLogout() {
 
 <template>
   <div>
-    <h1 class="mb-6 text-2xl font-bold">Mi perfil</h1>
+    <h1 class="mb-6 text-2xl font-bold lg:text-3xl">Mi perfil</h1>
 
-    <div class="mb-6 flex flex-col items-center rounded-xl border border-white/10 bg-white/5 p-6 text-center">
+    <div class="mb-6 grid gap-6 lg:grid-cols-2">
+    <div class="flex flex-col items-center rounded-xl border border-white/10 bg-white/5 p-6 text-center lg:p-8">
       <img
         v-if="auth.profile?.avatar"
         :src="auth.profile.avatar"
@@ -62,15 +63,16 @@ async function handleLogout() {
       </p>
     </div>
 
-    <div class="mb-6 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-5 text-center">
+    <div class="flex flex-col items-center justify-center rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-5 text-center lg:p-8">
       <p class="text-xs text-slate-400">Puntos acumulados</p>
-      <p class="text-4xl font-bold tabular-nums text-mundial-accent">
+      <p class="text-4xl font-bold tabular-nums text-mundial-accent lg:text-5xl">
         {{ auth.profile?.points ?? 0 }}
       </p>
       <RouterLink to="/ranking" class="mt-2 inline-flex items-center gap-1 text-sm text-mundial-accent hover:underline">
         Ver ranking
         <ChevronRight class="h-4 w-4" />
       </RouterLink>
+    </div>
     </div>
 
     <UserPredictionsList
@@ -80,48 +82,50 @@ async function handleLogout() {
       empty-message="Aún no has hecho predicciones. Elige un partido en inicio y agrega tus goles y marcadores."
     />
 
-    <section class="mb-6 space-y-2">
-      <h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        Accesos rápidos
-      </h2>
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section class="space-y-2">
+        <h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
+          Accesos rápidos
+        </h2>
 
-      <RouterLink
-        to="/reglas"
-        class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
-      >
-        <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-          <Settings class="h-4 w-4 text-slate-400" />
-          Reglas y pagos
-        </span>
-        <ChevronRight class="h-4 w-4 text-slate-500" />
-      </RouterLink>
+        <RouterLink
+          to="/reglas"
+          class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
+        >
+          <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
+            <Settings class="h-4 w-4 text-slate-400" />
+            Reglas y pagos
+          </span>
+          <ChevronRight class="h-4 w-4 text-slate-500" />
+        </RouterLink>
 
-      <RouterLink
-        v-if="auth.isAdmin"
-        to="/admin"
-        class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
-      >
-        <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-          <Shield class="h-4 w-4 text-slate-400" />
-          Panel de admin
-        </span>
-        <ChevronRight class="h-4 w-4 text-slate-500" />
-      </RouterLink>
-    </section>
+        <RouterLink
+          v-if="auth.isAdmin"
+          to="/admin"
+          class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
+        >
+          <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
+            <Shield class="h-4 w-4 text-slate-400" />
+            Panel de admin
+          </span>
+          <ChevronRight class="h-4 w-4 text-slate-500" />
+        </RouterLink>
+      </section>
 
-    <section>
-      <h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        Cuenta
-      </h2>
-      <button
-        type="button"
-        class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
-        :disabled="loggingOut"
-        @click="handleLogout"
-      >
-        <LogOut class="h-4 w-4" />
-        {{ loggingOut ? 'Cerrando sesión...' : 'Cerrar sesión' }}
-      </button>
-    </section>
+      <section>
+        <h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
+          Cuenta
+        </h2>
+        <button
+          type="button"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+          :disabled="loggingOut"
+          @click="handleLogout"
+        >
+          <LogOut class="h-4 w-4" />
+          {{ loggingOut ? 'Cerrando sesión...' : 'Cerrar sesión' }}
+        </button>
+      </section>
+    </div>
   </div>
 </template>
