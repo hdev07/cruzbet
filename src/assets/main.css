@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-mundial-dark: #1a1a2e;
+  --color-mundial-accent: #e94560;
+  --color-mundial-green: #16a34a;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-mundial-dark);
+  color: #f1f5f9;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+#app {
+  min-height: 100vh;
+}

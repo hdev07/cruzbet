@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="96" fill="#1a1a2e"/>
+  <circle cx="256" cy="220" r="140" fill="#e94560" opacity="0.15"/>
+  <circle cx="256" cy="220" r="96" stroke="#e94560" stroke-width="8" fill="none"/>
+  <path d="M256 132 L288 196 L256 172 L224 196 Z" fill="#e94560"/>
+  <path d="M256 308 L224 244 L256 268 L288 244 Z" fill="#e94560"/>
+  <path d="M168 220 L232 188 L208 220 L232 252 Z" fill="#e94560"/>
+  <path d="M344 220 L280 252 L304 220 L280 188 Z" fill="#e94560"/>
+  <text x="256" y="420" text-anchor="middle" fill="#e94560" font-family="system-ui,sans-serif" font-size="72" font-weight="800" letter-spacing="-2">CruzBet</text>
+</svg>
