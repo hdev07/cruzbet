@@ -67,6 +67,17 @@ begin
 end;
 $$;
 
+-- Helper: admin vía app_metadata.role o email del organizador
+create or replace function public.is_jwt_admin()
+returns boolean
+language sql
+stable
+as $$
+  select
+    (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+    or lower(coalesce(auth.jwt() ->> 'email', '')) = 'hcruz0716@gmail.com';
+$$;
+
 -- 3) RPC admin: marcar depósito verificado / no verificado
 create or replace function public.admin_set_payment_verified(
   p_user_id uuid,
@@ -79,7 +90,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if auth.jwt() ->> 'role' is distinct from 'admin' then
+  if not public.is_jwt_admin() then
     raise exception 'No autorizado';
   end if;
 
@@ -203,8 +214,8 @@ create policy "match_payments_select" on match_payments
 drop policy if exists "match_payments_admin_write" on match_payments;
 create policy "match_payments_admin_write" on match_payments
   for all to authenticated
-  using (auth.jwt() ->> 'role' = 'admin')
-  with check (auth.jwt() ->> 'role' = 'admin');
+  using (public.is_jwt_admin())
+  with check (public.is_jwt_admin());
 
 grant select on match_payments to anon, authenticated;
 grant insert, update, delete on match_payments to authenticated;

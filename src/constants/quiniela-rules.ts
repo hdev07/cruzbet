@@ -1,7 +1,22 @@
 export const ENTRY_FEE_MXN = 10
 
-export const MAX_GOAL_PREDICTIONS_PER_MATCH = 5
+export const MAX_GOAL_PREDICTIONS_PER_MATCH = 3
 export const MAX_SCORE_PREDICTIONS_PER_MATCH = 2
+
+export type SimpleRuleExample = {
+  id: string
+  title: string
+  emoji?: string
+  youSaid: string
+  whatHappened: string
+  youGet: string
+  extra?: string
+}
+
+export type RuleAlertSection = {
+  title: string
+  bullets: readonly string[]
+}
 
 export const PAYMENT_INFO = {
   beneficiary: 'Hector Alejandro Cruz Solis',
@@ -23,11 +38,13 @@ export const HOW_IT_WORKS = [
   },
   {
     title: 'Predice goles y marcadores',
-    description: 'Hasta 5 predicciones de gol (minuto + equipo) y hasta 2 marcadores finales por partido. Solo antes de que empiece.',
+    description:
+      'Puedes poner hasta 3 goles (minuto + quién mete el gol) y hasta 2 marcadores finales. Si quieres solo pones 1. Nadie te obliga a llenar todo.',
   },
   {
     title: 'Suma puntos',
-    description: 'Al finalizar el partido se calculan los puntos de cada predicción por separado.',
+    description:
+      'Cuando acaba el partido se revisa cada cosa que pusiste. Lo que aciertas suma. Lo que fallas vale 0 — no te quitan puntos.',
   },
   {
     title: 'Compite en el ranking',
@@ -36,27 +53,211 @@ export const HOW_IT_WORKS = [
 ] as const
 
 export const SCORING_RULES = [
-  { label: 'Minuto exacto + equipo correcto (por gol predicho)', points: 50 },
-  { label: '±1 minuto + equipo correcto', points: 25 },
-  { label: '±3 minutos + equipo correcto', points: 10 },
-  { label: 'Solo equipo correcto', points: 5 },
+  { label: 'Aciertas minuto exacto y quién metió el gol', points: 50 },
+  { label: 'Te falla el minuto por 1, pero el equipo sí', points: 25 },
+  { label: 'Te falla el minuto por 2 o 3, pero el equipo sí', points: 10 },
+  { label: 'Solo aciertas el equipo (el minuto muy lejos)', points: 5 },
 ] as const
 
 export const SCORE_SCORING_RULES = [
-  { label: 'Marcador exacto (por predicción)', points: 30 },
-  { label: 'Resultado correcto (ganador o empate)', points: 10 },
+  { label: 'Aciertas el marcador tal cual (ej. 2-1 y queda 2-1)', points: 30 },
+  { label: 'No aciertas marcador, pero sí quién gana o empate', points: 10 },
 ] as const
 
 export const PREDICTION_LIMITS = [
-  { label: 'Predicciones de gol por partido', value: MAX_GOAL_PREDICTIONS_PER_MATCH },
-  { label: 'Predicciones de marcador por partido', value: MAX_SCORE_PREDICTIONS_PER_MATCH },
+  { label: 'Predicciones de gol por partido (máximo)', value: MAX_GOAL_PREDICTIONS_PER_MATCH },
+  { label: 'Predicciones de marcador por partido (máximo)', value: MAX_SCORE_PREDICTIONS_PER_MATCH },
+  { label: 'Mínimo requerido por partido', value: '1 gol o 1 marcador' },
 ] as const
+
+export const GOAL_PREDICTION_EXAMPLES: readonly SimpleRuleExample[] = [
+  {
+    id: 'gol-uno',
+    emoji: '⚽',
+    title: 'Solo puse UN gol y ya',
+    youSaid: 'El local mete gol al minuto 23.',
+    whatHappened: 'Sí cayó un gol del local al minuto 23.',
+    youGet: '50 puntos. Listo.',
+    extra: 'No necesitas llenar los 3 goles. Con uno solo ya juegas normal.',
+  },
+  {
+    id: 'gol-tres',
+    emoji: '🎯',
+    title: 'Puse 3 goles distintos',
+    youSaid: 'Gol 1: local min 10. Gol 2: local min 23. Gol 3: visitante min 67.',
+    whatHappened:
+      'En el partido hubo goles al 12, 23 y 68. El del 10 no pasó. El del 23 sí. El del 67 casi (cayó al 68).',
+    youGet: 'Gol 1 = 5 pts. Gol 2 = 50 pts. Gol 3 = 25 pts. Total = 80 puntos.',
+    extra: 'Cada gol que pusiste se revisa por su cuenta. Uno no le quita puntos al otro.',
+  },
+  {
+    id: 'gol-equipo-mal',
+    emoji: '❌',
+    title: 'Aciertas el minuto pero fallas el equipo',
+    youSaid: 'El local mete gol al minuto 23.',
+    whatHappened: 'Al minuto 23 metió gol el visitante, no el local.',
+    youGet: '0 puntos en ESE gol. Pero tus otros goles o marcadores no se afectan.',
+    extra: 'Tiene que ser el equipo correcto. Si fallas el equipo, ese gol vale 0.',
+  },
+  {
+    id: 'gol-comparacion',
+    emoji: '🤝',
+    title: '¿Estoy en desventaja si solo pongo 1 gol?',
+    youSaid: 'Pedro pone 1 gol. Juan pone 3 goles.',
+    whatHappened: 'Los dos aciertan el gol del minuto 23.',
+    youGet: 'Pedro gana 50 pts por ese gol. Juan también gana 50 pts por ese mismo gol.',
+    extra: 'Pedro no pierde nada por no llenar todo. Juan puede ganar más si acierta sus otros goles.',
+  },
+] as const
+
+export const SCORE_PREDICTION_EXAMPLES: readonly SimpleRuleExample[] = [
+  {
+    id: 'marcador-exacto',
+    emoji: '🏆',
+    title: 'Aciertas el marcador exacto',
+    youSaid: 'Queda 2-1 (gana el local).',
+    whatHappened: 'Al final del partido quedó 2-1.',
+    youGet: '30 puntos.',
+    extra: 'Tiene que ser igualito: mismos goles del local y del visitante.',
+  },
+  {
+    id: 'marcador-casi',
+    emoji: '👍',
+    title: 'No aciertas marcador, pero sí quién gana',
+    youSaid: 'Queda 2-1 (gana el local).',
+    whatHappened: 'Al final quedó 3-1. No es el marcador exacto, pero el local sí ganó.',
+    youGet: '10 puntos (no 30, porque el marcador no fue exacto).',
+    extra: 'Con 10 pts ya sumaste algo. No te regañamos por no acertar el marcador exacto.',
+  },
+  {
+    id: 'marcador-dos',
+    emoji: '📋',
+    title: 'Puse 2 marcadores',
+    youSaid: 'Marcador 1: 2-1. Marcador 2: 3-1.',
+    whatHappened: 'Al final quedó 2-1.',
+    youGet: 'Marcador 1 = 30 pts (exacto). Marcador 2 = 10 pts (local ganó en ambos). Total = 40 pts.',
+    extra: 'Podías haber puesto solo uno y estar bien. El segundo es extra por si quieres más chances.',
+  },
+  {
+    id: 'marcador-mal',
+    emoji: '😅',
+    title: 'Te equivocas feo en el marcador',
+    youSaid: 'Queda 1-1 (empate).',
+    whatHappened: 'Al final quedó 2-1 (ganó el local). Ni empate ni marcador correcto.',
+    youGet: '0 puntos en ESE marcador. No te quitan lo que ganaste en otra cosa.',
+    extra: 'Fallar vale 0. Nunca restamos puntos.',
+  },
+  {
+    id: 'total-partido',
+    emoji: '🧮',
+    title: '¿Cómo se suma todo?',
+    youSaid: 'Pusiste 2 goles y 1 marcador en el mismo partido.',
+    whatHappened: 'Gol 1 te dio 50 pts. Gol 2 te dio 0 pts. Marcador te dio 30 pts.',
+    youGet: '50 + 0 + 30 = 80 puntos en total. Eso es lo que cuenta en el ranking.',
+    extra: 'Al final del partido se suman TODAS las cosas que pusiste. Más puntos = más arriba.',
+  },
+] as const
+
+/** Cómo se contabilizan las oportunidades extra de gol y marcador */
+export const MULTIPLE_PREDICTIONS_LOGIC = {
+  title: 'Las oportunidades extra (explicado fácil)',
+  summary:
+    'Puedes poner hasta 3 goles y 2 marcadores por partido. Si quieres pones 1 y ya. Nadie te obliga a llenar todo. Cada cosa que pones se revisa sola y los puntos se van sumando.',
+  steps: [
+    {
+      title: 'No tienes que llenar todo',
+      description:
+        'Con poner 1 gol o 1 marcador ya participas. Los demás son extras por si quieres más oportunidades de ganar puntos.',
+    },
+    {
+      title: 'Cada predicción va por separado',
+      description:
+        'Si pusiste 3 goles, al final revisamos gol 1, luego gol 2, luego gol 3. Lo que ganes en cada uno se suma.',
+    },
+    {
+      title: 'Si fallas, vale 0 (no te restan)',
+      description:
+        '¿Te equivocaste en un gol? Ese vale 0. ¿Pero acertaste otro? Ese sí suma. Nunca te quitamos puntos.',
+    },
+    {
+      title: 'Goles: tiene que ser el equipo correcto',
+      description:
+        'Si fallas quién metió el gol, ese vale 0 aunque el minuto esté cerca. Si aciertas equipo y minuto exacto = 50 pts.',
+    },
+    {
+      title: 'Marcador: exacto o casi',
+      description:
+        'Si aciertas el marcador tal cual (2-1 y queda 2-1) = 30 pts. Si no, pero sí aciertas quién gana o empate = 10 pts.',
+    },
+    {
+      title: '¿Conviene poner más predicciones?',
+      description:
+        'Más predicciones = más chances de sumar. Pero si solo pones una y la clavas, ganas lo mismo en esa que alguien que también la clavó.',
+    },
+  ],
+  goalExamples: GOAL_PREDICTION_EXAMPLES,
+  scoreExamples: SCORE_PREDICTION_EXAMPLES,
+} as const
+
+/** Aviso al guardar una predicción nueva (modal de confirmación) */
+export const PREDICTION_SAVE_ALERT = {
+  goal: {
+    title: '¿Guardamos este gol?',
+    subtitle: 'Lee esto rapidito antes de confirmar 👇',
+    sections: [
+      {
+        title: 'Lo básico',
+        bullets: [
+          'Cuando termine el partido revisamos este gol contra todos los goles reales.',
+          'Si aciertas minuto y equipo = 50 pts. Si te falla por 1 minuto = 25 pts.',
+          'Si fallas el equipo = 0 pts en este gol.',
+          'Puedes poner hasta 3 goles y 2 marcadores, pero NO es obligatorio.',
+        ],
+      },
+      {
+        title: 'Lo importante',
+        bullets: [
+          'Cada gol que pones se revisa por separado.',
+          'Si este falla, vale 0. No te quitan lo que ganes en otro.',
+          'Al final se suman todos tus puntos de ese partido.',
+        ],
+      },
+    ],
+    examples: [GOAL_PREDICTION_EXAMPLES[0]!, GOAL_PREDICTION_EXAMPLES[1]!],
+    confirm: 'Sí, guardar',
+  },
+  score: {
+    title: '¿Guardamos este marcador?',
+    subtitle: 'Lee esto rapidito antes de confirmar 👇',
+    sections: [
+      {
+        title: 'Lo básico',
+        bullets: [
+          'Cuando termine el partido comparamos con el marcador final.',
+          'Si aciertas tal cual (ej. 2-1 y queda 2-1) = 30 pts.',
+          'Si no aciertas marcador pero sí quién gana o empate = 10 pts.',
+          'Puedes poner hasta 2 marcadores, pero con 1 ya juegas.',
+        ],
+      },
+      {
+        title: 'Lo importante',
+        bullets: [
+          'Cada marcador se revisa por separado.',
+          'Si este falla, vale 0. No afecta a tus goles ni a tu otro marcador.',
+          'Al final se suman todos tus puntos de ese partido.',
+        ],
+      },
+    ],
+    examples: [SCORE_PREDICTION_EXAMPLES[0]!, SCORE_PREDICTION_EXAMPLES[1]!],
+    confirm: 'Sí, guardar',
+  },
+} as const
 
 export const PAYMENT_NOTES = [
   'La cuota es de $10 MXN por cada partido en el que quieras participar.',
   'Realiza el depósito o transferencia antes de guardar tu predicción.',
   'En el concepto o referencia escribe tu nombre de usuario para identificar el pago.',
-  'Hasta 5 predicciones de gol y 2 de marcador por partido; puedes agregar, editar o eliminar hasta que empiece.',
+  'Puedes poner hasta 3 goles y 2 marcadores por partido. Si quieres solo pones 1. Puedes cambiar todo hasta que empiece el partido.',
 ] as const
 
 /** Cómo se determina quién gana la quiniela de cada partido */

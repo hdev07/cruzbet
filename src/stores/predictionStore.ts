@@ -138,7 +138,9 @@ export const usePredictionStore = defineStore('prediction', () => {
 
       if (err) {
         if (err.code === '23505') throw new Error('Ya tienes esa predicción de gol')
-        if (err.message?.includes('Máximo 5')) throw new Error('Máximo 5 predicciones de gol por partido')
+        if (err.message?.includes('Máximo')) {
+          throw new Error(`Máximo ${MAX_GOAL_PREDICTIONS_PER_MATCH} predicciones de gol por partido`)
+        }
         throw err
       }
 
@@ -314,6 +316,23 @@ export const usePredictionStore = defineStore('prediction', () => {
       .slice(0, 20)
   }
 
+  async function fetchParticipantCountsByMatch(): Promise<Record<string, number>> {
+    const { data, error } = await supabase.from('predictions').select('match_id, user_id')
+    if (error) throw error
+
+    const byMatch = new Map<string, Set<string>>()
+    for (const row of data ?? []) {
+      const matchId = row.match_id as string
+      const userId = row.user_id as string
+      if (!byMatch.has(matchId)) byMatch.set(matchId, new Set())
+      byMatch.get(matchId)!.add(userId)
+    }
+
+    return Object.fromEntries(
+      [...byMatch.entries()].map(([matchId, users]) => [matchId, users.size]),
+    )
+  }
+
   async function fetchMatchParticipants(matchId: string): Promise<MatchParticipant[]> {
     const [{ data: preds, error: err }, { data: payments }] = await Promise.all([
       supabase.from('predictions').select('*').eq('match_id', matchId).order('created_at'),
@@ -408,6 +427,7 @@ export const usePredictionStore = defineStore('prediction', () => {
     updateScorePrediction,
     deletePrediction,
     fetchMatchRanking,
+    fetchParticipantCountsByMatch,
     fetchMatchParticipants,
     setPaymentVerified,
     fetchUserPredictions,

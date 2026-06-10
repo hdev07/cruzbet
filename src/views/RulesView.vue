@@ -8,10 +8,12 @@ import {
   PAYMENT_NOTES,
   GLOBAL_WINNER_LOGIC,
   MATCH_WINNER_LOGIC,
+  MULTIPLE_PREDICTIONS_LOGIC,
   PREDICTION_LIMITS,
   SCORE_SCORING_RULES,
   SCORING_RULES,
 } from '@/constants/quiniela-rules'
+import SimpleRuleExampleCard from '@/components/shared/SimpleRuleExampleCard.vue'
 
 const copiedField = ref<string | null>(null)
 
@@ -127,6 +129,53 @@ async function copyValue(value: string, field: string) {
       </div>
     </section>
 
+    <section class="mb-8">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-accent">
+        {{ MULTIPLE_PREDICTIONS_LOGIC.title }}
+      </h2>
+      <p class="mb-4 text-sm text-slate-400">{{ MULTIPLE_PREDICTIONS_LOGIC.summary }}</p>
+      <ol class="mb-6 space-y-3">
+        <li
+          v-for="(step, index) in MULTIPLE_PREDICTIONS_LOGIC.steps"
+          :key="step.title"
+          class="flex gap-3 rounded-xl border border-mundial-accent/20 bg-mundial-accent/5 p-4"
+        >
+          <span
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-mundial-accent/20 text-sm font-bold text-mundial-accent"
+          >
+            {{ index + 1 }}
+          </span>
+          <div>
+            <p class="font-semibold text-slate-200">{{ step.title }}</p>
+            <p class="mt-0.5 text-sm text-slate-400">{{ step.description }}</p>
+          </div>
+        </li>
+      </ol>
+      <div class="mb-8 space-y-4">
+        <h3 class="text-base font-bold text-mundial-accent">Ejemplos de goles (súper fácil)</h3>
+        <p class="text-sm text-slate-400">
+          Tú dijiste → Pasó esto → Ganas X puntos. Así de simple.
+        </p>
+        <SimpleRuleExampleCard
+          v-for="example in MULTIPLE_PREDICTIONS_LOGIC.goalExamples"
+          :key="example.id"
+          :example="example"
+        />
+      </div>
+
+      <div class="space-y-4">
+        <h3 class="text-base font-bold text-mundial-green">Ejemplos de marcadores (súper fácil)</h3>
+        <p class="text-sm text-slate-400">
+          Igual: cada marcador que pones se revisa solo. Abajo te lo explicamos con ejemplos.
+        </p>
+        <SimpleRuleExampleCard
+          v-for="example in MULTIPLE_PREDICTIONS_LOGIC.scoreExamples"
+          :key="example.id"
+          :example="example"
+        />
+      </div>
+    </section>
+
     <div class="mb-8 grid gap-8 lg:grid-cols-2">
       <section>
         <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
@@ -139,7 +188,12 @@ async function copyValue(value: string, field: string) {
             class="flex items-center justify-between gap-3"
           >
             <span class="text-slate-400">{{ limit.label }}</span>
-            <strong class="tabular-nums text-mundial-accent">{{ limit.value }}</strong>
+            <strong
+              class="text-mundial-accent"
+              :class="typeof limit.value === 'number' ? 'tabular-nums' : 'text-right text-xs'"
+            >
+              {{ limit.value }}
+            </strong>
           </li>
         </ul>
       </section>
@@ -225,9 +279,9 @@ async function copyValue(value: string, field: string) {
           <strong class="tabular-nums text-mundial-accent">{{ rule.points }} pts</strong>
         </li>
       </ul>
-      <p class="mt-3 text-xs text-slate-500">
-        Los puntos se calculan al finalizar el partido. Cada predicción de gol se compara con todos los goles reales
-        (se toma la mejor coincidencia). Cada marcador se evalúa por separado.
+      <p class="mt-3 text-sm text-slate-400">
+        Cuando acaba el partido revisamos todo lo que pusiste. Lo que aciertas suma. Lo que fallas vale 0.
+        No te quitamos puntos por equivocarte.
       </p>
     </section>
   </div>

@@ -6,7 +6,9 @@ import {
   ENTRY_FEE_MXN,
   MAX_GOAL_PREDICTIONS_PER_MATCH,
   MAX_SCORE_PREDICTIONS_PER_MATCH,
+  PREDICTION_SAVE_ALERT,
 } from '@/constants/quiniela-rules'
+import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import {
   getPredictionStatus,
   isGoalPrediction,
@@ -42,6 +44,7 @@ const predictedMinute = ref<number | ''>('')
 const predictedTeam = ref<'home' | 'away'>('home')
 const predictedHomeScore = ref<number | ''>('')
 const predictedAwayScore = ref<number | ''>('')
+const pendingSave = ref<'goal' | 'score' | null>(null)
 
 const scoreOptions = Array.from({ length: 21 }, (_, index) => ({
   value: index,
@@ -129,13 +132,51 @@ function openScoreForm() {
   showScoreForm.value = true
 }
 
-async function submitGoalPrediction() {
+function submitGoalPrediction() {
   formError.value = null
   saveSuccess.value = null
   if (predictedMinute.value === '') {
     formError.value = 'Elige el minuto del gol'
     return
   }
+  if (!editingGoalId.value) {
+    pendingSave.value = 'goal'
+    return
+  }
+  void persistGoalPrediction()
+}
+
+function submitScorePrediction() {
+  formError.value = null
+  saveSuccess.value = null
+  if (predictedHomeScore.value === '' || predictedAwayScore.value === '') {
+    formError.value = 'Indica el marcador final (local y visitante)'
+    return
+  }
+  if (!editingScoreId.value) {
+    pendingSave.value = 'score'
+    return
+  }
+  void persistScorePrediction()
+}
+
+function cancelPendingSave() {
+  if (predictionStore.saving) return
+  pendingSave.value = null
+}
+
+async function confirmPendingSave() {
+  if (!pendingSave.value) return
+  if (pendingSave.value === 'goal') {
+    await persistGoalPrediction()
+  } else {
+    await persistScorePrediction()
+  }
+}
+
+async function persistGoalPrediction() {
+  formError.value = null
+  saveSuccess.value = null
   const input = { minute: Number(predictedMinute.value), team: predictedTeam.value }
   try {
     if (editingGoalId.value) {
@@ -155,6 +196,7 @@ async function submitGoalPrediction() {
       )
       saveSuccess.value = 'Predicción de gol guardada'
     }
+    pendingSave.value = null
     resetGoalForm()
     emit('updated')
   } catch (e) {
@@ -162,13 +204,9 @@ async function submitGoalPrediction() {
   }
 }
 
-async function submitScorePrediction() {
+async function persistScorePrediction() {
   formError.value = null
   saveSuccess.value = null
-  if (predictedHomeScore.value === '' || predictedAwayScore.value === '') {
-    formError.value = 'Indica el marcador final (local y visitante)'
-    return
-  }
   const input = {
     homeScore: Number(predictedHomeScore.value),
     awayScore: Number(predictedAwayScore.value),
@@ -191,6 +229,7 @@ async function submitScorePrediction() {
       )
       saveSuccess.value = 'Predicción de marcador guardada'
     }
+    pendingSave.value = null
     resetScoreForm()
     emit('updated')
   } catch (e) {
@@ -439,5 +478,30 @@ async function removePrediction(id: number) {
       <CheckCircle2 class="h-4 w-4" />
       {{ saveSuccess }}
     </p>
+
+    <ConfirmModal
+      :open="pendingSave === 'goal'"
+      :title="PREDICTION_SAVE_ALERT.goal.title"
+      :subtitle="PREDICTION_SAVE_ALERT.goal.subtitle"
+      :sections="PREDICTION_SAVE_ALERT.goal.sections"
+      :examples="PREDICTION_SAVE_ALERT.goal.examples"
+      examples-title="Ejemplo para que quede claro"
+      :confirm-label="PREDICTION_SAVE_ALERT.goal.confirm"
+      :saving="predictionStore.saving"
+      @confirm="confirmPendingSave"
+      @cancel="cancelPendingSave"
+    />
+    <ConfirmModal
+      :open="pendingSave === 'score'"
+      :title="PREDICTION_SAVE_ALERT.score.title"
+      :subtitle="PREDICTION_SAVE_ALERT.score.subtitle"
+      :sections="PREDICTION_SAVE_ALERT.score.sections"
+      :examples="PREDICTION_SAVE_ALERT.score.examples"
+      examples-title="Ejemplo para que quede claro"
+      :confirm-label="PREDICTION_SAVE_ALERT.score.confirm"
+      :saving="predictionStore.saving"
+      @confirm="confirmPendingSave"
+      @cancel="cancelPendingSave"
+    />
   </div>
 </template>
