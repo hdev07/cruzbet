@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { getAuthRedirectUrl } from '@/lib/authRedirect'
 import { ADMIN_EMAIL } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/types'
@@ -48,7 +49,7 @@ export const useAuthStore = defineStore('auth', () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: getAuthRedirectUrl(),
       },
     })
     if (error) throw error
