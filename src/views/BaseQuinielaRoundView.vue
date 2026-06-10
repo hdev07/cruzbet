@@ -113,7 +113,8 @@ async function onPredictionsUpdated() {
         </RouterLink>
       </div>
 
-      <section class="mb-8">
+      <div class="xl:grid xl:grid-cols-3 xl:items-start xl:gap-8">
+      <section class="mb-8 xl:col-span-2 xl:mb-0">
         <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-accent">
           Grilla L · E · V
         </h2>
@@ -126,7 +127,7 @@ async function onPredictionsUpdated() {
         />
       </section>
 
-      <section>
+      <section class="xl:col-span-1">
         <div class="mb-3 flex items-center gap-2">
           <Trophy class="h-5 w-5 text-mundial-accent" />
           <h2 class="text-sm font-semibold uppercase tracking-wider text-mundial-accent">
@@ -145,7 +146,7 @@ async function onPredictionsUpdated() {
           Aún no hay quinielas completas en esta jornada.
         </div>
 
-        <ol v-else class="space-y-2 lg:max-w-2xl">
+        <ol v-else class="space-y-2">
           <li
             v-for="(player, index) in baseStore.leaderboard"
             :key="player.user_id"
@@ -172,7 +173,7 @@ async function onPredictionsUpdated() {
               {{ player.username?.[0]?.toUpperCase() ?? '?' }}
             </span>
 
-            <span class="flex-1 font-medium">
+            <span class="min-w-0 flex-1 truncate font-medium">
               {{ player.username ?? 'Anónimo' }}
               <span v-if="player.user_id === auth.user?.id" class="ml-1 text-xs text-mundial-accent">
                 (tú)
@@ -188,6 +189,7 @@ async function onPredictionsUpdated() {
           </li>
         </ol>
       </section>
+      </div>
     </template>
   </div>
 </template>

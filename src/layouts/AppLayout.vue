@@ -46,16 +46,16 @@ function isNavActive(item: QuinielaNavItem): boolean {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col pb-20 lg:pb-0">
+  <div class="flex min-h-screen flex-col pb-[4.5rem] md:pb-0">
     <header class="sticky top-0 z-40 border-b border-white/10 bg-mundial-dark/95 backdrop-blur">
-      <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:px-8">
+      <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6 lg:max-w-7xl lg:px-8">
         <RouterLink to="/" class="shrink-0 text-lg font-bold text-mundial-accent lg:text-xl">
           {{ APP_NAME }}
         </RouterLink>
 
         <nav
           v-if="route.path !== '/login'"
-          class="hidden flex-1 items-center justify-center gap-1 lg:flex"
+          class="hidden flex-1 items-center justify-center gap-1 md:flex"
         >
           <RouterLink
             v-for="item in navItems"
@@ -122,20 +122,22 @@ function isNavActive(item: QuinielaNavItem): boolean {
       </div>
     </header>
 
-    <main class="mx-auto w-full max-w-lg flex-1 px-4 py-6 lg:max-w-7xl lg:px-8 lg:py-8">
+    <main
+      class="mx-auto w-full max-w-xl flex-1 px-4 py-6 sm:max-w-2xl md:max-w-3xl lg:max-w-5xl lg:px-8 lg:py-8 xl:max-w-6xl"
+    >
       <slot />
     </main>
 
     <nav
       v-if="route.path !== '/login'"
-      class="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-mundial-dark/95 backdrop-blur lg:hidden"
+      class="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-mundial-dark/95 backdrop-blur md:hidden"
     >
-      <div class="mx-auto flex max-w-lg">
+      <div class="mx-auto flex w-full max-w-xl">
         <RouterLink
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
-          class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] transition"
+          class="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition"
           :class="isNavActive(item) ? 'text-mundial-accent' : 'text-slate-400'"
         >
           <component :is="item.icon" class="h-5 w-5" :stroke-width="2" />

@@ -32,7 +32,7 @@ onMounted(() => baseStore.fetchRounds())
       Aún no hay jornadas de quiniela base.
     </div>
 
-    <div v-else class="space-y-2 lg:max-w-2xl">
+    <div v-else class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
       <RouterLink
         v-for="round in baseStore.rounds"
         :key="round.id"

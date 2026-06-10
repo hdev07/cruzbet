@@ -31,7 +31,7 @@ const isPartido = computed(() => mode.value === 'partido')
       >
         {{ config.title }}
       </p>
-      <p class="text-xs text-slate-400">{{ config.entryLabel }} · {{ config.tagline }}</p>
+      <p class="truncate text-xs text-slate-400">{{ config.entryLabel }} · {{ config.tagline }}</p>
     </div>
   </div>
 </template>

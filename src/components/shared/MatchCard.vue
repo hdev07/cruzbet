@@ -34,31 +34,31 @@ const phaseLabels: Record<string, string> = {
       </span>
     </div>
 
-    <div class="flex items-center justify-between gap-4">
-      <div class="flex flex-1 items-center gap-2">
+    <div class="flex items-center justify-between gap-2 sm:gap-4">
+      <div class="flex min-w-0 flex-1 items-center gap-2">
         <img
           v-if="match.home_team?.flag_url"
           :src="match.home_team.flag_url"
           :alt="match.home_team.name"
-          class="h-6 w-8 object-cover"
+          class="h-6 w-8 shrink-0 object-cover"
         />
-        <span class="font-medium">{{ match.home_team?.name ?? 'Local' }}</span>
+        <span class="truncate font-medium">{{ match.home_team?.name ?? 'Local' }}</span>
       </div>
 
-      <div class="text-xl font-bold tabular-nums">
+      <div class="shrink-0 px-1 text-lg font-bold tabular-nums sm:text-xl">
         <template v-if="match.status !== 'scheduled'">
           {{ match.home_score }} - {{ match.away_score }}
         </template>
         <template v-else>vs</template>
       </div>
 
-      <div class="flex flex-1 items-center justify-end gap-2">
-        <span class="font-medium">{{ match.away_team?.name ?? 'Visitante' }}</span>
+      <div class="flex min-w-0 flex-1 items-center justify-end gap-2">
+        <span class="truncate font-medium">{{ match.away_team?.name ?? 'Visitante' }}</span>
         <img
           v-if="match.away_team?.flag_url"
           :src="match.away_team.flag_url"
           :alt="match.away_team.name"
-          class="h-6 w-8 object-cover"
+          class="h-6 w-8 shrink-0 object-cover"
         />
       </div>
     </div>

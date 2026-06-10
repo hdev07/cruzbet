@@ -15,7 +15,7 @@ export const QUINIELA_MODE_PARTIDO = {
   id: 'partido' as const,
   title: 'Quiniela por partido',
   shortTitle: 'Por partido',
-  tagline: 'Minuto del primer gol + ganador L/E/V',
+  tagline: 'Adivina el minuto del primer gol y quién gana el partido',
   entryFeeMxn: ENTRY_FEE_MXN,
   entryLabel: `$${ENTRY_FEE_MXN} MXN por partido`,
   accentClass: 'mundial-accent',
@@ -23,9 +23,9 @@ export const QUINIELA_MODE_PARTIDO = {
   bgClass: 'bg-mundial-accent/10',
   homePath: '/quiniela-partido',
   features: [
-    'Elige el partido que quieres jugar',
-    'Predice minuto del primer gol y L/E/V',
-    'Ranking global y top por partido',
+    'Elige los partidos que quieras (no es obligatorio jugar todos)',
+    'Marca el minuto del primer gol o «sin goles»',
+    'También marcas L, E o V (local, empate, visitante)',
   ],
 } as const
 
@@ -33,7 +33,7 @@ export const QUINIELA_MODE_BASE = {
   id: 'base' as const,
   title: 'Quiniela base',
   shortTitle: 'Base',
-  tagline: `Grilla L/E/V · ${BASE_QUINIELA_MATCHES_PER_ROUND} partidos por jornada`,
+  tagline: `Marca L, E o V en ${BASE_QUINIELA_MATCHES_PER_ROUND} partidos de la jornada`,
   entryFeeMxn: BASE_ENTRY_FEE_MXN,
   entryLabel: `$${BASE_ENTRY_FEE_MXN} MXN por jornada`,
   accentClass: 'mundial-green',
@@ -41,9 +41,9 @@ export const QUINIELA_MODE_BASE = {
   bgClass: 'bg-mundial-green/10',
   homePath: '/quiniela-base',
   features: [
-    `${BASE_QUINIELA_MATCHES_PER_ROUND} partidos por jornada en orden de calendario`,
-    'Solo marcas L, E o V en la grilla',
-    'Ranking propio por jornada (más aciertos gana)',
+    `$${BASE_ENTRY_FEE_MXN} pesos por jornada (${BASE_QUINIELA_MATCHES_PER_ROUND} partidos)`,
+    'L = gana el de casa · E = empate · V = gana el de fuera',
+    'Gana quien más acierte en la jornada',
   ],
 } as const
 

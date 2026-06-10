@@ -65,8 +65,8 @@ async function loadPredictionData() {
     <p v-else-if="!match" class="text-red-300">Partido no encontrado</p>
 
     <template v-else>
-      <div class="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
-        <div class="lg:col-span-2">
+      <div class="md:grid md:grid-cols-3 md:items-start md:gap-6 lg:gap-8">
+        <div class="md:col-span-2">
           <header class="rounded-xl border border-white/10 bg-white/5 p-6 text-center lg:p-8">
             <p class="mb-1 inline-flex items-center justify-center gap-1 text-xs text-slate-400">
               <Trophy class="h-3.5 w-3.5" />
@@ -85,27 +85,31 @@ async function loadPredictionData() {
             </p>
             <p v-else class="mb-3 text-sm text-slate-400">Programado</p>
 
-            <div class="flex items-center justify-center gap-4 lg:gap-8">
-              <div class="flex flex-1 flex-col items-center gap-2">
+            <div class="flex items-center justify-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
+              <div class="flex min-w-0 flex-1 flex-col items-center gap-2">
                 <img
                   v-if="match.home_team?.flag_url"
                   :src="match.home_team.flag_url"
                   :alt="match.home_team.name"
-                  class="h-12 w-12 object-contain lg:h-16 lg:w-16"
+                  class="h-12 w-12 object-contain sm:h-14 sm:w-14 lg:h-16 lg:w-16"
                 />
-                <p class="text-sm font-bold lg:text-base">{{ match.home_team?.name }}</p>
+                <p class="w-full truncate px-1 text-center text-sm font-bold lg:text-base">
+                  {{ match.home_team?.name }}
+                </p>
               </div>
-              <p class="text-4xl font-bold tabular-nums lg:text-5xl">
+              <p class="shrink-0 text-3xl font-bold tabular-nums sm:text-4xl lg:text-5xl">
                 {{ match.home_score }} - {{ match.away_score }}
               </p>
-              <div class="flex flex-1 flex-col items-center gap-2">
+              <div class="flex min-w-0 flex-1 flex-col items-center gap-2">
                 <img
                   v-if="match.away_team?.flag_url"
                   :src="match.away_team.flag_url"
                   :alt="match.away_team.name"
-                  class="h-12 w-12 object-contain lg:h-16 lg:w-16"
+                  class="h-12 w-12 object-contain sm:h-14 sm:w-14 lg:h-16 lg:w-16"
                 />
-                <p class="text-sm font-bold lg:text-base">{{ match.away_team?.name }}</p>
+                <p class="w-full truncate px-1 text-center text-sm font-bold lg:text-base">
+                  {{ match.away_team?.name }}
+                </p>
               </div>
             </div>
           </header>
@@ -141,7 +145,7 @@ async function loadPredictionData() {
           </template>
         </div>
 
-        <aside class="mt-6 space-y-6 lg:mt-0">
+        <aside class="mt-6 space-y-6 md:mt-0">
           <section v-if="goals.length" class="rounded-xl border border-white/10 bg-white/5 p-4 lg:p-5">
             <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Goles</h2>
             <ul class="space-y-2 text-sm">

@@ -116,7 +116,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
     </p>
 
     <!-- Móvil: tarjetas sin scroll horizontal -->
-    <div class="space-y-3 lg:hidden">
+    <div class="space-y-3 md:hidden">
       <article
         v-for="row in sortedMatches"
         :key="`mobile-${row.id}`"
@@ -203,7 +203,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
     </div>
 
     <!-- Escritorio: tabla -->
-    <div class="hidden overflow-x-auto rounded-xl border border-white/10 lg:block">
+    <div class="hidden overflow-x-auto rounded-xl border border-white/10 md:block">
       <table class="w-full border-collapse text-sm">
         <thead>
           <tr class="bg-black/40 text-xs uppercase tracking-wider text-slate-400">

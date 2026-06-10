@@ -76,7 +76,7 @@ const groupedByRound = computed(() => {
         Aún no tienes predicciones en la quiniela base.
       </div>
 
-      <div v-else class="space-y-4 lg:max-w-2xl">
+      <div v-else class="space-y-4">
         <section
           v-for="group in groupedByRound"
           :key="group.round?.id ?? group.picks[0]?.round_id"

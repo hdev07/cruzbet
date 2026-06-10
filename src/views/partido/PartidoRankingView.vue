@@ -33,7 +33,7 @@ onMounted(async () => {
 
     <div
       v-if="auth.isLoggedIn && auth.profile"
-      class="mb-6 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-4 lg:max-w-sm"
+      class="mb-6 inline-block rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-4 sm:min-w-[12rem]"
     >
       <p class="text-xs text-slate-400">Tus puntos</p>
       <p class="text-3xl font-bold text-mundial-accent">{{ auth.profile.points }}</p>
@@ -48,7 +48,7 @@ onMounted(async () => {
       Aún no hay puntos. ¡Sé el primero en predecir!
     </div>
 
-    <ol v-else class="mb-8 space-y-2 lg:max-w-2xl">
+    <ol v-else class="mx-auto mb-8 max-w-3xl space-y-2">
       <li
         v-for="(player, index) in ranking.leaders"
         :key="player.id"
@@ -75,7 +75,7 @@ onMounted(async () => {
           {{ player.username?.[0]?.toUpperCase() ?? '?' }}
         </span>
 
-        <span class="flex-1 font-medium">
+        <span class="min-w-0 flex-1 truncate font-medium">
           {{ player.username ?? 'Anónimo' }}
           <span v-if="player.id === auth.user?.id" class="ml-1 text-xs text-mundial-accent">(tú)</span>
         </span>

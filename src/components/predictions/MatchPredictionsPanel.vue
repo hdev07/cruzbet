@@ -431,7 +431,7 @@ function winnerCellClass(winner: PredictedWinner): string {
 
         <div>
           <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Primer tiempo</p>
-          <div class="grid grid-cols-9 gap-1 sm:grid-cols-15">
+          <div class="grid grid-cols-9 gap-1 md:grid-cols-15">
             <button
               v-for="m in FIRST_HALF_REGULAR"
               :key="`1t-${m}`"
@@ -444,7 +444,7 @@ function winnerCellClass(winner: PredictedWinner): string {
             </button>
           </div>
           <p class="mt-2 mb-1 text-xs text-slate-500">Tiempo extra 1er tiempo</p>
-          <div class="grid grid-cols-5 gap-1 sm:grid-cols-10">
+          <div class="grid grid-cols-5 gap-1 md:grid-cols-10">
             <button
               v-for="m in FIRST_HALF_EXTRA"
               :key="`1t-extra-${m}`"
@@ -460,7 +460,7 @@ function winnerCellClass(winner: PredictedWinner): string {
 
         <div>
           <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Segundo tiempo</p>
-          <div class="grid grid-cols-9 gap-1 sm:grid-cols-15">
+          <div class="grid grid-cols-9 gap-1 md:grid-cols-15">
             <button
               v-for="m in SECOND_HALF_REGULAR"
               :key="`2t-${m}`"
@@ -473,7 +473,7 @@ function winnerCellClass(winner: PredictedWinner): string {
             </button>
           </div>
           <p class="mt-2 mb-1 text-xs text-slate-500">Tiempo extra 2do tiempo</p>
-          <div class="grid grid-cols-5 gap-1 sm:grid-cols-10">
+          <div class="grid grid-cols-5 gap-1 md:grid-cols-10">
             <button
               v-for="m in SECOND_HALF_EXTRA"
               :key="`2t-extra-${m}`"
@@ -662,11 +662,3 @@ function winnerCellClass(winner: PredictedWinner): string {
     />
   </div>
 </template>
-
-<style scoped>
-@media (min-width: 640px) {
-  .sm\:grid-cols-15 {
-    grid-template-columns: repeat(15, minmax(0, 1fr));
-  }
-}
-</style>

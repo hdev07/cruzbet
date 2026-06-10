@@ -30,7 +30,7 @@ interface BeforeInstallPromptEvent extends Event {
 <template>
   <div
     v-if="showPrompt"
-    class="fixed bottom-24 left-4 right-4 z-50 flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-mundial-dark p-4 shadow-xl lg:hidden"
+    class="fixed bottom-24 left-4 right-4 z-50 flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-mundial-dark p-4 shadow-xl md:hidden"
   >
     <p class="inline-flex items-center gap-2 text-sm">
       <Smartphone class="h-4 w-4 shrink-0 text-mundial-accent" />

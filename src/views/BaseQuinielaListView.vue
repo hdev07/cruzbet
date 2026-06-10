@@ -70,7 +70,7 @@ const roundCount = computed(() => baseStore.rounds.length)
       </p>
     </div>
 
-    <div v-else class="space-y-3 lg:max-w-2xl">
+    <div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <RouterLink
         v-for="round in baseStore.rounds"
         :key="round.id"

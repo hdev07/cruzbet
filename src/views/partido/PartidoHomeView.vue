@@ -71,7 +71,7 @@ const openForPredictions = computed(() =>
           No hay partidos abiertos ahora. Vuelve más tarde.
         </div>
 
-        <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <MatchCard
             v-for="match in openForPredictions"
             :key="match.id"
@@ -97,7 +97,7 @@ const openForPredictions = computed(() =>
           </p>
         </div>
 
-        <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <MatchCard
             v-for="match in matchStore.liveMatches"
             :key="match.id"
