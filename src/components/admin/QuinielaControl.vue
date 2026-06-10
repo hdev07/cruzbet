@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { supabase } from '@/lib/supabase'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchEvent } from '@/types'
 
@@ -57,8 +58,8 @@ const sortedEvents = computed(() =>
 
 function teamLabel(teamId: string | null) {
   if (!teamId) return '—'
-  if (teamId === props.match.home_team_id) return props.match.home_team?.name ?? 'Local'
-  if (teamId === props.match.away_team_id) return props.match.away_team?.name ?? 'Visita'
+  if (teamId === props.match.home_team_id) return teamDisplayName(props.match.home_team, 'Local')
+  if (teamId === props.match.away_team_id) return teamDisplayName(props.match.away_team, 'Visita')
   return '—'
 }
 
@@ -316,8 +317,8 @@ async function finishMatch() {
               <label class="block text-sm md:text-xs">
                 Equipo
                 <select v-model="editTeamId" :class="inputClass">
-                  <option :value="match.home_team_id">{{ match.home_team?.name }}</option>
-                  <option :value="match.away_team_id">{{ match.away_team?.name }}</option>
+                  <option :value="match.home_team_id">{{ teamDisplayName(match.home_team, 'Local') }}</option>
+                  <option :value="match.away_team_id">{{ teamDisplayName(match.away_team, 'Visita') }}</option>
                 </select>
               </label>
               <label class="block text-sm md:text-xs">
@@ -451,8 +452,8 @@ async function finishMatch() {
           <label class="block text-sm md:text-xs">
             Equipo
             <select v-model="goalTeamId" :class="inputClass">
-              <option :value="match.home_team_id">{{ match.home_team?.name }}</option>
-              <option :value="match.away_team_id">{{ match.away_team?.name }}</option>
+              <option :value="match.home_team_id">{{ teamDisplayName(match.home_team, 'Local') }}</option>
+              <option :value="match.away_team_id">{{ teamDisplayName(match.away_team, 'Visita') }}</option>
             </select>
           </label>
           <label class="block text-sm md:text-xs">

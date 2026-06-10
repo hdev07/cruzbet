@@ -6,6 +6,7 @@ import AdminPaymentVerification from '@/components/admin/AdminPaymentVerificatio
 import QuinielaControl from '@/components/admin/QuinielaControl.vue'
 import { APP_NAME } from '@/constants/branding'
 import { ENTRY_FEE_MXN } from '@/constants/quiniela-rules'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import { useMatchStore } from '@/stores/matchStore'
 import { usePredictionStore } from '@/stores/predictionStore'
 
@@ -101,11 +102,11 @@ watch(
           <img
             v-if="selectedMatch.home_team?.flag_url"
             :src="selectedMatch.home_team.flag_url"
-            :alt="selectedMatch.home_team?.name"
+            :alt="teamDisplayName(selectedMatch.home_team, 'Local')"
             class="h-7 w-9 shrink-0 rounded-sm object-cover"
           />
           <span class="min-w-0 flex-1 truncate text-right text-sm font-semibold">
-            {{ selectedMatch.home_team?.name }}
+            {{ teamDisplayName(selectedMatch.home_team, 'Local') }}
           </span>
           <span class="shrink-0 px-1 text-xl font-bold tabular-nums text-mundial-accent">
             <template v-if="selectedMatch.status !== 'scheduled'">
@@ -114,12 +115,12 @@ watch(
             <template v-else>vs</template>
           </span>
           <span class="min-w-0 flex-1 truncate text-sm font-semibold">
-            {{ selectedMatch.away_team?.name }}
+            {{ teamDisplayName(selectedMatch.away_team, 'Visitante') }}
           </span>
           <img
             v-if="selectedMatch.away_team?.flag_url"
             :src="selectedMatch.away_team.flag_url"
-            :alt="selectedMatch.away_team?.name"
+            :alt="teamDisplayName(selectedMatch.away_team, 'Visitante')"
             class="h-7 w-9 shrink-0 rounded-sm object-cover"
           />
         </div>
@@ -221,21 +222,21 @@ watch(
           <img
             v-if="selectedMatch.home_team?.flag_url"
             :src="selectedMatch.home_team.flag_url"
-            :alt="selectedMatch.home_team?.name"
+            :alt="teamDisplayName(selectedMatch.home_team, 'Local')"
             class="h-6 w-8 rounded-sm object-cover"
           />
-          <span class="text-sm font-semibold text-slate-200">{{ selectedMatch.home_team?.name }}</span>
+          <span class="text-sm font-semibold text-slate-200">{{ teamDisplayName(selectedMatch.home_team, 'Local') }}</span>
           <span class="text-base font-bold tabular-nums text-mundial-accent">
             <template v-if="selectedMatch.status !== 'scheduled'">
               {{ selectedMatch.home_score }} - {{ selectedMatch.away_score }}
             </template>
             <template v-else>vs</template>
           </span>
-          <span class="text-sm font-semibold text-slate-200">{{ selectedMatch.away_team?.name }}</span>
+          <span class="text-sm font-semibold text-slate-200">{{ teamDisplayName(selectedMatch.away_team, 'Visitante') }}</span>
           <img
             v-if="selectedMatch.away_team?.flag_url"
             :src="selectedMatch.away_team.flag_url"
-            :alt="selectedMatch.away_team?.name"
+            :alt="teamDisplayName(selectedMatch.away_team, 'Visitante')"
             class="h-6 w-8 rounded-sm object-cover"
           />
           <span

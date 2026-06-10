@@ -8,6 +8,7 @@ import {
   predictionSummary,
   statusBadgeClass,
 } from '@/lib/predictionDisplay'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import type { PredictionWithMatch } from '@/types'
 
 const props = withDefaults(
@@ -57,13 +58,13 @@ const teamOptions = computed(() => {
 
     if (match.home_team) {
       teams.set(match.home_team_id, {
-        name: match.home_team.name,
+        name: teamDisplayName(match.home_team, 'Local'),
         flag_url: match.home_team.flag_url,
       })
     }
     if (match.away_team) {
       teams.set(match.away_team_id, {
-        name: match.away_team.name,
+        name: teamDisplayName(match.away_team, 'Visitante'),
         flag_url: match.away_team.flag_url,
       })
     }
@@ -130,7 +131,7 @@ watch(selectedGroup, () => {
 function matchLabel(entry: PredictionWithMatch) {
   const m = entry.match
   if (!m) return 'Partido'
-  return `${m.home_team?.name ?? 'Local'} vs ${m.away_team?.name ?? 'Visitante'}`
+  return `${teamDisplayName(m.home_team, 'Local')} vs ${teamDisplayName(m.away_team, 'Visitante')}`
 }
 
 function matchScore(entry: PredictionWithMatch) {

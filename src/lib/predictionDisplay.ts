@@ -1,5 +1,6 @@
 import { formatEncodedMinute, isNoGoalsMinute } from '@/lib/predictionMinutes'
 import { isMatchOpenForPredictions } from '@/lib/matchRules'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import type { Match, PredictedWinner, Prediction } from '@/types'
 
 const WINNER_LABELS: Record<PredictedWinner, string> = {
@@ -53,13 +54,13 @@ export function totalPredictionPoints(prediction: Prediction): number {
 export function teamLabelForMatch(match: Match | undefined, team: 'home' | 'away'): string {
   if (!match) return team === 'home' ? 'Local' : 'Visitante'
   return team === 'home'
-    ? (match.home_team?.name ?? 'Local')
-    : (match.away_team?.name ?? 'Visitante')
+    ? teamDisplayName(match.home_team, 'Local')
+    : teamDisplayName(match.away_team, 'Visitante')
 }
 
 export function winnerLabel(winner: PredictedWinner, match?: Match): string {
-  if (winner === 'home') return `L — ${match?.home_team?.name ?? 'Local'}`
-  if (winner === 'away') return `V — ${match?.away_team?.name ?? 'Visita'}`
+  if (winner === 'home') return `L — ${teamDisplayName(match?.home_team, 'Local')}`
+  if (winner === 'away') return `V — ${teamDisplayName(match?.away_team, 'Visita')}`
   return WINNER_LABELS.draw
 }
 

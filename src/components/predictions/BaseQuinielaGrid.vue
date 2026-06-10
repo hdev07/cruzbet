@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle } from '@lucide/vue'
 import { BASE_QUINIELA_POINTS_PER_HIT } from '@/constants/base-quiniela-rules'
 import { BASE_WINNER_OPTIONS, isPredictionCorrect } from '@/lib/baseQuinielaDisplay'
 import { formatKickoff, isMatchOpenForPredictions } from '@/lib/matchRules'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseQuinielaRoundMatch, PredictedWinner } from '@/types'
 
@@ -138,21 +139,21 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
             <img
               v-if="row.match.home_team?.flag_url"
               :src="row.match.home_team.flag_url"
-              :alt="row.match.home_team?.code ?? ''"
+              :alt="teamDisplayName(row.match.home_team, 'Local')"
               class="h-4 w-5 shrink-0 rounded object-cover"
             />
             <span class="truncate font-medium text-slate-200">
-              {{ row.match.home_team?.code ?? 'LOC' }}
+              {{ teamDisplayName(row.match.home_team, 'Local') }}
             </span>
             <span class="text-slate-500">vs</span>
             <img
               v-if="row.match.away_team?.flag_url"
               :src="row.match.away_team.flag_url"
-              :alt="row.match.away_team?.code ?? ''"
+              :alt="teamDisplayName(row.match.away_team, 'Visitante')"
               class="h-4 w-5 shrink-0 rounded object-cover"
             />
             <span class="truncate font-medium text-slate-200">
-              {{ row.match.away_team?.code ?? 'VIS' }}
+              {{ teamDisplayName(row.match.away_team, 'Visitante') }}
             </span>
           </div>
 
@@ -238,21 +239,21 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
                   <img
                     v-if="row.match.home_team?.flag_url"
                     :src="row.match.home_team.flag_url"
-                    :alt="row.match.home_team?.code ?? ''"
+                    :alt="teamDisplayName(row.match.home_team, 'Local')"
                     class="h-4 w-5 shrink-0 rounded object-cover"
                   />
                   <span class="truncate font-medium text-slate-200">
-                    {{ row.match.home_team?.code ?? 'LOC' }}
+                    {{ teamDisplayName(row.match.home_team, 'Local') }}
                   </span>
                   <span class="text-slate-500">vs</span>
                   <img
                     v-if="row.match.away_team?.flag_url"
                     :src="row.match.away_team.flag_url"
-                    :alt="row.match.away_team?.code ?? ''"
+                    :alt="teamDisplayName(row.match.away_team, 'Visitante')"
                     class="h-4 w-5 shrink-0 rounded object-cover"
                   />
                   <span class="truncate font-medium text-slate-200">
-                    {{ row.match.away_team?.code ?? 'VIS' }}
+                    {{ teamDisplayName(row.match.away_team, 'Visitante') }}
                   </span>
                   <span
                     v-if="row.match.status !== 'scheduled'"

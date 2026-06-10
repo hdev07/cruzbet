@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { ChevronRight } from '@lucide/vue'
 import QuinielaModeBanner from '@/components/layout/QuinielaModeBanner.vue'
 import { winnerCode } from '@/lib/baseQuinielaDisplay'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import { QUINIELA_MODE_BASE } from '@/constants/quiniela-modes'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -104,9 +105,9 @@ const groupedByRound = computed(() => {
             >
               <span class="font-bold text-mundial-green">{{ winnerCode(pick.predicted_winner) }}</span>
               <span class="min-w-0 flex-1 truncate text-slate-300">
-                {{ pick.match?.home_team?.code ?? 'LOC' }}
+                {{ teamDisplayName(pick.match?.home_team, 'Local') }}
                 vs
-                {{ pick.match?.away_team?.code ?? 'VIS' }}
+                {{ teamDisplayName(pick.match?.away_team, 'Visitante') }}
               </span>
               <span
                 v-if="pick.scored_at"

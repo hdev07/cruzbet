@@ -5,6 +5,7 @@ import { ChevronLeft, Radio, Trophy } from '@lucide/vue'
 import { useRealtime } from '@/composables/useRealtime'
 import { formatGoalEventTime } from '@/lib/predictionMinutes'
 import { formatKickoff, isMatchOpenForPredictions, predictionsCloseMessage } from '@/lib/matchRules'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import { useAuthStore } from '@/stores/authStore'
 import { useMatchStore } from '@/stores/matchStore'
 import { usePredictionStore, type MatchRankingEntry } from '@/stores/predictionStore'
@@ -90,11 +91,11 @@ async function loadPredictionData() {
                 <img
                   v-if="match.home_team?.flag_url"
                   :src="match.home_team.flag_url"
-                  :alt="match.home_team.name"
+                  :alt="teamDisplayName(match.home_team, 'Local')"
                   class="h-12 w-12 object-contain sm:h-14 sm:w-14 lg:h-16 lg:w-16"
                 />
                 <p class="w-full truncate px-1 text-center text-sm font-bold lg:text-base">
-                  {{ match.home_team?.name }}
+                  {{ teamDisplayName(match.home_team, 'Local') }}
                 </p>
               </div>
               <p class="shrink-0 text-3xl font-bold tabular-nums sm:text-4xl lg:text-5xl">
@@ -104,11 +105,11 @@ async function loadPredictionData() {
                 <img
                   v-if="match.away_team?.flag_url"
                   :src="match.away_team.flag_url"
-                  :alt="match.away_team.name"
+                  :alt="teamDisplayName(match.away_team, 'Visitante')"
                   class="h-12 w-12 object-contain sm:h-14 sm:w-14 lg:h-16 lg:w-16"
                 />
                 <p class="w-full truncate px-1 text-center text-sm font-bold lg:text-base">
-                  {{ match.away_team?.name }}
+                  {{ teamDisplayName(match.away_team, 'Visitante') }}
                 </p>
               </div>
             </div>
@@ -154,7 +155,7 @@ async function loadPredictionData() {
                 :key="goal.id"
                 class="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-slate-300"
               >
-                <span>{{ goal.teams?.name ?? 'Equipo' }}</span>
+                <span>{{ teamDisplayName(goal.teams, 'Equipo') }}</span>
                 <span class="font-semibold tabular-nums text-mundial-accent">
                   {{ formatGoalEventTime(goal.minute, goal.extra_time, goal.event_second ?? 0) }}
                 </span>

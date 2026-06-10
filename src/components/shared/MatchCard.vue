@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChevronRight, Radio, Users } from '@lucide/vue'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import type { Match } from '@/types'
 
 defineProps<{ match: Match; showPredictBadge?: boolean; participantCount?: number }>()
@@ -39,10 +40,10 @@ const phaseLabels: Record<string, string> = {
         <img
           v-if="match.home_team?.flag_url"
           :src="match.home_team.flag_url"
-          :alt="match.home_team.name"
+          :alt="teamDisplayName(match.home_team, 'Local')"
           class="h-6 w-8 shrink-0 object-cover"
         />
-        <span class="truncate font-medium">{{ match.home_team?.name ?? 'Local' }}</span>
+        <span class="truncate font-medium">{{ teamDisplayName(match.home_team, 'Local') }}</span>
       </div>
 
       <div class="shrink-0 px-1 text-lg font-bold tabular-nums sm:text-xl">
@@ -53,11 +54,11 @@ const phaseLabels: Record<string, string> = {
       </div>
 
       <div class="flex min-w-0 flex-1 items-center justify-end gap-2">
-        <span class="truncate font-medium">{{ match.away_team?.name ?? 'Visitante' }}</span>
+        <span class="truncate font-medium">{{ teamDisplayName(match.away_team, 'Visitante') }}</span>
         <img
           v-if="match.away_team?.flag_url"
           :src="match.away_team.flag_url"
-          :alt="match.away_team.name"
+          :alt="teamDisplayName(match.away_team, 'Visitante')"
           class="h-6 w-8 shrink-0 object-cover"
         />
       </div>

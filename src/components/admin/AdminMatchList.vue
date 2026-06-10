@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Radio, Users } from '@lucide/vue'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchStatus } from '@/types'
 
@@ -35,10 +36,18 @@ const filteredMatches = computed(() => {
     if (statusFilter.value !== 'all' && m.status !== statusFilter.value) return false
     if (onlyWithParticipants.value && !(participantCounts[m.id] ?? 0)) return false
     if (!q) return true
-    const home = m.home_team?.name?.toLowerCase() ?? ''
-    const away = m.away_team?.name?.toLowerCase() ?? ''
+    const home = teamDisplayName(m.home_team, 'Local').toLowerCase()
+    const away = teamDisplayName(m.away_team, 'Visitante').toLowerCase()
+    const homeCode = m.home_team?.code?.toLowerCase() ?? ''
+    const awayCode = m.away_team?.code?.toLowerCase() ?? ''
     const venue = m.venue?.toLowerCase() ?? ''
-    return home.includes(q) || away.includes(q) || venue.includes(q)
+    return (
+      home.includes(q) ||
+      away.includes(q) ||
+      homeCode.includes(q) ||
+      awayCode.includes(q) ||
+      venue.includes(q)
+    )
   })
 })
 
@@ -136,11 +145,11 @@ function formatDate(match: Match) {
             <img
               v-if="match.home_team?.flag_url"
               :src="match.home_team.flag_url"
-              :alt="match.home_team.name"
+              :alt="teamDisplayName(match.home_team, 'Local')"
               class="h-6 w-8 shrink-0 rounded-sm object-cover md:h-5 md:w-7"
             />
             <span class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-200 md:text-xs">
-              {{ match.home_team?.name ?? 'Local' }}
+              {{ teamDisplayName(match.home_team, 'Local') }}
             </span>
             <span class="shrink-0 text-sm font-bold tabular-nums text-mundial-accent">
               <template v-if="match.status !== 'scheduled'">
@@ -149,12 +158,12 @@ function formatDate(match: Match) {
               <template v-else>vs</template>
             </span>
             <span class="min-w-0 flex-1 truncate text-right text-sm font-semibold text-slate-200 md:text-xs">
-              {{ match.away_team?.name ?? 'Visitante' }}
+              {{ teamDisplayName(match.away_team, 'Visitante') }}
             </span>
             <img
               v-if="match.away_team?.flag_url"
               :src="match.away_team.flag_url"
-              :alt="match.away_team.name"
+              :alt="teamDisplayName(match.away_team, 'Visitante')"
               class="h-5 w-7 shrink-0 rounded-sm object-cover"
             />
           </div>

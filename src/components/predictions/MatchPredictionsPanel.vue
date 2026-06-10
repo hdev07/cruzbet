@@ -30,6 +30,7 @@ import {
   statusBadgeClass,
   totalPredictionPoints,
 } from '@/lib/predictionDisplay'
+import { teamDisplayName } from '@/lib/teamDisplay'
 import { usePredictionStore } from '@/stores/predictionStore'
 import type { Match, PredictedWinner, Prediction } from '@/types'
 
@@ -73,7 +74,7 @@ const winnerColumns = computed(() => [
   {
     key: 'home' as const,
     code: 'L',
-    label: props.match.home_team?.name ?? 'Local',
+    label: teamDisplayName(props.match.home_team, 'Local'),
     flag: props.match.home_team?.flag_url,
   },
   {
@@ -85,7 +86,7 @@ const winnerColumns = computed(() => [
   {
     key: 'away' as const,
     code: 'V',
-    label: props.match.away_team?.name ?? 'Visita',
+    label: teamDisplayName(props.match.away_team, 'Visita'),
     flag: props.match.away_team?.flag_url,
   },
 ])
