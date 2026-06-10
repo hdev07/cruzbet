@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { cleanupOAuthUrl, hasOAuthCallbackInUrl } from '@/lib/authCallback'
 import { getAuthRedirectUrl } from '@/lib/authRedirect'
 import { ADMIN_EMAIL } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
@@ -34,15 +35,28 @@ export const useAuthStore = defineStore('auth', () => {
   async function init() {
     if (initialized) return
     initialized = true
-    const { data } = await supabase.auth.getSession()
-    user.value = data.session?.user ?? null
-    if (user.value) await fetchProfile(user.value.id)
 
-    supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
+    const oauthCallback = hasOAuthCallbackInUrl()
+
+    supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       user.value = session?.user ?? null
       if (user.value) await fetchProfile(user.value.id)
       else profile.value = null
+
+      if (oauthCallback && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+        cleanupOAuthUrl()
+      }
     })
+
+    const { data, error } = await supabase.auth.getSession()
+    if (error) console.error('Error al restaurar sesión:', error.message)
+
+    user.value = data.session?.user ?? null
+    if (user.value) await fetchProfile(user.value.id)
+
+    if (oauthCallback && data.session) {
+      cleanupOAuthUrl()
+    }
   }
 
   async function loginWithGoogle() {
