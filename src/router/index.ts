@@ -40,6 +40,16 @@ const router = createRouter({
       meta: { layout: 'blank', title: 'Entrar' },
     },
     {
+      path: '/privacidad',
+      component: () => import('@/views/PrivacyView.vue'),
+      meta: { layout: 'mobile', title: 'Privacidad' },
+    },
+    {
+      path: '/terminos',
+      component: () => import('@/views/TermsView.vue'),
+      meta: { layout: 'mobile', title: 'Términos' },
+    },
+    {
       path: '/admin',
       component: () => import('@/views/AdminPanel.vue'),
       meta: { layout: 'mobile', requiresAdmin: true, title: 'Admin' },

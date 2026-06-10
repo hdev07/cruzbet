@@ -73,6 +73,13 @@ async function loginWithGoogle() {
         Ver partidos sin cuenta
         <ChevronRight class="h-4 w-4" />
       </button>
+
+      <p class="mt-6 text-xs text-slate-500">
+        Al continuar, aceptas nuestros
+        <RouterLink to="/terminos" class="text-mundial-accent hover:underline">términos</RouterLink>
+        y
+        <RouterLink to="/privacidad" class="text-mundial-accent hover:underline">privacidad</RouterLink>.
+      </p>
     </div>
   </div>
 </template>
