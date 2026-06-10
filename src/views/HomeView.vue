@@ -23,7 +23,7 @@ const auth = useAuthStore()
 
     <div
       v-if="!auth.isLoggedIn"
-      class="mb-8 rounded-xl border border-white/10 bg-white/5 p-4 text-center"
+      class="mb-6 rounded-xl border border-white/10 bg-white/5 p-4 text-center"
     >
       <p class="mb-3 text-sm text-slate-300">Inicia sesión para guardar predicciones y ver tu historial</p>
       <RouterLink
@@ -34,14 +34,12 @@ const auth = useAuthStore()
       </RouterLink>
     </div>
 
-    <HomeLandingRules />
-
     <div class="mb-4 text-center">
       <h2 class="text-lg font-bold text-slate-100 lg:text-xl">Elige tu quiniela</h2>
       <p class="mt-1 text-sm text-slate-500">Cada modalidad tiene su propio ranking, reglas e historial</p>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-2 lg:gap-6">
+    <div class="mb-10 grid gap-4 lg:grid-cols-2 lg:gap-6">
       <RouterLink
         :to="QUINIELA_MODE_PARTIDO.homePath"
         class="group flex flex-col rounded-2xl border-2 border-mundial-accent/30 bg-gradient-to-br from-mundial-accent/10 to-transparent p-6 transition hover:border-mundial-accent/60 hover:shadow-lg hover:shadow-mundial-accent/10"
@@ -101,5 +99,6 @@ const auth = useAuthStore()
       </RouterLink>
     </div>
 
+    <HomeLandingRules />
   </div>
 </template>
