@@ -1,7 +1,7 @@
 import { onMounted, onUnmounted } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useMatchStore } from '@/stores/matchStore'
-import type { RealtimeChannel } from '@supabase/supabase-js/dist/common.js/dist/common.js'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 const STATUS_REFRESH_MS = 60_000
 

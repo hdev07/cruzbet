@@ -270,25 +270,34 @@ export const usePredictionStore = defineStore('prediction', () => {
     if (err) throw err
     if (!preds?.length) return []
 
-    const userIds = [...new Set(preds.map((p) => p.user_id))]
+    const typedPreds = preds as Prediction[]
+    const userIds = [...new Set(typedPreds.map((p) => p.user_id))]
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, username, avatar')
       .in('id', userIds)
 
-    const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
+    type RankingProfile = { id: string; username: string | null; avatar: string | null }
+    const profileMap = new Map<string, RankingProfile>(
+      ((profiles ?? []) as RankingProfile[]).map((p) => [p.id, p]),
+    )
     const totals = new Map<string, number>()
 
-    for (const p of preds) {
-      totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + totalPredictionPoints(p as Prediction))
+    for (const p of typedPreds) {
+      totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + totalPredictionPoints(p))
     }
 
     return [...totals.entries()]
-      .map(([user_id, points]) => ({
-        user_id,
-        points,
-        profiles: profileMap.get(user_id) ?? undefined,
-      }))
+      .map(([user_id, points]) => {
+        const profile = profileMap.get(user_id)
+        return {
+          user_id,
+          points,
+          profiles: profile
+            ? { username: profile.username, avatar: profile.avatar }
+            : undefined,
+        }
+      })
       .sort((a, b) => b.points - a.points)
       .slice(0, 20)
   }
@@ -303,14 +312,15 @@ export const usePredictionStore = defineStore('prediction', () => {
     if (err) throw err
     if (!preds?.length) return []
 
-    const matchIds = [...new Set(preds.map((p) => p.match_id))]
+    const typedPreds = preds as Prediction[]
+    const matchIds = [...new Set(typedPreds.map((p) => p.match_id))]
     const { data: matches } = await supabase
       .from('matches')
       .select(MATCH_SELECT)
       .in('id', matchIds)
 
-    const matchMap = new Map((matches ?? []).map((m) => [m.id, m]))
-    return preds.map((p) => ({
+    const matchMap = new Map(((matches ?? []) as Match[]).map((m) => [m.id, m]))
+    return typedPreds.map((p) => ({
       ...p,
       match: matchMap.get(p.match_id) as Match | undefined,
     })) as PredictionWithMatch[]

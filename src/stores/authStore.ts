@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { ADMIN_EMAIL } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/types'
-import type { User } from '@supabase/supabase-js/dist/common.js/dist/common.js'
+import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -37,7 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = data.session?.user ?? null
     if (user.value) await fetchProfile(user.value.id)
 
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
       user.value = session?.user ?? null
       if (user.value) await fetchProfile(user.value.id)
       else profile.value = null

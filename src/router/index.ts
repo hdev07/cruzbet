@@ -1,4 +1,9 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import {
+  createRouter,
+  createWebHistory,
+  type RouteLocationGeneric,
+  type RouteLocationNormalized,
+} from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = createRouter({
@@ -39,12 +44,12 @@ const router = createRouter({
       component: () => import('@/views/AdminPanel.vue'),
       meta: { layout: 'mobile', requiresAdmin: true, title: 'Admin' },
     },
-    { path: '/partido/:id', redirect: (to) => `/match/${to.params.id}` },
+    { path: '/partido/:id', redirect: (to: RouteLocationGeneric) => `/match/${to.params.id}` },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach((to: RouteLocationNormalized) => {
   const auth = useAuthStore()
   if (to.path === '/login' && auth.isLoggedIn) return '/'
   if (to.meta.requiresAuth && !auth.isLoggedIn) return '/login'

@@ -2,7 +2,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useMatchStore } from '@/stores/matchStore'
 import type { MatchEvent } from '@/types'
-import type { RealtimeChannel } from '@supabase/supabase-js/dist/common.js/dist/common.js'
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 const STATUS_REFRESH_MS = 60_000
 
@@ -26,7 +26,7 @@ export function useRealtime(matchId: string) {
           table: 'match_events',
           filter: `match_id=eq.${matchId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>) => {
           const event = payload.new as MatchEvent
           matchStore.addEvent(event)
           events.value = [...matchStore.events]
@@ -40,7 +40,7 @@ export function useRealtime(matchId: string) {
           table: 'matches',
           filter: `id=eq.${matchId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>) => {
           matchStore.updateMatch(payload.new as Parameters<typeof matchStore.updateMatch>[0])
         },
       )
