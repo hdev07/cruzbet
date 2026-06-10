@@ -56,66 +56,75 @@ watch(
 </script>
 
 <template>
-  <div class="mx-auto flex h-[calc(100vh-5rem)] w-full max-w-[1800px] flex-col">
-    <header class="mb-4 shrink-0">
-      <h1 class="text-xl font-bold text-slate-100 lg:text-2xl">{{ APP_NAME }} — Admin</h1>
-      <p class="mt-1 text-sm text-slate-400">
-        Elige un partido a la izquierda y verifica depósitos de ${{ ENTRY_FEE_MXN }} MXN a la derecha.
+  <div class="-my-2 flex min-h-[calc(100dvh-5.5rem)] flex-col lg:-my-4">
+    <header class="mb-3 shrink-0">
+      <h1 class="text-lg font-bold text-slate-100 lg:text-xl">{{ APP_NAME }} — Admin</h1>
+      <p class="text-xs text-slate-500">
+        Partido a la izquierda · depósitos de ${{ ENTRY_FEE_MXN }} MXN a la derecha
       </p>
     </header>
 
-    <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
+    <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[300px_minmax(0,1fr)]">
       <AdminMatchList
         v-model="selectedMatchId"
         v-model:search="search"
         v-model:status-filter="statusFilter"
         v-model:only-with-participants="onlyWithParticipants"
         :participant-counts="participantCounts"
-        class="min-h-[420px] xl:min-h-0"
+        class="min-h-[280px] xl:max-h-none xl:min-h-0"
       />
 
-      <div v-if="selectedMatch" class="flex min-h-0 flex-col gap-4">
-        <div class="grid shrink-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-          <div class="flex items-center gap-4 rounded-xl border border-white/10 bg-white/5 px-5 py-4">
-            <img
-              v-if="selectedMatch.home_team?.flag_url"
-              :src="selectedMatch.home_team.flag_url"
-              :alt="selectedMatch.home_team.name"
-              class="h-10 w-14 rounded object-cover"
-            />
-            <div class="min-w-0 flex-1 text-center">
-              <p class="truncate text-sm font-bold text-slate-100">
-                {{ selectedMatch.home_team?.name }}
-              </p>
-              <p class="mt-1 text-2xl font-bold tabular-nums text-mundial-accent">
-                <template v-if="selectedMatch.status !== 'scheduled'">
-                  {{ selectedMatch.home_score }} - {{ selectedMatch.away_score }}
-                </template>
-                <template v-else>vs</template>
-              </p>
-              <p class="truncate text-sm font-bold text-slate-100">
-                {{ selectedMatch.away_team?.name }}
-              </p>
-            </div>
-            <img
-              v-if="selectedMatch.away_team?.flag_url"
-              :src="selectedMatch.away_team.flag_url"
-              :alt="selectedMatch.away_team.name"
-              class="h-10 w-14 rounded object-cover"
-            />
-          </div>
-
-          <QuinielaControl :match="selectedMatch" />
+      <div v-if="selectedMatch" class="flex min-h-0 flex-1 flex-col gap-2">
+        <div class="flex shrink-0 flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+          <img
+            v-if="selectedMatch.home_team?.flag_url"
+            :src="selectedMatch.home_team.flag_url"
+            :alt="selectedMatch.home_team?.name"
+            class="h-6 w-8 rounded-sm object-cover"
+          />
+          <span class="text-sm font-semibold text-slate-200">
+            {{ selectedMatch.home_team?.name }}
+          </span>
+          <span class="text-base font-bold tabular-nums text-mundial-accent">
+            <template v-if="selectedMatch.status !== 'scheduled'">
+              {{ selectedMatch.home_score }} - {{ selectedMatch.away_score }}
+            </template>
+            <template v-else>vs</template>
+          </span>
+          <span class="text-sm font-semibold text-slate-200">
+            {{ selectedMatch.away_team?.name }}
+          </span>
+          <img
+            v-if="selectedMatch.away_team?.flag_url"
+            :src="selectedMatch.away_team.flag_url"
+            :alt="selectedMatch.away_team?.name"
+            class="h-6 w-8 rounded-sm object-cover"
+          />
+          <span
+            v-if="selectedMatch.status === 'live'"
+            class="rounded-full bg-mundial-green px-2 py-0.5 text-[11px] font-semibold"
+          >
+            EN VIVO {{ selectedMatch.current_minute ?? 0 }}'
+          </span>
         </div>
 
-        <AdminPaymentVerification :match="selectedMatch" class="min-h-0 flex-1" />
+        <details class="shrink-0 rounded-lg border border-white/10 bg-white/5">
+          <summary class="cursor-pointer px-3 py-2 text-xs font-medium text-slate-400 hover:text-slate-200">
+            Control del partido (marcador y goles)
+          </summary>
+          <div class="border-t border-white/10 p-3">
+            <QuinielaControl :match="selectedMatch" />
+          </div>
+        </details>
+
+        <AdminPaymentVerification :match="selectedMatch" />
       </div>
 
       <div
         v-else
-        class="flex items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-8"
+        class="flex flex-1 items-center justify-center rounded-xl border border-dashed border-white/15 p-8"
       >
-        <p class="text-center text-slate-500">Selecciona un partido de la lista</p>
+        <p class="text-slate-500">Selecciona un partido de la lista</p>
       </div>
     </div>
   </div>

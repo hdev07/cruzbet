@@ -19,14 +19,6 @@ const saving = ref(false)
 const message = ref('')
 const error = ref('')
 
-const phaseLabels: Record<string, string> = {
-  group: 'Grupos',
-  r16: 'Octavos',
-  qf: 'Cuartos',
-  sf: 'Semifinal',
-  final: 'Final',
-}
-
 function syncForm(match: Match) {
   currentMinute.value = match.current_minute ?? 0
   homeScore.value = match.home_score
@@ -115,31 +107,7 @@ async function finishMatch() {
 </script>
 
 <template>
-  <aside class="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
-    <header class="text-center">
-      <p class="text-xs text-slate-400">
-        {{ phaseLabels[match.phase ?? ''] ?? match.phase }}
-        <span v-if="match.venue"> · {{ match.venue }}</span>
-      </p>
-      <div class="mt-2 flex items-center justify-center gap-2 text-sm font-bold">
-        <span class="truncate">{{ match.home_team?.name }}</span>
-        <span class="shrink-0 text-xl tabular-nums text-mundial-accent">
-          {{ match.home_score }} - {{ match.away_score }}
-        </span>
-        <span class="truncate">{{ match.away_team?.name }}</span>
-      </div>
-      <p class="mt-2 text-xs">
-        <span
-          v-if="match.status === 'live'"
-          class="rounded-full bg-mundial-green px-2 py-0.5 font-semibold"
-        >
-          EN VIVO · {{ match.current_minute ?? 0 }}'
-        </span>
-        <span v-else-if="match.status === 'finished'" class="text-slate-400">Finalizado</span>
-        <span v-else class="text-slate-400">Programado</span>
-      </p>
-    </header>
-
+  <div class="space-y-3">
     <button
       v-if="match.status === 'scheduled'"
       type="button"
@@ -243,5 +211,5 @@ async function finishMatch() {
 
     <p v-if="message" class="text-xs text-mundial-green">{{ message }}</p>
     <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
-  </aside>
+  </div>
 </template>
