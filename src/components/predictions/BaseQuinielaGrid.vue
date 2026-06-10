@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { CheckCircle2, XCircle } from '@lucide/vue'
 import { BASE_QUINIELA_POINTS_PER_HIT } from '@/constants/base-quiniela-rules'
-import { isPredictionCorrect, winnerCode } from '@/lib/baseQuinielaDisplay'
+import { BASE_WINNER_OPTIONS, isPredictionCorrect } from '@/lib/baseQuinielaDisplay'
 import { formatKickoff, isMatchOpenForPredictions } from '@/lib/matchRules'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseQuinielaRoundMatch, PredictedWinner } from '@/types'
@@ -72,6 +72,30 @@ function cellClass(
   return `${base} border-white/10 bg-black/20 text-slate-300 hover:border-mundial-accent/40 hover:bg-mundial-accent/10`
 }
 
+function mobileCellClass(
+  matchId: string,
+  winner: PredictedWinner,
+  canEdit: boolean,
+): string {
+  const prediction = baseStore.getPredictionForMatch(matchId)
+  const selected = prediction?.predicted_winner === winner
+  const base =
+    'flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg border px-2 py-2 text-center transition-colors'
+
+  if (!canEdit) {
+    if (selected) {
+      return `${base} border-mundial-accent/50 bg-mundial-accent/15 text-mundial-accent`
+    }
+    return `${base} border-white/5 bg-black/10 text-slate-600`
+  }
+
+  if (selected) {
+    return `${base} border-mundial-accent bg-mundial-accent/25 text-mundial-accent`
+  }
+
+  return `${base} border-white/10 bg-black/20 text-slate-300 hover:border-mundial-accent/40 hover:bg-mundial-accent/10`
+}
+
 function rowStatusClass(row: BaseQuinielaRoundMatch): string {
   const match = row.match
   const prediction = baseStore.getPredictionForMatch(row.match_id)
@@ -82,6 +106,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
   if (correct === false) return 'ring-1 ring-red-500/30'
   return ''
 }
+
 </script>
 
 <template>
@@ -90,16 +115,111 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
       {{ formError }}
     </p>
 
-    <div class="overflow-x-auto rounded-xl border border-white/10">
-      <table class="w-full min-w-[640px] border-collapse text-sm">
+    <!-- Móvil: tarjetas sin scroll horizontal -->
+    <div class="space-y-3 lg:hidden">
+      <article
+        v-for="row in sortedMatches"
+        :key="`mobile-${row.id}`"
+        class="rounded-xl border border-white/10 bg-white/[0.02] p-3"
+        :class="rowStatusClass(row)"
+      >
+        <div v-if="row.match" class="mb-3">
+          <div class="mb-1 flex items-center gap-2">
+            <span class="text-xs font-semibold tabular-nums text-slate-500">#{{ row.position }}</span>
+            <span
+              v-if="row.match.status !== 'scheduled'"
+              class="ml-auto text-xs font-bold tabular-nums text-mundial-accent"
+            >
+              {{ row.match.home_score }}-{{ row.match.away_score }}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <img
+              v-if="row.match.home_team?.flag_url"
+              :src="row.match.home_team.flag_url"
+              :alt="row.match.home_team?.code ?? ''"
+              class="h-4 w-5 shrink-0 rounded object-cover"
+            />
+            <span class="truncate font-medium text-slate-200">
+              {{ row.match.home_team?.code ?? 'LOC' }}
+            </span>
+            <span class="text-slate-500">vs</span>
+            <img
+              v-if="row.match.away_team?.flag_url"
+              :src="row.match.away_team.flag_url"
+              :alt="row.match.away_team?.code ?? ''"
+              class="h-4 w-5 shrink-0 rounded object-cover"
+            />
+            <span class="truncate font-medium text-slate-200">
+              {{ row.match.away_team?.code ?? 'VIS' }}
+            </span>
+          </div>
+
+          <p v-if="formatKickoff(row.match)" class="mt-1 text-xs text-slate-500">
+            {{ formatKickoff(row.match) }}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <button
+            v-for="option in BASE_WINNER_OPTIONS"
+            :key="`${row.match_id}-mobile-${option.key}`"
+            v-show="row.match"
+            type="button"
+            :class="mobileCellClass(row.match_id, option.key, matchCanEdit(row.match_id))"
+            :disabled="baseStore.saving || !matchCanEdit(row.match_id)"
+            @click="pickWinner(row.match_id, option.key)"
+          >
+            <span class="text-xs font-bold uppercase tracking-wide text-mundial-accent/80">
+              {{ option.code }}
+            </span>
+            <span class="text-xs font-semibold leading-tight">
+              <template v-if="savingMatchId === row.match_id && baseStore.saving">…</template>
+              <template
+                v-else-if="baseStore.getPredictionForMatch(row.match_id)?.predicted_winner === option.key"
+              >
+                ✓ {{ option.label }}
+              </template>
+              <template v-else>{{ option.label }}</template>
+            </span>
+          </button>
+        </div>
+
+        <div
+          v-if="row.match?.status === 'finished' && baseStore.getPredictionForMatch(row.match_id)"
+          class="mt-3 flex items-center justify-end gap-1 text-xs"
+        >
+          <template v-if="baseStore.getPredictionForMatch(row.match_id)?.points">
+            <CheckCircle2 class="h-3.5 w-3.5 text-mundial-green" />
+            <span class="font-bold text-mundial-green">{{ BASE_QUINIELA_POINTS_PER_HIT }} pts</span>
+          </template>
+          <template v-else>
+            <XCircle class="h-3.5 w-3.5 text-red-400" />
+            <span class="text-red-400">0 pts</span>
+          </template>
+        </div>
+      </article>
+    </div>
+
+    <!-- Escritorio: tabla -->
+    <div class="hidden overflow-x-auto rounded-xl border border-white/10 lg:block">
+      <table class="w-full border-collapse text-sm">
         <thead>
           <tr class="bg-black/40 text-xs uppercase tracking-wider text-slate-400">
-            <th class="border border-white/10 px-2 py-2 text-left w-8">#</th>
+            <th class="w-8 border border-white/10 px-2 py-2 text-left">#</th>
             <th class="border border-white/10 px-3 py-2 text-left">Partido</th>
-            <th class="border border-white/10 px-2 py-2 text-center w-14">L</th>
-            <th class="border border-white/10 px-2 py-2 text-center w-14">E</th>
-            <th class="border border-white/10 px-2 py-2 text-center w-14">V</th>
-            <th class="border border-white/10 px-2 py-2 text-center w-16">Pts</th>
+            <th
+              v-for="option in BASE_WINNER_OPTIONS"
+              :key="`head-${option.key}`"
+              class="w-24 border border-white/10 px-2 py-2 text-center"
+            >
+              <span class="block text-sm font-bold text-mundial-accent">{{ option.code }}</span>
+              <span class="mt-0.5 block text-[0.65rem] font-normal normal-case text-slate-400">
+                {{ option.label }}
+              </span>
+            </th>
+            <th class="w-16 border border-white/10 px-2 py-2 text-center">Pts</th>
           </tr>
         </thead>
         <tbody>
@@ -147,22 +267,24 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
               </div>
             </td>
             <td
-              v-for="winner in (['home', 'draw', 'away'] as const)"
-              :key="`${row.match_id}-${winner}`"
+              v-for="option in BASE_WINNER_OPTIONS"
+              :key="`${row.match_id}-${option.key}`"
               class="border border-white/10 p-1"
             >
               <button
                 v-if="row.match"
                 type="button"
-                :class="cellClass(row.match_id, winner, matchCanEdit(row.match_id))"
+                :class="cellClass(row.match_id, option.key, matchCanEdit(row.match_id))"
                 :disabled="baseStore.saving || !matchCanEdit(row.match_id)"
-                @click="pickWinner(row.match_id, winner)"
+                @click="pickWinner(row.match_id, option.key)"
               >
                 <span v-if="savingMatchId === row.match_id && baseStore.saving">…</span>
-                <span v-else-if="baseStore.getPredictionForMatch(row.match_id)?.predicted_winner === winner">
+                <span
+                  v-else-if="baseStore.getPredictionForMatch(row.match_id)?.predicted_winner === option.key"
+                >
                   ✓
                 </span>
-                <span v-else>{{ winnerCode(winner) }}</span>
+                <span v-else class="text-xs">{{ option.label }}</span>
               </button>
             </td>
             <td class="border border-white/10 px-2 py-2 text-center">
