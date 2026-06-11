@@ -8,6 +8,7 @@ import type {
   BaseQuinielaRound,
   BaseQuinielaRoundMatch,
   BaseRoundLeaderboardEntry,
+  BaseRoundParticipant,
   Match,
   PredictedWinner,
 } from '@/types'
@@ -163,6 +164,96 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     }
   }
 
+  async function fetchParticipantCountsByRound(): Promise<Record<string, number>> {
+    const { data, error } = await supabase
+      .from('base_predictions')
+      .select('round_id, user_id')
+
+    if (error) throw error
+
+    const byRound = new Map<string, Set<string>>()
+    for (const row of data ?? []) {
+      const roundId = row.round_id as string
+      const userId = row.user_id as string
+      if (!byRound.has(roundId)) byRound.set(roundId, new Set())
+      byRound.get(roundId)!.add(userId)
+    }
+
+    return Object.fromEntries(
+      [...byRound.entries()].map(([roundId, users]) => [roundId, users.size]),
+    )
+  }
+
+  async function fetchRoundParticipants(roundId: string): Promise<BaseRoundParticipant[]> {
+    const matchCount =
+      currentRound.value?.id === roundId
+        ? (currentRound.value.match_count ?? BASE_QUINIELA_MATCHES_PER_ROUND)
+        : BASE_QUINIELA_MATCHES_PER_ROUND
+
+    const [{ data: preds, error: predsErr }, { data: payments }] = await Promise.all([
+      supabase.from('base_predictions').select('*').eq('round_id', roundId).order('created_at'),
+      supabase.from('base_round_payments').select('user_id, verified').eq('round_id', roundId),
+    ])
+
+    if (predsErr) throw predsErr
+    if (!preds?.length) return []
+
+    const typedPreds = preds as BasePrediction[]
+    const verifiedMap = new Map(
+      (payments ?? []).map((p: { user_id: string; verified: boolean }) => [p.user_id, p.verified]),
+    )
+    const userIds = [...new Set(typedPreds.map((p) => p.user_id))]
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username, avatar')
+      .in('id', userIds)
+
+    type ParticipantProfile = { id: string; username: string | null; avatar: string | null }
+    const profileMap = new Map<string, ParticipantProfile>(
+      ((profiles ?? []) as ParticipantProfile[]).map((p) => [p.id, p]),
+    )
+    const grouped = new Map<string, BasePrediction[]>()
+
+    for (const pred of typedPreds) {
+      const list = grouped.get(pred.user_id) ?? []
+      list.push(pred)
+      grouped.set(pred.user_id, list)
+    }
+
+    return [...grouped.entries()]
+      .map(([user_id, predictions]) => {
+        const profile = profileMap.get(user_id)
+        const complete = predictions.length >= matchCount
+        const total_points = predictions.reduce((sum, p) => sum + (p.points ?? 0), 0)
+        const correct_count = predictions.filter((p) => p.points > 0).length
+        return {
+          user_id,
+          verified: verifiedMap.get(user_id) ?? false,
+          profiles: profile
+            ? { username: profile.username, avatar: profile.avatar }
+            : undefined,
+          predictions,
+          total_points,
+          correct_count,
+          complete,
+        }
+      })
+      .sort((a, b) => b.total_points - a.total_points)
+  }
+
+  async function setPaymentVerified(
+    userId: string,
+    roundId: string,
+    verified: boolean,
+  ): Promise<void> {
+    const { error } = await supabase.rpc('admin_set_base_payment_verified', {
+      p_user_id: userId,
+      p_round_id: roundId,
+      p_verified: verified,
+    })
+    if (error) throw error
+  }
+
   async function fetchUserHistory(userId: string) {
     const { data, error } = await supabase
       .from('base_predictions')
@@ -192,6 +283,9 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     fetchMyPredictions,
     fetchRoundLeaderboard,
     fetchUserHistory,
+    fetchParticipantCountsByRound,
+    fetchRoundParticipants,
+    setPaymentVerified,
     getPredictionForMatch,
     isRoundOpenForPredictions,
     myProgress,

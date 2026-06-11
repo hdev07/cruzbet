@@ -135,8 +135,8 @@ async function onPredictionsUpdated() {
           </h2>
         </div>
         <p class="mb-4 text-xs text-slate-500">
-          Solo participantes con los {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos marcados.
-          Orden: más aciertos, luego más puntos.
+          Solo participantes con los {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos marcados y depósito
+          verificado. Orden: más aciertos, luego más puntos.
         </p>
 
         <div

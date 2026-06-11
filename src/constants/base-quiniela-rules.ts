@@ -12,6 +12,13 @@ export const BASE_PAYMENT_INFO = {
   concept: 'Quiniela base — incluye concepto y número de jornada',
 } as const
 
+export const BASE_QUINIELA_FILL_TIP = {
+  allFilled:
+    'Tu quiniela está guardada. Puedes editar cada partido hasta que empiece el encuentro.',
+  lockHint:
+    'Usa el candado al inicio de cada fila para bloquear un partido y evitar cambios accidentales.',
+} as const
+
 export const BASE_QUINIELA_LOGIC = {
   title: 'Quiniela base',
   summary: `Deposita $${BASE_ENTRY_FEE_MXN} MXN por jornada. Marca L, E o V en ${BASE_QUINIELA_MATCHES_PER_ROUND} partidos. Cada acierto suma ${BASE_QUINIELA_POINTS_PER_HIT} puntos. Ranking independiente por jornada.`,

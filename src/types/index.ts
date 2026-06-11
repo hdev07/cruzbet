@@ -150,3 +150,21 @@ export interface BaseRoundLeaderboardEntry {
   match_count: number
   is_complete: boolean
 }
+
+export interface BaseRoundPayment {
+  user_id: string
+  round_id: string
+  verified: boolean
+  verified_at?: string | null
+  created_at?: string
+}
+
+export interface BaseRoundParticipant {
+  user_id: string
+  verified: boolean
+  profiles?: Pick<Profile, 'username' | 'avatar'>
+  predictions: BasePrediction[]
+  total_points: number
+  correct_count: number
+  complete: boolean
+}
