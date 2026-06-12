@@ -69,6 +69,16 @@ async function loginWithGoogle() {
       <RouterLink to="/" class="mt-6 inline-block text-sm text-slate-500 hover:text-slate-300">
         Volver al inicio
       </RouterLink>
+
+      <nav class="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs" aria-label="Enlaces legales">
+        <RouterLink to="/privacidad" class="text-slate-500 hover:text-slate-300">
+          Política de privacidad
+        </RouterLink>
+        <span class="text-slate-700" aria-hidden="true">·</span>
+        <RouterLink to="/terminos" class="text-slate-500 hover:text-slate-300">
+          Términos del servicio
+        </RouterLink>
+      </nav>
     </div>
   </div>
 </template>
