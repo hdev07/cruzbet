@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase'
 import type { Match } from '@/types'
 
 const SYNC_INTERVAL_MS = 60_000
@@ -26,16 +27,17 @@ function getSyncUrl(): string {
 }
 
 export async function triggerLiveSync(): Promise<{ ok: boolean; error?: string }> {
-  const token = import.meta.env.VITE_LIVE_SYNC_TOKEN
-  if (!token) {
-    return { ok: false, error: 'Falta VITE_LIVE_SYNC_TOKEN' }
+  const { data } = await supabase.auth.getSession()
+  const bearer = data.session?.access_token ?? import.meta.env.VITE_LIVE_SYNC_TOKEN
+  if (!bearer) {
+    return { ok: false, error: 'Inicia sesión como admin o configura VITE_LIVE_SYNC_TOKEN' }
   }
 
   try {
     const res = await fetch(getSyncUrl(), {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${bearer}`,
         'Content-Type': 'application/json',
       },
     })

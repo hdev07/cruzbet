@@ -112,10 +112,7 @@ export async function syncAllLiveMatches(): Promise<{
   return { processed: rows.length, updated, errors }
 }
 
-export function isAuthorizedSyncRequest(authHeader: string | undefined): boolean {
-  if (!authHeader?.startsWith('Bearer ')) return false
-  const token = authHeader.slice(7)
-
+function isStaticSyncToken(token: string): boolean {
   const liveToken = process.env.LIVE_SYNC_TOKEN
   if (liveToken && token === liveToken) return true
 
@@ -123,4 +120,34 @@ export function isAuthorizedSyncRequest(authHeader: string | undefined): boolean
   if (cronSecret && token === cronSecret) return true
 
   return false
+}
+
+async function isAdminAccessToken(token: string): Promise<boolean> {
+  if (!token.includes('.')) return false
+
+  try {
+    const supabase = getSupabaseAdmin()
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error || !data.user) return false
+
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase()
+    const userEmail = data.user.email?.toLowerCase()
+
+    return (
+      data.user.app_metadata?.role === 'admin' ||
+      (!!adminEmail && userEmail === adminEmail)
+    )
+  } catch {
+    return false
+  }
+}
+
+export async function isAuthorizedSyncRequest(
+  authHeader: string | undefined,
+): Promise<boolean> {
+  if (!authHeader?.startsWith('Bearer ')) return false
+  const token = authHeader.slice(7)
+
+  if (isStaticSyncToken(token)) return true
+  return isAdminAccessToken(token)
 }
