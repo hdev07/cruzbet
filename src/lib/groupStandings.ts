@@ -106,3 +106,21 @@ export function computeGroupStandings(teams: Team[], matches: Match[]): GroupSta
 export function allGroupLetters(): string[] {
   return [...GROUP_LETTERS]
 }
+
+/** Cada grupo de 4 equipos juega 6 partidos en fase de grupos */
+export const MATCHES_PER_GROUP = 6
+
+export function countFinishedMatchesInGroup(group: GroupStandings, matches: Match[]): number {
+  const teamIds = new Set(group.rows.map((r) => r.team.id))
+  return matches.filter(
+    (m) =>
+      m.phase === 'group' &&
+      m.status === 'finished' &&
+      teamIds.has(m.home_team_id) &&
+      teamIds.has(m.away_team_id),
+  ).length
+}
+
+export function totalGoalsInMatches(matches: Match[]): number {
+  return matches.reduce((sum, m) => sum + m.home_score + m.away_score, 0)
+}

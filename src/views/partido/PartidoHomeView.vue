@@ -3,7 +3,6 @@ import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ChevronRight } from '@lucide/vue'
 import QuinielaModeBanner from '@/components/layout/QuinielaModeBanner.vue'
-import GroupStandingsSection from '@/components/shared/GroupStandingsSection.vue'
 import MatchCard from '@/components/shared/MatchCard.vue'
 import { useHomeRealtime } from '@/composables/useHomeRealtime'
 import { QUINIELA_MODE_PARTIDO } from '@/constants/quiniela-modes'
@@ -107,8 +106,6 @@ const openForPredictions = computed(() =>
           />
         </div>
       </section>
-
-      <GroupStandingsSection show-view-all-link compact />
     </div>
   </div>
 </template>

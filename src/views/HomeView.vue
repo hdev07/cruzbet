@@ -2,6 +2,7 @@
 import { RouterLink } from 'vue-router'
 import { ChevronRight, Grid3x3, Zap } from '@lucide/vue'
 import HomeLandingRules from '@/components/home/HomeLandingRules.vue'
+import HomeTournamentHub from '@/components/home/HomeTournamentHub.vue'
 import { QUINIELA_MODE_BASE, QUINIELA_MODE_PARTIDO } from '@/constants/quiniela-modes'
 import { APP_NAME, APP_TAGLINE } from '@/constants/branding'
 import { useAuthStore } from '@/stores/authStore'
@@ -10,7 +11,7 @@ const auth = useAuthStore()
 </script>
 
 <template>
-  <div class="mx-auto w-full lg:max-w-4xl">
+  <div class="mx-auto w-full lg:max-w-5xl">
     <div class="mb-8 text-center lg:mb-10">
       <h1 class="text-3xl font-bold tracking-tight text-slate-100 lg:text-4xl">{{ APP_NAME }}</h1>
       <p class="mx-auto mt-3 max-w-md text-base text-slate-300 lg:text-lg">
@@ -35,6 +36,8 @@ const auth = useAuthStore()
         Entrar con Google
       </RouterLink>
     </div>
+
+    <HomeTournamentHub />
 
     <header class="mb-4 text-center">
       <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-mundial-green">
