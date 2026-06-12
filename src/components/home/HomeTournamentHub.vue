@@ -107,19 +107,10 @@ const stats = computed(() => [
 
 <template>
   <section
-    class="mb-10 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent"
+    class="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent"
   >
     <div class="border-b border-white/10 px-4 py-5 sm:px-6">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-mundial-accent">
-            Centro del torneo
-          </p>
-          <h2 class="text-xl font-bold text-slate-100 sm:text-2xl">Mundial 2026</h2>
-          <p class="mt-1 text-sm text-slate-400">
-            Partidos en vivo, tablas de grupos y calendario del torneo
-          </p>
-        </div>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <RouterLink
           :to="GRUPOS_PATH"
           class="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-mundial-accent/40 hover:text-mundial-accent"
@@ -129,7 +120,7 @@ const stats = computed(() => [
         </RouterLink>
       </div>
 
-      <div v-if="spotlightMatch" class="mt-4">
+      <div v-if="spotlightMatch">
         <HomeSpotlightMatch :match="spotlightMatch" :is-live="spotlightIsLive" />
 
         <div

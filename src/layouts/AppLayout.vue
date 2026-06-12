@@ -2,8 +2,14 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import InstallPrompt from '@/components/shared/InstallPrompt.vue'
+import QuinielaSubNav from '@/components/navigation/QuinielaSubNav.vue'
 import { APP_NAME } from '@/constants/branding'
-import { HUB_NAV, isQuinielaRoute, QUINIELA_NAV, type NavItem } from '@/constants/nav'
+import {
+  isQuinielaSectionRoute,
+  MAIN_NAV,
+  navItemHref,
+  type NavItem,
+} from '@/constants/nav'
 import { useLiveSync } from '@/composables/useLiveSync'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -12,20 +18,16 @@ useLiveSync()
 const route = useRoute()
 const auth = useAuthStore()
 
-const navItems = computed((): NavItem[] =>
-  isQuinielaRoute(route.path) ? QUINIELA_NAV : HUB_NAV,
-)
+const showQuinielaSubNav = computed(() => isQuinielaSectionRoute(route.path))
 
 function isNavActive(item: NavItem): boolean {
   if (item.to === '/') return route.path === '/'
   if (item.to === '/perfil') return route.path === '/perfil'
+  if (item.to === '/mundial') {
+    return route.path === '/mundial' || route.path === '/grupos' || route.path.startsWith('/grupos/')
+  }
   if (item.to === '/jornadas') {
-    const sub = route.path.slice('/jornadas/'.length)
-    const isRoundDetail =
-      route.path.startsWith('/jornadas/') &&
-      sub.length > 0 &&
-      !['todas'].includes(sub)
-    return route.path === '/jornadas' || route.path === '/jornadas/todas' || isRoundDetail
+    return isQuinielaSectionRoute(route.path)
   }
   return route.path === item.to || route.path.startsWith(`${item.to}/`)
 }
@@ -44,13 +46,13 @@ function isNavActive(item: NavItem): boolean {
 
         <nav
           v-if="route.path !== '/login'"
-          class="hidden flex-1 items-center justify-center gap-1 md:flex"
+          class="hidden flex-1 items-center justify-center gap-0.5 md:flex lg:gap-1"
         >
           <RouterLink
-            v-for="item in navItems"
+            v-for="item in MAIN_NAV"
             :key="item.to"
-            :to="item.to"
-            class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition"
+            :to="navItemHref(item, auth.isLoggedIn)"
+            class="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition lg:gap-2 lg:px-4"
             :class="
               isNavActive(item)
                 ? 'bg-mundial-accent/15 text-mundial-accent'
@@ -111,6 +113,8 @@ function isNavActive(item: NavItem): boolean {
       </div>
     </header>
 
+    <QuinielaSubNav v-if="showQuinielaSubNav" />
+
     <main
       class="mx-auto w-full max-w-xl flex-1 px-4 py-6 sm:max-w-2xl md:max-w-3xl lg:max-w-5xl lg:px-8 lg:py-8 xl:max-w-6xl"
     >
@@ -123,10 +127,10 @@ function isNavActive(item: NavItem): boolean {
     >
       <div class="mx-auto flex w-full max-w-xl">
         <RouterLink
-          v-for="item in navItems"
+          v-for="item in MAIN_NAV"
           :key="item.to"
-          :to="item.to"
-          class="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition"
+          :to="navItemHref(item, auth.isLoggedIn)"
+          class="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] transition"
           :class="isNavActive(item) ? 'text-mundial-accent' : 'text-slate-400'"
         >
           <component :is="item.icon" class="h-5 w-5" :stroke-width="2" />

@@ -1,27 +1,35 @@
 import type { Component } from 'vue'
-import { ClipboardList, Grid3x3, History, Home, Trophy, User } from '@lucide/vue'
+import { ClipboardList, Grid3x3, History, Home, LayoutGrid, Trophy, User } from '@lucide/vue'
 import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 
+export const MUNDIAL_PATH = '/mundial'
 export const GRUPOS_PATH = '/grupos'
 export const JORNADAS_PATH = '/jornadas'
+export const RANKING_PATH = '/ranking'
+export const PERFIL_PATH = '/perfil'
 
 export type NavItem = {
   to: string
   label: string
   icon: Component
+  /** Si requiere sesión, el enlace apunta a /login */
+  requiresAuth?: boolean
 }
 
-export const QUINIELA_NAV: NavItem[] = [
-  { to: '/jornadas', label: 'Jornadas', icon: Grid3x3 },
-  { to: '/ranking', label: 'Ranking', icon: Trophy },
-  { to: '/reglas', label: 'Reglas', icon: ClipboardList },
-  { to: '/historial', label: 'Historial', icon: History },
+/** Navegación principal — siempre visible, sin cambiar según la ruta */
+export const MAIN_NAV: NavItem[] = [
+  { to: '/', label: 'Inicio', icon: Home },
+  { to: MUNDIAL_PATH, label: 'Mundial', icon: LayoutGrid },
+  { to: JORNADAS_PATH, label: 'Quiniela', icon: Grid3x3 },
+  { to: RANKING_PATH, label: 'Ranking', icon: Trophy },
+  { to: PERFIL_PATH, label: 'Perfil', icon: User, requiresAuth: true },
 ]
 
-export const HUB_NAV: NavItem[] = [
-  { to: '/', label: 'Inicio', icon: Home },
-  { to: '/ranking', label: 'Ranking', icon: Trophy },
-  { to: '/perfil', label: 'Perfil', icon: User },
+/** Sub-navegación dentro de la sección Quiniela */
+export const QUINIELA_SUB_NAV: NavItem[] = [
+  { to: JORNADAS_PATH, label: 'Jornadas', icon: Grid3x3 },
+  { to: '/historial', label: 'Historial', icon: History, requiresAuth: true },
+  { to: '/reglas', label: 'Reglas', icon: ClipboardList },
 ]
 
 export const QUINIELA_SUMMARY = {
@@ -34,10 +42,19 @@ export const QUINIELA_SUMMARY = {
   ],
 } as const
 
-const QUINIELA_ROUTES = new Set(['/jornadas', '/ranking', '/reglas', '/historial'])
+const QUINIELA_SECTION_ROUTES = new Set(['/jornadas', '/historial', '/reglas'])
 
-export function isQuinielaRoute(path: string): boolean {
-  if (QUINIELA_ROUTES.has(path)) return true
+export function isQuinielaSectionRoute(path: string): boolean {
+  if (QUINIELA_SECTION_ROUTES.has(path)) return true
   if (path.startsWith('/jornadas/')) return true
   return false
+}
+
+export function isMundialSectionRoute(path: string): boolean {
+  return path === MUNDIAL_PATH || path === GRUPOS_PATH || path.startsWith('/grupos/')
+}
+
+export function navItemHref(item: NavItem, isLoggedIn: boolean): string {
+  if (item.requiresAuth && !isLoggedIn) return '/login'
+  return item.to
 }

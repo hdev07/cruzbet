@@ -14,6 +14,11 @@ const router = createRouter({
       meta: { layout: 'mobile', title: 'Inicio' },
     },
     {
+      path: '/mundial',
+      component: () => import('@/views/MundialView.vue'),
+      meta: { layout: 'mobile', title: 'Mundial' },
+    },
+    {
       path: '/grupos',
       component: () => import('@/views/partido/PartidoGruposView.vue'),
       meta: { layout: 'mobile', title: 'Grupos' },

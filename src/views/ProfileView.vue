@@ -1,7 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { Check, ChevronRight, LogOut, Pencil, Settings, Shield, X } from '@lucide/vue'
+import {
+  Check,
+  ChevronRight,
+  ClipboardList,
+  Grid3x3,
+  History,
+  LogOut,
+  Pencil,
+  Shield,
+  Trophy,
+  X,
+} from '@lucide/vue'
+import { JORNADAS_PATH } from '@/constants/nav'
 import { useAuthStore } from '@/stores/authStore'
 
 const auth = useAuthStore()
@@ -65,9 +77,14 @@ async function handleLogout() {
 
 <template>
   <div>
-    <h1 class="mb-6 text-2xl font-bold lg:text-3xl">Mi perfil</h1>
+    <header class="mb-6">
+      <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-mundial-accent">
+        Cuenta
+      </p>
+      <h1 class="text-2xl font-bold text-slate-100 lg:text-3xl">Mi perfil</h1>
+    </header>
 
-    <div class="mb-6 flex flex-col items-center rounded-xl border border-white/10 bg-white/5 p-6 text-center lg:mx-auto lg:max-w-md lg:p-8">
+    <div class="mb-8 flex flex-col items-center rounded-xl border border-white/10 bg-white/5 p-6 text-center lg:mx-auto lg:max-w-md lg:p-8">
       <img
         v-if="auth.profile?.avatar"
         :src="auth.profile.avatar"
@@ -136,33 +153,57 @@ async function handleLogout() {
       </p>
     </div>
 
-    <div class="mb-6 flex flex-wrap justify-center gap-2">
-      <RouterLink
-        to="/historial"
-        class="rounded-lg border border-mundial-green/30 bg-mundial-green/10 px-3 py-2 text-sm font-medium text-mundial-green hover:bg-mundial-green/20"
-      >
-        Mi historial de jornadas
-      </RouterLink>
-      <RouterLink
-        to="/ranking"
-        class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/10"
-      >
-        Ver ranking
-      </RouterLink>
-    </div>
+    <section class="mb-8">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
+        Mi quiniela
+      </h2>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <RouterLink
+          :to="JORNADAS_PATH"
+          class="flex items-center justify-between rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-4 py-3 transition hover:bg-mundial-green/15"
+        >
+          <span class="inline-flex items-center gap-2 text-sm font-medium text-mundial-green">
+            <Grid3x3 class="h-4 w-4" />
+            Ir a jornadas
+          </span>
+          <ChevronRight class="h-4 w-4 text-mundial-green/60" />
+        </RouterLink>
 
-    <div class="grid gap-6 lg:grid-cols-2">
-      <section class="space-y-2">
-        <h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-          Accesos rápidos
-        </h2>
+        <RouterLink
+          to="/historial"
+          class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
+        >
+          <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
+            <History class="h-4 w-4 text-slate-400" />
+            Mi historial
+          </span>
+          <ChevronRight class="h-4 w-4 text-slate-500" />
+        </RouterLink>
 
+        <RouterLink
+          to="/ranking"
+          class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10 sm:col-span-2"
+        >
+          <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
+            <Trophy class="h-4 w-4 text-slate-400" />
+            Ver ranking
+          </span>
+          <ChevronRight class="h-4 w-4 text-slate-500" />
+        </RouterLink>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
+        Información
+      </h2>
+      <div class="space-y-2">
         <RouterLink
           to="/reglas"
           class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
         >
           <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-            <Settings class="h-4 w-4 text-slate-400" />
+            <ClipboardList class="h-4 w-4 text-slate-400" />
             Reglas y pagos
           </span>
           <ChevronRight class="h-4 w-4 text-slate-500" />
@@ -179,22 +220,22 @@ async function handleLogout() {
           </span>
           <ChevronRight class="h-4 w-4 text-slate-500" />
         </RouterLink>
-      </section>
+      </div>
+    </section>
 
-      <section>
-        <h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-          Cuenta
-        </h2>
-        <button
-          type="button"
-          class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
-          :disabled="loggingOut"
-          @click="handleLogout"
-        >
-          <LogOut class="h-4 w-4" />
-          {{ loggingOut ? 'Cerrando sesión...' : 'Cerrar sesión' }}
-        </button>
-      </section>
-    </div>
+    <section>
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
+        Sesión
+      </h2>
+      <button
+        type="button"
+        class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+        :disabled="loggingOut"
+        @click="handleLogout"
+      >
+        <LogOut class="h-4 w-4" />
+        {{ loggingOut ? 'Cerrando sesión...' : 'Cerrar sesión' }}
+      </button>
+    </section>
   </div>
 </template>

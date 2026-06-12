@@ -55,9 +55,12 @@ watch(
 
 <template>
   <div>
+    <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-mundial-accent">
+      Clasificación
+    </p>
     <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Ranking</h1>
     <p class="mb-6 text-sm text-slate-400 lg:text-base">
-      Posiciones y pronósticos de la jornada
+      Posiciones y pronósticos por jornada
     </p>
 
     <p v-if="baseStore.loading && !baseStore.rounds.length" class="text-slate-400">

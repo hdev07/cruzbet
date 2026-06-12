@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
+import { ArrowLeft } from '@lucide/vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
+import { MUNDIAL_PATH } from '@/constants/nav'
 import GroupStandingsSection from '@/components/shared/GroupStandingsSection.vue'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 
@@ -13,6 +16,14 @@ onMounted(() => standingsStore.fetchStandingsData())
 
 <template>
   <div>
+    <RouterLink
+      :to="MUNDIAL_PATH"
+      class="mb-4 inline-flex items-center gap-1 text-sm text-slate-400 hover:text-mundial-accent"
+    >
+      <ArrowLeft class="h-4 w-4" />
+      Volver al Mundial
+    </RouterLink>
+
     <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Grupos</h1>
     <p class="mb-6 text-sm text-slate-400">
       Tablas de posiciones de la fase de grupos del Mundial 2026

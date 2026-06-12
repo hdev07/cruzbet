@@ -30,7 +30,6 @@ const editSecond = ref(0)
 const editExtraTime = ref(0)
 const editTeamId = ref('')
 const autoSyncEnabled = ref(true)
-const showManualControls = ref(false)
 
 const btnPrimary = computed(() =>
   props.mobile
@@ -43,22 +42,16 @@ const btnSecondary = computed(() =>
     : 'w-full rounded-lg py-2 text-xs font-medium disabled:opacity-50',
 )
 const formGrid = computed(() =>
-  props.mobile ? 'grid grid-cols-1 gap-3 sm:grid-cols-3' : 'grid grid-cols-3 gap-2',
+  props.mobile ? 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4' : 'grid grid-cols-2 gap-2 lg:grid-cols-4',
 )
 const inputClass =
   'mt-1.5 w-full rounded-lg border border-white/10 bg-mundial-dark px-3 py-2.5 text-base md:py-1.5 md:text-sm'
-const canManage = computed(() => props.match.status === 'live')
+
+const isScheduled = computed(() => props.match.status === 'scheduled')
+const isLive = computed(() => props.match.status === 'live')
 const isFinished = computed(() => props.match.status === 'finished')
 const isAutoSyncOn = computed(() => autoSyncEnabled.value !== false)
-
-function formatSyncTime(iso: string | null | undefined) {
-  if (!iso) return 'Aún no'
-  return new Date(iso).toLocaleString('es-MX', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-}
+const canEditGoals = computed(() => isLive.value || isFinished.value)
 
 const sortedEvents = computed(() =>
   [...events.value]
@@ -85,6 +78,15 @@ function formatGoalTime(minute: number, second: number, extraTime = 0) {
   }
   if (second > 0) return `${minute}:${String(second).padStart(2, '0')}`
   return `${minute}'`
+}
+
+function formatSyncTime(iso: string | null | undefined) {
+  if (!iso) return 'Aún no'
+  return new Date(iso).toLocaleString('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
 }
 
 function syncForm(match: Match) {
@@ -121,16 +123,24 @@ watch(
   { immediate: true },
 )
 
+async function refreshMatch() {
+  await matchStore.fetchMatches()
+  await loadEvents()
+  const updated = matchStore.matches.find((m) => m.id === props.match.id)
+  if (updated) syncForm(updated)
+}
+
 async function syncNow() {
   saving.value = true
   error.value = ''
+  message.value = ''
   const result = await triggerLiveSync()
   saving.value = false
   if (!result.ok) {
     error.value = result.error ?? 'No se pudo sincronizar'
     return
   }
-  message.value = 'Sincronizado'
+  message.value = 'Partido sincronizado'
   await refreshMatch()
 }
 
@@ -148,15 +158,8 @@ async function toggleAutoSync() {
     return
   }
   autoSyncEnabled.value = next
-  message.value = next ? 'Sync automático activado' : 'Sync automático pausado'
+  message.value = next ? 'Auto sync activado para este partido' : 'Auto sync pausado'
   await refreshMatch()
-}
-
-async function refreshMatch() {
-  await matchStore.fetchMatches()
-  await loadEvents()
-  const updated = matchStore.matches.find((m) => m.id === props.match.id)
-  if (updated) syncForm(updated)
 }
 
 async function startLive() {
@@ -169,7 +172,7 @@ async function startLive() {
   saving.value = false
   if (err) error.value = err.message
   else {
-    message.value = 'Partido iniciado — predicciones cerradas'
+    message.value = 'Partido iniciado manualmente'
     await refreshMatch()
   }
 }
@@ -177,7 +180,7 @@ async function startLive() {
 async function revertToScheduled() {
   if (
     !confirm(
-      '¿Deshacer el inicio? El partido volverá a programado, se borrarán los goles y se reabrirán las predicciones.',
+      '¿Volver a programado? Se borran goles, se resetea marcador y se reabren predicciones.',
     )
   ) {
     return
@@ -191,7 +194,7 @@ async function revertToScheduled() {
   saving.value = false
   if (err) error.value = err.message
   else {
-    message.value = 'Inicio deshecho — predicciones reabiertas'
+    message.value = 'Partido en programado'
     await refreshMatch()
   }
 }
@@ -199,7 +202,7 @@ async function revertToScheduled() {
 async function reopenMatch() {
   if (
     !confirm(
-      '¿Reactivar el partido? Volverá a programado, se anulará la puntuación y se borrarán goles y marcador.',
+      '¿Reactivar? Vuelve a programado, anula puntos y borra goles/marcador.',
     )
   ) {
     return
@@ -213,7 +216,7 @@ async function reopenMatch() {
   saving.value = false
   if (err) error.value = err.message
   else {
-    message.value = 'Partido reactivado — quedó como programado'
+    message.value = 'Partido reactivado'
     await refreshMatch()
   }
 }
@@ -232,7 +235,7 @@ async function updateLiveState() {
   saving.value = false
   if (err) error.value = err.message
   else {
-    message.value = 'Marcador y minuto actualizados'
+    message.value = 'Marcador y minuto guardados'
     await refreshMatch()
   }
 }
@@ -248,17 +251,14 @@ async function registerGoal() {
     minute: goalMinute.value,
     extra_time: goalExtraTime.value,
     event_second: goalSecond.value,
-    metadata: { type: 'foot' },
+    metadata: { type: 'foot', source: 'manual' },
   })
   saving.value = false
   if (err) {
     error.value = err.message
     return
   }
-  message.value =
-    goalSecond.value > 0
-      ? `Gol al ${goalMinute.value}:${String(goalSecond.value).padStart(2, '0')} registrado`
-      : `Gol al ${goalMinute.value}' registrado`
+  message.value = `Gol registrado (${formatGoalTime(goalMinute.value, goalSecond.value, goalExtraTime.value)})`
   await refreshMatch()
 }
 
@@ -314,6 +314,7 @@ async function deleteGoal(event: MatchEvent) {
 }
 
 async function finishMatch() {
+  if (!confirm('¿Finalizar partido y calcular puntos?')) return
   saving.value = true
   error.value = ''
   const { error: err } = await supabase
@@ -323,139 +324,168 @@ async function finishMatch() {
   saving.value = false
   if (err) error.value = err.message
   else {
-    message.value = 'Partido finalizado — puntos calculados'
+    message.value = 'Partido finalizado'
     await refreshMatch()
   }
 }
 </script>
 
 <template>
-  <div class="space-y-4">
-    <section
-      class="rounded-xl border border-mundial-green/30 bg-mundial-green/10 p-4 md:rounded-lg"
-    >
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 class="text-sm font-semibold text-mundial-green">Sync automático en vivo</h3>
-          <p class="mt-1 text-xs text-slate-400">
-            Se actualiza cada 60 s mientras alguien tenga la app abierta (sin cron de pago).
-            También puedes forzar sync o usar controles manuales abajo.
-          </p>
-          <p class="mt-2 text-xs text-slate-500">
-            Última sync: {{ formatSyncTime(match.live_sync_at) }}
-          </p>
-          <p v-if="match.live_sync_error" class="mt-1 text-xs text-amber-300">
-            Aviso: {{ match.live_sync_error }}
-          </p>
-        </div>
-        <div class="flex shrink-0 flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            class="rounded-lg border border-white/20 px-3 py-2 text-xs font-medium disabled:opacity-50"
-            :disabled="saving"
-            @click="syncNow"
-          >
-            Sync ahora
-          </button>
-          <button
-            type="button"
-            class="rounded-lg border border-white/20 px-3 py-2 text-xs font-medium disabled:opacity-50"
-            :disabled="saving"
-            @click="toggleAutoSync"
-          >
-            {{ isAutoSyncOn ? 'Pausar sync' : 'Activar sync' }}
-          </button>
-        </div>
+  <div class="space-y-5">
+    <!-- 1. SYNC -->
+    <section class="rounded-xl border border-mundial-green/30 bg-mundial-green/10 p-4">
+      <h3 class="text-sm font-semibold text-mundial-green">1. Sync automático</h3>
+      <p class="mt-1 text-xs text-slate-400">
+        cron-job.org + sync manual. Si falla, usa las secciones de abajo.
+      </p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <span
+          class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          :class="isAutoSyncOn ? 'bg-mundial-green/25 text-mundial-green' : 'bg-white/10 text-slate-400'"
+        >
+          {{ isAutoSyncOn ? 'Auto ON' : 'Auto OFF' }}
+        </span>
+        <span class="text-xs text-slate-500">Última sync: {{ formatSyncTime(match.live_sync_at) }}</span>
+      </div>
+      <p v-if="match.live_sync_error" class="mt-2 text-xs text-amber-300">{{ match.live_sync_error }}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="rounded-lg border border-white/20 px-3 py-2 text-xs font-medium disabled:opacity-50"
+          :disabled="saving"
+          @click="syncNow"
+        >
+          Sync este partido
+        </button>
+        <button
+          type="button"
+          class="rounded-lg border border-white/20 px-3 py-2 text-xs font-medium disabled:opacity-50"
+          :disabled="saving"
+          @click="toggleAutoSync"
+        >
+          {{ isAutoSyncOn ? 'Pausar auto' : 'Activar auto' }}
+        </button>
       </div>
     </section>
 
-    <button
-      v-if="match.status === 'scheduled' && !isAutoSyncOn"
-      type="button"
-      :class="[btnPrimary, 'bg-mundial-green']"
-      :disabled="saving"
-      @click="startLive"
-    >
-      Iniciar partido manualmente
-    </button>
+    <!-- 2. ESTADO -->
+    <section class="rounded-xl border border-white/10 bg-black/20 p-4">
+      <h3 class="text-sm font-semibold text-slate-100">2. Estado del partido</h3>
 
-    <p
-      v-else-if="match.status === 'scheduled' && isAutoSyncOn"
-      class="text-center text-xs text-slate-500"
-    >
-      El partido pasará a en vivo automáticamente al arrancar.
-    </p>
+      <div v-if="isScheduled" class="mt-3 space-y-2">
+        <p class="text-xs text-slate-500">
+          {{ isAutoSyncOn ? 'Pasará a en vivo solo al arrancar el partido real.' : 'Sync pausado: inicia manualmente.' }}
+        </p>
+        <button
+          v-if="!isAutoSyncOn"
+          type="button"
+          :class="[btnPrimary, 'bg-mundial-green']"
+          :disabled="saving"
+          @click="startLive"
+        >
+          Iniciar partido manualmente
+        </button>
+      </div>
 
-    <template v-if="isFinished">
-      <p class="text-center text-sm text-slate-500">
-        Partido cerrado. Reactívalo para dejarlo como programado y reabrir predicciones.
-      </p>
-      <button
-        type="button"
-        :class="[btnPrimary, 'border border-amber-500/40 bg-amber-500/10 text-amber-200']"
-        :disabled="saving"
-        @click="reopenMatch"
-      >
-        Reactivar partido
-      </button>
-    </template>
+      <div v-else-if="isFinished" class="mt-3 space-y-2">
+        <p class="text-xs text-slate-500">Partido cerrado. Puedes editar goles abajo o reactivar.</p>
+        <button
+          type="button"
+          :class="[btnSecondary, 'border border-amber-500/40 text-amber-200']"
+          :disabled="saving"
+          @click="reopenMatch"
+        >
+          Reactivar partido
+        </button>
+      </div>
 
-    <section
-      v-if="sortedEvents.length"
-      class="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3"
-    >
-      <h3 class="text-sm font-semibold">Goles registrados</h3>
-      <ul class="space-y-2">
+      <div v-if="isLive || isFinished" class="mt-4 space-y-3">
+        <div class="grid grid-cols-3 gap-2">
+          <label class="block text-xs text-slate-400">
+            Minuto
+            <input v-model.number="currentMinute" type="number" min="0" max="120" :class="inputClass" />
+          </label>
+          <label class="block text-xs text-slate-400">
+            Local
+            <input v-model.number="homeScore" type="number" min="0" :class="inputClass" />
+          </label>
+          <label class="block text-xs text-slate-400">
+            Visita
+            <input v-model.number="awayScore" type="number" min="0" :class="inputClass" />
+          </label>
+        </div>
+        <button
+          type="button"
+          :class="[btnSecondary, 'bg-slate-600 font-semibold text-white']"
+          :disabled="saving"
+          @click="updateLiveState"
+        >
+          Guardar marcador y minuto
+        </button>
+      </div>
+
+      <div v-if="isLive" class="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          :class="[btnPrimary, 'border border-white/20 bg-white/5 text-slate-200']"
+          :disabled="saving"
+          @click="finishMatch"
+        >
+          Finalizar partido
+        </button>
+        <button
+          type="button"
+          :class="[btnSecondary, 'border border-red-500/30 text-red-300']"
+          :disabled="saving"
+          @click="revertToScheduled"
+        >
+          Volver a programado
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. GOLES -->
+    <section class="rounded-xl border border-white/10 bg-black/20 p-4">
+      <h3 class="text-sm font-semibold text-slate-100">3. Goles</h3>
+
+      <ul v-if="sortedEvents.length" class="mt-3 space-y-2">
         <li
           v-for="event in sortedEvents"
           :key="event.id"
-          class="rounded-lg border border-white/5 bg-white/5 p-2"
+          class="rounded-lg border border-white/5 bg-white/5 p-3"
         >
-          <template v-if="editingEventId === event.id && canManage">
+          <template v-if="editingEventId === event.id">
             <div :class="formGrid">
-              <label class="block text-sm md:text-xs">
+              <label class="block text-xs">
                 Equipo
                 <select v-model="editTeamId" :class="inputClass">
                   <option :value="match.home_team_id">{{ teamDisplayName(match.home_team, 'Local') }}</option>
                   <option :value="match.away_team_id">{{ teamDisplayName(match.away_team, 'Visita') }}</option>
                 </select>
               </label>
-              <label class="block text-sm md:text-xs">
+              <label class="block text-xs">
                 Minuto
-                <input
-                  v-model.number="editMinute"
-                  type="number"
-                  min="1"
-                  max="120"
-                  :class="inputClass"
-                />
+                <input v-model.number="editMinute" type="number" min="1" max="120" :class="inputClass" />
               </label>
-              <label class="block text-sm md:text-xs">
+              <label class="block text-xs">
+                Agregado
+                <input v-model.number="editExtraTime" type="number" min="0" max="15" :class="inputClass" />
+              </label>
+              <label class="block text-xs">
                 Segundos
-                <input
-                  v-model.number="editSecond"
-                  type="number"
-                  min="0"
-                  max="59"
-                  :class="inputClass"
-                />
+                <input v-model.number="editSecond" type="number" min="0" max="59" :class="inputClass" />
               </label>
             </div>
             <div class="mt-3 flex gap-2">
               <button
                 type="button"
-                class="flex-1 rounded-xl bg-mundial-accent py-3 text-sm font-semibold disabled:opacity-50 md:rounded-lg md:py-1.5 md:text-xs"
+                class="flex-1 rounded-lg bg-mundial-accent py-2 text-xs font-semibold"
                 :disabled="saving"
                 @click="saveEditGoal"
               >
                 Guardar
               </button>
-              <button
-                type="button"
-                class="rounded-xl border border-white/20 px-4 py-3 text-sm text-slate-400 md:rounded-lg md:py-1.5 md:text-xs"
-                :disabled="saving"
-                @click="cancelEditGoal"
-              >
+              <button type="button" class="rounded-lg border border-white/20 px-4 py-2 text-xs" @click="cancelEditGoal">
                 Cancelar
               </button>
             </div>
@@ -465,22 +495,16 @@ async function finishMatch() {
               <span class="text-sm text-slate-200">
                 {{ teamLabel(event.team_id) }} —
                 {{ formatGoalTime(event.minute, event.event_second ?? 0, event.extra_time ?? 0) }}
+                <span
+                  v-if="(event.metadata as Record<string, unknown>)?.source === 'live_sync' || (event.metadata as Record<string, unknown>)?.sync_key"
+                  class="ml-1 text-[10px] text-slate-500"
+                >(auto)</span>
               </span>
-              <div v-if="canManage" class="flex shrink-0 gap-1">
-                <button
-                  type="button"
-                  class="rounded-lg px-3 py-2 text-xs text-slate-400 hover:bg-white/10 md:px-2 md:py-1 md:text-[11px]"
-                  :disabled="saving"
-                  @click="startEditGoal(event)"
-                >
+              <div v-if="canEditGoals" class="flex gap-1">
+                <button type="button" class="rounded px-2 py-1 text-xs text-slate-400 hover:bg-white/10" @click="startEditGoal(event)">
                   Editar
                 </button>
-                <button
-                  type="button"
-                  class="rounded-lg px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 md:px-2 md:py-1 md:text-[11px]"
-                  :disabled="saving"
-                  @click="deleteGoal(event)"
-                >
+                <button type="button" class="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/10" @click="deleteGoal(event)">
                   Borrar
                 </button>
               </div>
@@ -488,141 +512,40 @@ async function finishMatch() {
           </template>
         </li>
       </ul>
-    </section>
+      <p v-else class="mt-3 text-xs text-slate-500">Sin goles registrados.</p>
 
-    <template v-if="canManage">
-      <button
-        type="button"
-        :class="[btnSecondary, 'border border-white/20 text-slate-300']"
-        :disabled="saving"
-        @click="showManualControls = !showManualControls"
-      >
-        {{ showManualControls ? 'Ocultar controles manuales' : 'Controles manuales (override)' }}
-      </button>
-
-      <template v-if="showManualControls">
-      <button
-        type="button"
-        :class="[btnSecondary, 'border border-red-500/30 bg-red-500/10 text-red-300']"
-        :disabled="saving"
-        @click="revertToScheduled"
-      >
-        Deshacer inicio (volver a programado)
-      </button>
-
-      <section class="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4 md:rounded-lg md:p-3">
-        <h3 class="text-sm font-semibold">Marcador y minuto</h3>
+      <div v-if="canEditGoals" class="mt-4 space-y-3 border-t border-white/10 pt-4">
+        <h4 class="text-xs font-semibold uppercase tracking-wide text-mundial-accent">Registrar gol manual</h4>
         <div :class="formGrid">
-          <label class="block text-sm md:text-xs">
-            Min
-            <input
-              v-model.number="currentMinute"
-              type="number"
-              min="0"
-              max="120"
-              :class="inputClass"
-            />
-          </label>
-          <label class="block text-sm md:text-xs">
-            Local
-            <input
-              v-model.number="homeScore"
-              type="number"
-              min="0"
-              :class="inputClass"
-            />
-          </label>
-          <label class="block text-sm md:text-xs">
-            Visita
-            <input
-              v-model.number="awayScore"
-              type="number"
-              min="0"
-              :class="inputClass"
-            />
-          </label>
-        </div>
-        <p class="text-xs text-slate-500">
-          Si registras o editas goles, el marcador se sincroniza solo. Puedes ajustarlo manualmente si hace falta.
-        </p>
-        <button
-          type="button"
-          :class="[btnSecondary, 'bg-slate-600 font-semibold text-white']"
-          :disabled="saving"
-          @click="updateLiveState"
-        >
-          Actualizar marcador
-        </button>
-      </section>
-
-      <section class="space-y-3 rounded-xl border border-mundial-accent/30 bg-mundial-accent/5 p-4 md:rounded-lg md:p-3">
-        <h3 class="text-sm font-semibold text-mundial-accent">Registrar gol</h3>
-        <div :class="formGrid">
-          <label class="block text-sm md:text-xs">
+          <label class="block text-xs">
             Equipo
             <select v-model="goalTeamId" :class="inputClass">
               <option :value="match.home_team_id">{{ teamDisplayName(match.home_team, 'Local') }}</option>
               <option :value="match.away_team_id">{{ teamDisplayName(match.away_team, 'Visita') }}</option>
             </select>
           </label>
-          <label class="block text-sm md:text-xs">
+          <label class="block text-xs">
             Minuto
-            <input
-              v-model.number="goalMinute"
-              type="number"
-              min="1"
-              max="120"
-              :class="inputClass"
-            />
+            <input v-model.number="goalMinute" type="number" min="1" max="120" :class="inputClass" />
           </label>
-          <label class="block text-sm md:text-xs">
-            Segundos
-            <input
-              v-model.number="goalSecond"
-              type="number"
-              min="0"
-              max="59"
-              :class="inputClass"
-            />
-          </label>
-          <label class="block text-sm md:text-xs">
+          <label class="block text-xs">
             Agregado
-            <input
-              v-model.number="goalExtraTime"
-              type="number"
-              min="0"
-              max="15"
-              :class="inputClass"
-            />
+            <input v-model.number="goalExtraTime" type="number" min="0" max="15" :class="inputClass" />
+          </label>
+          <label class="block text-xs">
+            Segundos
+            <input v-model.number="goalSecond" type="number" min="0" max="59" :class="inputClass" />
           </label>
         </div>
-        <p class="text-xs text-slate-500">
-          Desde el segundo 30 cuenta como el siguiente minuto para puntuar (ej. 34:45 → casillero 35).
-          Usa agregado para goles tipo 90+2.
+        <p class="text-[11px] text-slate-500">
+          Segundo ≥30 cuenta como minuto siguiente. Agregado: 90+2 → minuto 90, agregado 2.
         </p>
-        <button
-          type="button"
-          :class="[btnPrimary, 'bg-mundial-accent']"
-          :disabled="saving"
-          @click="registerGoal"
-        >
+        <button type="button" :class="[btnPrimary, 'bg-mundial-accent']" :disabled="saving" @click="registerGoal">
           Registrar gol
         </button>
-      </section>
-
-      <button
-        type="button"
-        :class="[
-          btnPrimary,
-          'border-2 border-white/30 bg-white/5 text-slate-200 hover:bg-white/10',
-        ]"
-        :disabled="saving"
-        @click="finishMatch"
-      >
-        Finalizar partido
-      </button>
-      </template>
-    </template>
+      </div>
+      <p v-else class="mt-3 text-xs text-slate-500">Inicia el partido para registrar goles.</p>
+    </section>
 
     <p v-if="message" class="text-xs text-mundial-green">{{ message }}</p>
     <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
