@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { CheckCircle2, Lock, LockOpen, XCircle } from '@lucide/vue'
-import { BASE_QUINIELA_FILL_TIP, BASE_QUINIELA_POINTS_PER_HIT } from '@/constants/base-quiniela-rules'
+import { computed, ref } from 'vue'
+import { CheckCircle2, Info, Lock, XCircle } from '@lucide/vue'
+import ConfirmModal from '@/components/shared/ConfirmModal.vue'
+import {
+  BASE_QUINIELA_FILL_TIP,
+  BASE_QUINIELA_POINTS_PER_HIT,
+  BASE_QUINIELA_SAVE_ALERT,
+} from '@/constants/base-quiniela-rules'
 import { BASE_WINNER_OPTIONS, isPredictionCorrect } from '@/lib/baseQuinielaDisplay'
 import { formatKickoff, isMatchOpenForPredictions } from '@/lib/matchRules'
 import { teamDisplayName } from '@/lib/teamDisplay'
@@ -22,8 +27,7 @@ const emit = defineEmits<{
 const baseStore = useBaseQuinielaStore()
 const formError = ref<string | null>(null)
 const savingMatchId = ref<string | null>(null)
-const lockedMatchIds = ref<Set<string>>(new Set())
-const justCompleted = ref(false)
+const showSubmitModal = ref(false)
 
 const sortedMatches = computed(() =>
   [...props.roundMatches].sort((a, b) => a.position - b.position),
@@ -38,59 +42,10 @@ const isComplete = computed(() => {
   return filled === total
 })
 
-function locksStorageKey(): string | null {
-  if (!props.userId || !props.roundId) return null
-  return `base-quiniela-locks:${props.userId}:${props.roundId}`
-}
-
-function loadLocks() {
-  const key = locksStorageKey()
-  if (!key) {
-    lockedMatchIds.value = new Set()
-    return
-  }
-  try {
-    const raw = localStorage.getItem(key)
-    lockedMatchIds.value = new Set(raw ? (JSON.parse(raw) as string[]) : [])
-  } catch {
-    lockedMatchIds.value = new Set()
-  }
-}
-
-function persistLocks() {
-  const key = locksStorageKey()
-  if (!key) return
-  localStorage.setItem(key, JSON.stringify([...lockedMatchIds.value]))
-}
-
-watch(() => [props.userId, props.roundId] as const, loadLocks, { immediate: true })
-
-function isMatchLocked(matchId: string): boolean {
-  return lockedMatchIds.value.has(matchId)
-}
-
-function canToggleLock(matchId: string): boolean {
-  if (!props.canPredict || !props.userId) return false
-  if (!baseStore.getPredictionForMatch(matchId)) return false
-  const row = props.roundMatches.find((rm) => rm.match_id === matchId)
-  return row?.match ? isMatchOpenForPredictions(row.match) : false
-}
-
-function toggleLock(matchId: string) {
-  if (!canToggleLock(matchId)) return
-  const next = new Set(lockedMatchIds.value)
-  if (next.has(matchId)) {
-    next.delete(matchId)
-  } else {
-    next.add(matchId)
-  }
-  lockedMatchIds.value = next
-  persistLocks()
-}
+const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
 
 function matchCanEdit(matchId: string): boolean {
-  if (!props.canPredict || !props.userId) return false
-  if (isMatchLocked(matchId)) return false
+  if (!props.canPredict || !props.userId || isSubmitted.value) return false
   const row = props.roundMatches.find((rm) => rm.match_id === matchId)
   return row?.match ? isMatchOpenForPredictions(row.match) : false
 }
@@ -108,14 +63,35 @@ async function pickWinner(matchId: string, winner: PredictedWinner) {
   savingMatchId.value = matchId
   try {
     await baseStore.savePrediction(props.roundId, row.match, props.userId, winner)
-    if (total > 0 && filledBefore === total - 1) {
-      justCompleted.value = true
+    if (total > 0 && filledBefore === total - 1 && !isSubmitted.value) {
+      showSubmitModal.value = true
     }
     emit('updated')
   } catch (err) {
     formError.value = err instanceof Error ? err.message : 'No se pudo guardar'
   } finally {
     savingMatchId.value = null
+  }
+}
+
+function openSubmitModal() {
+  if (!isComplete.value || isSubmitted.value) return
+  showSubmitModal.value = true
+}
+
+function cancelSubmitModal() {
+  showSubmitModal.value = false
+}
+
+async function confirmSubmitQuiniela() {
+  if (!props.userId) return
+  formError.value = null
+  try {
+    await baseStore.submitQuiniela(props.roundId, props.userId)
+    showSubmitModal.value = false
+    emit('updated')
+  } catch (err) {
+    formError.value = err instanceof Error ? err.message : 'No se pudo guardar la quiniela'
   }
 }
 
@@ -183,14 +159,37 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
 <template>
   <div>
     <div
-      v-if="canPredict && (isComplete || justCompleted)"
+      v-if="canPredict && isSubmitted"
       class="mb-4 flex gap-2 rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-3 py-2.5 text-sm text-mundial-green"
     >
-      <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0" />
-      <div>
-        <p>{{ BASE_QUINIELA_FILL_TIP.allFilled }}</p>
-        <p class="mt-1 text-xs text-mundial-green/80">{{ BASE_QUINIELA_FILL_TIP.lockHint }}</p>
+      <Lock class="mt-0.5 h-4 w-4 shrink-0" />
+      <p>{{ BASE_QUINIELA_FILL_TIP.submitted }}</p>
+    </div>
+
+    <div
+      v-else-if="canPredict && isComplete"
+      class="mb-4 flex flex-col gap-3 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div class="flex gap-2 text-sm text-mundial-accent">
+        <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0" />
+        <p>{{ BASE_QUINIELA_FILL_TIP.readyToSubmit }}</p>
       </div>
+      <button
+        type="button"
+        class="shrink-0 rounded-lg bg-mundial-accent px-4 py-2 text-sm font-bold text-white hover:bg-mundial-accent/90 disabled:opacity-50"
+        :disabled="baseStore.saving"
+        @click="openSubmitModal"
+      >
+        {{ baseStore.saving ? 'Guardando...' : 'Guardar quiniela' }}
+      </button>
+    </div>
+
+    <div
+      v-else-if="canPredict"
+      class="mb-4 flex gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-slate-300"
+    >
+      <Info class="mt-0.5 h-4 w-4 shrink-0 text-mundial-accent" />
+      <p>{{ BASE_QUINIELA_FILL_TIP.draft }}</p>
     </div>
 
     <p v-if="formError" class="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -207,25 +206,10 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
       >
         <div v-if="row.match" class="mb-3">
           <div class="mb-1 flex items-center gap-2">
-            <button
-              v-if="canToggleLock(row.match_id)"
-              type="button"
-              class="rounded-md p-1 transition-colors"
-              :class="
-                isMatchLocked(row.match_id)
-                  ? 'text-mundial-accent hover:bg-mundial-accent/15'
-                  : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
-              "
-              :title="
-                isMatchLocked(row.match_id)
-                  ? 'Desbloquear para editar'
-                  : 'Bloquear para evitar cambios'
-              "
-              @click="toggleLock(row.match_id)"
-            >
-              <Lock v-if="isMatchLocked(row.match_id)" class="h-3.5 w-3.5" />
-              <LockOpen v-else class="h-3.5 w-3.5" />
-            </button>
+            <Lock
+              v-if="isSubmitted && baseStore.getPredictionForMatch(row.match_id)"
+              class="h-3.5 w-3.5 text-mundial-accent"
+            />
             <span class="text-xs font-semibold tabular-nums text-slate-500">#{{ row.position }}</span>
             <span
               v-if="row.match.status !== 'scheduled'"
@@ -308,12 +292,6 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
       <table class="w-full border-collapse text-sm">
         <thead>
           <tr class="bg-black/40 text-xs uppercase tracking-wider text-slate-400">
-            <th
-              class="w-8 border border-white/10 px-1 py-2 text-center"
-              title="Bloquear fila"
-            >
-              <Lock class="mx-auto h-3.5 w-3.5" />
-            </th>
             <th class="w-8 border border-white/10 px-2 py-2 text-left">#</th>
             <th class="border border-white/10 px-3 py-2 text-left">Partido</th>
             <th
@@ -336,30 +314,14 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
             class="bg-white/[0.02]"
             :class="rowStatusClass(row)"
           >
-            <td class="border border-white/10 px-1 py-2 text-center">
-              <button
-                v-if="canToggleLock(row.match_id)"
-                type="button"
-                class="rounded-md p-1 transition-colors"
-                :class="
-                  isMatchLocked(row.match_id)
-                    ? 'text-mundial-accent hover:bg-mundial-accent/15'
-                    : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
-                "
-                :title="
-                  isMatchLocked(row.match_id)
-                    ? 'Desbloquear para editar'
-                    : 'Bloquear para evitar cambios'
-                "
-                @click="toggleLock(row.match_id)"
-              >
-                <Lock v-if="isMatchLocked(row.match_id)" class="h-3.5 w-3.5" />
-                <LockOpen v-else class="h-3.5 w-3.5" />
-              </button>
-              <span v-else class="text-slate-700">—</span>
-            </td>
             <td class="border border-white/10 px-2 py-2 text-center text-slate-500 tabular-nums">
-              {{ row.position }}
+              <span class="inline-flex items-center gap-1">
+                <Lock
+                  v-if="isSubmitted && baseStore.getPredictionForMatch(row.match_id)"
+                  class="h-3 w-3 text-mundial-accent"
+                />
+                {{ row.position }}
+              </span>
             </td>
             <td class="border border-white/10 px-3 py-2">
               <div v-if="row.match" class="min-w-0">
@@ -440,5 +402,16 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
         </tbody>
       </table>
     </div>
+
+    <ConfirmModal
+      :open="showSubmitModal"
+      :title="BASE_QUINIELA_SAVE_ALERT.title"
+      :subtitle="BASE_QUINIELA_SAVE_ALERT.subtitle"
+      :sections="BASE_QUINIELA_SAVE_ALERT.sections"
+      :confirm-label="BASE_QUINIELA_SAVE_ALERT.confirm"
+      :saving="baseStore.saving"
+      @confirm="confirmSubmitQuiniela"
+      @cancel="cancelSubmitModal"
+    />
   </div>
 </template>

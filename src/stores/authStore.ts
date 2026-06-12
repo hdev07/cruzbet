@@ -79,6 +79,32 @@ export const useAuthStore = defineStore('auth', () => {
     profile.value = null
   }
 
+  function validateUsername(value: string): string | null {
+    const trimmed = value.trim()
+    if (!trimmed) return 'El nombre no puede estar vacío'
+    if (trimmed.length < 2) return 'Mínimo 2 caracteres'
+    if (trimmed.length > 30) return 'Máximo 30 caracteres'
+    return null
+  }
+
+  async function updateUsername(username: string) {
+    if (!user.value) throw new Error('Debes iniciar sesión')
+
+    const validationError = validateUsername(username)
+    if (validationError) throw new Error(validationError)
+
+    const trimmed = username.trim()
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ username: trimmed })
+      .eq('id', user.value.id)
+      .select()
+      .single()
+
+    if (error) throw error
+    if (data) profile.value = data as Profile
+  }
+
   return {
     user,
     profile,
@@ -88,5 +114,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchProfile,
     loginWithGoogle,
     logout,
+    updateUsername,
   }
 })

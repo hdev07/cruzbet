@@ -13,10 +13,28 @@ export const BASE_PAYMENT_INFO = {
 } as const
 
 export const BASE_QUINIELA_FILL_TIP = {
-  allFilled:
-    'Tu quiniela está guardada. Puedes editar cada partido hasta que empiece el encuentro.',
-  lockHint:
-    'Usa el candado al inicio de cada fila para bloquear un partido y evitar cambios accidentales.',
+  draft:
+    'Puedes cambiar tus picks libremente. Cuando marques los 16 partidos, podrás guardar tu quiniela.',
+  readyToSubmit:
+    'Marcaste los 16 partidos. Guarda tu quiniela para confirmarla — después no podrás cambiar ningún pick.',
+  submitted:
+    'Tu quiniela está guardada. Ya no puedes modificar tus picks.',
+} as const
+
+export const BASE_QUINIELA_SAVE_ALERT = {
+  title: '¿Guardamos tu quiniela?',
+  subtitle: 'Lee esto antes de confirmar 👇',
+  sections: [
+    {
+      title: 'Lo importante',
+      bullets: [
+        'Una vez guardada, no podrás cambiar ningún partido.',
+        'Revisa bien tus picks de L, E o V antes de confirmar.',
+        'Solo puedes guardar cuando hayas marcado los 16 partidos.',
+      ],
+    },
+  ],
+  confirm: 'Sí, guardar quiniela',
 } as const
 
 export const BASE_QUINIELA_LOGIC = {
@@ -26,6 +44,8 @@ export const BASE_QUINIELA_LOGIC = {
     `Transfiere $${BASE_ENTRY_FEE_MXN} MXN por cada jornada en la que participes.`,
     `Los partidos se agrupan en jornadas de ${BASE_QUINIELA_MATCHES_PER_ROUND}, en orden de calendario.`,
     'Marca L, E o V para cada partido antes de que empiece.',
+    'Puedes cambiar tus picks mientras no hayas guardado la quiniela.',
+    'Al guardar la quiniela (16 partidos marcados), tus picks quedan bloqueados definitivamente.',
     'Al terminar cada partido se revisa tu pick automáticamente.',
     `Cada acierto vale ${BASE_QUINIELA_POINTS_PER_HIT} puntos (máximo ${BASE_QUINIELA_MAX_POINTS} por jornada).`,
     'El ranking de la jornada ordena por aciertos; en empate, por puntos.',

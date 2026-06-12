@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { ChevronRight, LogOut, Settings, Shield } from '@lucide/vue'
+import { Check, ChevronRight, LogOut, Pencil, Settings, Shield, X } from '@lucide/vue'
 import UserPredictionsList from '@/components/predictions/UserPredictionsList.vue'
 import { useAuthStore } from '@/stores/authStore'
 import { usePredictionStore } from '@/stores/predictionStore'
@@ -13,6 +13,45 @@ const router = useRouter()
 const loggingOut = ref(false)
 const loadingPredictions = ref(false)
 const userPredictions = ref<PredictionWithMatch[]>([])
+const editingUsername = ref(false)
+const usernameDraft = ref('')
+const savingUsername = ref(false)
+const usernameError = ref<string | null>(null)
+
+watch(
+  () => auth.profile?.username,
+  (username) => {
+    if (!editingUsername.value) {
+      usernameDraft.value = username ?? ''
+    }
+  },
+  { immediate: true },
+)
+
+function startEditingUsername() {
+  usernameDraft.value = auth.profile?.username ?? ''
+  usernameError.value = null
+  editingUsername.value = true
+}
+
+function cancelEditingUsername() {
+  usernameDraft.value = auth.profile?.username ?? ''
+  usernameError.value = null
+  editingUsername.value = false
+}
+
+async function saveUsername() {
+  usernameError.value = null
+  savingUsername.value = true
+  try {
+    await auth.updateUsername(usernameDraft.value)
+    editingUsername.value = false
+  } catch (err) {
+    usernameError.value = err instanceof Error ? err.message : 'No se pudo guardar el nombre'
+  } finally {
+    savingUsername.value = false
+  }
+}
 
 onMounted(async () => {
   if (!auth.user) return
@@ -55,9 +94,56 @@ async function handleLogout() {
         {{ auth.profile?.username?.[0]?.toUpperCase() ?? auth.user?.email?.[0]?.toUpperCase() ?? '?' }}
       </span>
 
-      <p class="text-xl font-semibold">
-        {{ auth.profile?.username ?? 'Jugador' }}
-      </p>
+      <div v-if="editingUsername" class="mt-1 w-full max-w-xs space-y-2">
+        <label class="sr-only" for="profile-username">Nombre de usuario</label>
+        <input
+          id="profile-username"
+          v-model="usernameDraft"
+          type="text"
+          maxlength="30"
+          autocomplete="nickname"
+          class="w-full rounded-lg border border-white/10 bg-mundial-dark px-3 py-2 text-center text-base font-semibold"
+          :disabled="savingUsername"
+          @keyup.enter="saveUsername"
+          @keyup.escape="cancelEditingUsername"
+        />
+        <p v-if="usernameError" class="text-sm text-red-400">{{ usernameError }}</p>
+        <div class="flex justify-center gap-2">
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 rounded-lg bg-mundial-accent px-3 py-1.5 text-sm font-semibold text-mundial-dark disabled:opacity-50"
+            :disabled="savingUsername"
+            @click="saveUsername"
+          >
+            <Check class="h-4 w-4" />
+            {{ savingUsername ? 'Guardando...' : 'Guardar' }}
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-50"
+            :disabled="savingUsername"
+            @click="cancelEditingUsername"
+          >
+            <X class="h-4 w-4" />
+            Cancelar
+          </button>
+        </div>
+      </div>
+
+      <div v-else class="flex items-center gap-2">
+        <p class="text-xl font-semibold">
+          {{ auth.profile?.username ?? 'Jugador' }}
+        </p>
+        <button
+          type="button"
+          class="rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-slate-200"
+          title="Cambiar nombre"
+          @click="startEditingUsername"
+        >
+          <Pencil class="h-4 w-4" />
+        </button>
+      </div>
+
       <p v-if="auth.user?.email" class="mt-1 text-sm text-slate-400">
         {{ auth.user.email }}
       </p>

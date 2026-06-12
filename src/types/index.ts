@@ -156,6 +156,7 @@ export interface BaseRoundPayment {
   round_id: string
   verified: boolean
   verified_at?: string | null
+  submitted_at?: string | null
   created_at?: string
 }
 

@@ -9,6 +9,7 @@ import type {
   BaseQuinielaRoundMatch,
   BaseRoundLeaderboardEntry,
   BaseRoundParticipant,
+  BaseRoundPayment,
   Match,
   PredictedWinner,
 } from '@/types'
@@ -20,6 +21,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   const currentRound = ref<BaseQuinielaRound | null>(null)
   const roundMatches = ref<BaseQuinielaRoundMatch[]>([])
   const myPredictions = ref<BasePrediction[]>([])
+  const mySubmission = ref<BaseRoundPayment | null>(null)
   const leaderboard = ref<BaseRoundLeaderboardEntry[]>([])
   const loading = ref(false)
   const saving = ref(false)
@@ -72,14 +74,28 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   }
 
   async function fetchMyPredictions(roundId: string, userId: string) {
-    const { data, error } = await supabase
-      .from('base_predictions')
-      .select('*')
-      .eq('round_id', roundId)
-      .eq('user_id', userId)
+    const [{ data, error }, { data: payment, error: paymentErr }] = await Promise.all([
+      supabase
+        .from('base_predictions')
+        .select('*')
+        .eq('round_id', roundId)
+        .eq('user_id', userId),
+      supabase
+        .from('base_round_payments')
+        .select('*')
+        .eq('round_id', roundId)
+        .eq('user_id', userId)
+        .maybeSingle(),
+    ])
 
     if (error) throw error
+    if (paymentErr) throw paymentErr
     myPredictions.value = (data ?? []) as BasePrediction[]
+    mySubmission.value = (payment ?? null) as BaseRoundPayment | null
+  }
+
+  function isQuinielaSubmitted(): boolean {
+    return mySubmission.value?.submitted_at != null
   }
 
   async function fetchRoundLeaderboard(roundId: string) {
@@ -117,6 +133,10 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     userId: string,
     winner: PredictedWinner,
   ): Promise<BasePrediction> {
+    if (isQuinielaSubmitted()) {
+      throw new Error('Tu quiniela ya está guardada. No puedes cambiar tus picks.')
+    }
+
     if (!isMatchOpenForPredictions(match)) {
       throw new Error('Las predicciones cerraron: el partido ya inició o terminó')
     }
@@ -159,6 +179,37 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
       const created = data as BasePrediction
       myPredictions.value.push(created)
       return created
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function submitQuiniela(roundId: string, userId: string): Promise<void> {
+    if (isQuinielaSubmitted()) {
+      throw new Error('Tu quiniela ya está guardada')
+    }
+
+    const { filled, total } = myProgress()
+    if (filled < total) {
+      throw new Error('Debes marcar todos los partidos antes de guardar')
+    }
+
+    saving.value = true
+    try {
+      const { error } = await supabase.rpc('submit_base_quiniela', {
+        p_round_id: roundId,
+      })
+      if (error) throw error
+
+      const { data: payment, error: paymentErr } = await supabase
+        .from('base_round_payments')
+        .select('*')
+        .eq('round_id', roundId)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (paymentErr) throw paymentErr
+      mySubmission.value = (payment ?? null) as BaseRoundPayment | null
     } finally {
       saving.value = false
     }
@@ -275,6 +326,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     currentRound,
     roundMatches,
     myPredictions,
+    mySubmission,
     leaderboard,
     loading,
     saving,
@@ -287,8 +339,10 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     fetchRoundParticipants,
     setPaymentVerified,
     getPredictionForMatch,
+    isQuinielaSubmitted,
     isRoundOpenForPredictions,
     myProgress,
     savePrediction,
+    submitQuiniela,
   }
 })
