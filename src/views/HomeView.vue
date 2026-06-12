@@ -11,7 +11,7 @@ import {
   QUINIELA_SUMMARY,
   RANKING_PATH,
 } from '@/constants/nav'
-import { APP_TAGLINE } from '@/constants/branding'
+import { APP_TAGLINE, DEVIFLY_NAME, DEVIFLY_URL } from '@/constants/branding'
 import { useAuthStore } from '@/stores/authStore'
 
 const auth = useAuthStore()
@@ -98,5 +98,31 @@ const quickLinks = [
     </p>
 
     <HomeLandingRules />
+
+    <footer class="mt-10 border-t border-white/5 pt-6 pb-2 text-center">
+      <p class="text-xs text-slate-500">
+        Hecho por
+        <a
+          :href="DEVIFLY_URL"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-slate-400 transition hover:text-slate-300"
+        >
+          {{ DEVIFLY_NAME }}
+        </a>
+      </p>
+      <nav
+        class="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs"
+        aria-label="Enlaces legales"
+      >
+        <RouterLink to="/privacidad" class="text-slate-500 transition hover:text-slate-300">
+          Política de privacidad
+        </RouterLink>
+        <span class="text-slate-700" aria-hidden="true">·</span>
+        <RouterLink to="/terminos" class="text-slate-500 transition hover:text-slate-300">
+          Términos del servicio
+        </RouterLink>
+      </nav>
+    </footer>
   </div>
 </template>
