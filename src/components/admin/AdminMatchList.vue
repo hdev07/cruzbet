@@ -130,15 +130,24 @@ function formatDate(match: Match) {
         >
           <div class="mb-2 flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide text-slate-500">
             <span>{{ phaseLabels[match.phase ?? ''] ?? match.phase }}</span>
-            <span
-              v-if="match.status === 'live'"
-              class="inline-flex items-center gap-0.5 rounded-full bg-mundial-green px-1.5 py-0.5 font-semibold text-white"
-            >
-              <Radio class="h-2.5 w-2.5" />
-              {{ match.current_minute ?? 0 }}'
+            <span class="flex items-center gap-1">
+              <span
+                v-if="match.auto_sync_enabled !== false"
+                class="rounded bg-mundial-green/15 px-1 py-0.5 text-[9px] font-semibold normal-case text-mundial-green"
+                title="Sync automático activo"
+              >
+                sync
+              </span>
+              <span
+                v-if="match.status === 'live'"
+                class="inline-flex items-center gap-0.5 rounded-full bg-mundial-green px-1.5 py-0.5 font-semibold normal-case text-white"
+              >
+                <Radio class="h-2.5 w-2.5" />
+                {{ match.current_minute ?? 0 }}'
+              </span>
+              <span v-else-if="match.status === 'finished'" class="normal-case">Fin</span>
+              <span v-else class="normal-case">{{ formatDate(match) ?? '—' }}</span>
             </span>
-            <span v-else-if="match.status === 'finished'">Fin</span>
-            <span v-else>{{ formatDate(match) ?? '—' }}</span>
           </div>
 
           <div class="flex items-center gap-2">
