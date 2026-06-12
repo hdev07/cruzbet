@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import { triggerLiveSync } from '@/lib/liveSync'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchEvent } from '@/types'
 
@@ -18,6 +19,7 @@ const awayScore = ref(0)
 const goalTeamId = ref('')
 const goalMinute = ref(1)
 const goalSecond = ref(0)
+const goalExtraTime = ref(0)
 const saving = ref(false)
 const message = ref('')
 const error = ref('')
@@ -25,7 +27,10 @@ const events = ref<MatchEvent[]>([])
 const editingEventId = ref<string | null>(null)
 const editMinute = ref(1)
 const editSecond = ref(0)
+const editExtraTime = ref(0)
 const editTeamId = ref('')
+const autoSyncEnabled = ref(true)
+const showManualControls = ref(false)
 
 const btnPrimary = computed(() =>
   props.mobile
@@ -44,6 +49,16 @@ const inputClass =
   'mt-1.5 w-full rounded-lg border border-white/10 bg-mundial-dark px-3 py-2.5 text-base md:py-1.5 md:text-sm'
 const canManage = computed(() => props.match.status === 'live')
 const isFinished = computed(() => props.match.status === 'finished')
+const isAutoSyncOn = computed(() => autoSyncEnabled.value !== false)
+
+function formatSyncTime(iso: string | null | undefined) {
+  if (!iso) return 'Aún no'
+  return new Date(iso).toLocaleString('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+}
 
 const sortedEvents = computed(() =>
   [...events.value]
@@ -63,7 +78,11 @@ function teamLabel(teamId: string | null) {
   return '—'
 }
 
-function formatGoalTime(minute: number, second: number) {
+function formatGoalTime(minute: number, second: number, extraTime = 0) {
+  if (extraTime > 0) {
+    const suffix = second > 0 ? `:${String(second).padStart(2, '0')}` : ''
+    return `${minute}+${extraTime}${suffix}'`
+  }
   if (second > 0) return `${minute}:${String(second).padStart(2, '0')}`
   return `${minute}'`
 }
@@ -74,7 +93,9 @@ function syncForm(match: Match) {
   awayScore.value = match.away_score
   goalMinute.value = Math.max((match.current_minute ?? 0) + 1, 1)
   goalSecond.value = 0
+  goalExtraTime.value = 0
   goalTeamId.value = match.home_team_id
+  autoSyncEnabled.value = match.auto_sync_enabled !== false
 }
 
 async function loadEvents() {
@@ -99,6 +120,37 @@ watch(
   },
   { immediate: true },
 )
+
+async function syncNow() {
+  saving.value = true
+  error.value = ''
+  const result = await triggerLiveSync()
+  saving.value = false
+  if (!result.ok) {
+    error.value = result.error ?? 'No se pudo sincronizar'
+    return
+  }
+  message.value = 'Sincronizado'
+  await refreshMatch()
+}
+
+async function toggleAutoSync() {
+  saving.value = true
+  error.value = ''
+  const next = !autoSyncEnabled.value
+  const { error: err } = await supabase
+    .from('matches')
+    .update({ auto_sync_enabled: next })
+    .eq('id', props.match.id)
+  saving.value = false
+  if (err) {
+    error.value = err.message
+    return
+  }
+  autoSyncEnabled.value = next
+  message.value = next ? 'Sync automático activado' : 'Sync automático pausado'
+  await refreshMatch()
+}
 
 async function refreshMatch() {
   await matchStore.fetchMatches()
@@ -194,7 +246,7 @@ async function registerGoal() {
     team_id: goalTeamId.value,
     event_type: 'goal',
     minute: goalMinute.value,
-    extra_time: 0,
+    extra_time: goalExtraTime.value,
     event_second: goalSecond.value,
     metadata: { type: 'foot' },
   })
@@ -214,6 +266,7 @@ function startEditGoal(event: MatchEvent) {
   editingEventId.value = event.id
   editMinute.value = event.minute
   editSecond.value = event.event_second ?? 0
+  editExtraTime.value = event.extra_time ?? 0
   editTeamId.value = event.team_id ?? props.match.home_team_id
 }
 
@@ -229,6 +282,7 @@ async function saveEditGoal() {
     .from('match_events')
     .update({
       minute: editMinute.value,
+      extra_time: editExtraTime.value,
       event_second: editSecond.value,
       team_id: editTeamId.value,
     })
@@ -244,7 +298,7 @@ async function saveEditGoal() {
 }
 
 async function deleteGoal(event: MatchEvent) {
-  if (!confirm(`¿Eliminar gol al ${formatGoalTime(event.minute, event.event_second ?? 0)}?`)) {
+  if (!confirm(`¿Eliminar gol al ${formatGoalTime(event.minute, event.event_second ?? 0, event.extra_time ?? 0)}?`)) {
     return
   }
   saving.value = true
@@ -277,15 +331,60 @@ async function finishMatch() {
 
 <template>
   <div class="space-y-4">
+    <section
+      class="rounded-xl border border-mundial-green/30 bg-mundial-green/10 p-4 md:rounded-lg"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 class="text-sm font-semibold text-mundial-green">Sync automático en vivo</h3>
+          <p class="mt-1 text-xs text-slate-400">
+            Se actualiza cada 60 s mientras alguien tenga la app abierta (sin cron de pago).
+            También puedes forzar sync o usar controles manuales abajo.
+          </p>
+          <p class="mt-2 text-xs text-slate-500">
+            Última sync: {{ formatSyncTime(match.live_sync_at) }}
+          </p>
+          <p v-if="match.live_sync_error" class="mt-1 text-xs text-amber-300">
+            Aviso: {{ match.live_sync_error }}
+          </p>
+        </div>
+        <div class="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            class="rounded-lg border border-white/20 px-3 py-2 text-xs font-medium disabled:opacity-50"
+            :disabled="saving"
+            @click="syncNow"
+          >
+            Sync ahora
+          </button>
+          <button
+            type="button"
+            class="rounded-lg border border-white/20 px-3 py-2 text-xs font-medium disabled:opacity-50"
+            :disabled="saving"
+            @click="toggleAutoSync"
+          >
+            {{ isAutoSyncOn ? 'Pausar sync' : 'Activar sync' }}
+          </button>
+        </div>
+      </div>
+    </section>
+
     <button
-      v-if="match.status === 'scheduled'"
+      v-if="match.status === 'scheduled' && !isAutoSyncOn"
       type="button"
       :class="[btnPrimary, 'bg-mundial-green']"
       :disabled="saving"
       @click="startLive"
     >
-      Iniciar partido
+      Iniciar partido manualmente
     </button>
+
+    <p
+      v-else-if="match.status === 'scheduled' && isAutoSyncOn"
+      class="text-center text-xs text-slate-500"
+    >
+      El partido pasará a en vivo automáticamente al arrancar.
+    </p>
 
     <template v-if="isFinished">
       <p class="text-center text-sm text-slate-500">
@@ -365,7 +464,7 @@ async function finishMatch() {
             <div class="flex items-center justify-between gap-2">
               <span class="text-sm text-slate-200">
                 {{ teamLabel(event.team_id) }} —
-                {{ formatGoalTime(event.minute, event.event_second ?? 0) }}
+                {{ formatGoalTime(event.minute, event.event_second ?? 0, event.extra_time ?? 0) }}
               </span>
               <div v-if="canManage" class="flex shrink-0 gap-1">
                 <button
@@ -392,6 +491,16 @@ async function finishMatch() {
     </section>
 
     <template v-if="canManage">
+      <button
+        type="button"
+        :class="[btnSecondary, 'border border-white/20 text-slate-300']"
+        :disabled="saving"
+        @click="showManualControls = !showManualControls"
+      >
+        {{ showManualControls ? 'Ocultar controles manuales' : 'Controles manuales (override)' }}
+      </button>
+
+      <template v-if="showManualControls">
       <button
         type="button"
         :class="[btnSecondary, 'border border-red-500/30 bg-red-500/10 text-red-300']"
@@ -476,9 +585,20 @@ async function finishMatch() {
               :class="inputClass"
             />
           </label>
+          <label class="block text-sm md:text-xs">
+            Agregado
+            <input
+              v-model.number="goalExtraTime"
+              type="number"
+              min="0"
+              max="15"
+              :class="inputClass"
+            />
+          </label>
         </div>
         <p class="text-xs text-slate-500">
           Desde el segundo 30 cuenta como el siguiente minuto para puntuar (ej. 34:45 → casillero 35).
+          Usa agregado para goles tipo 90+2.
         </p>
         <button
           type="button"
@@ -501,6 +621,7 @@ async function finishMatch() {
       >
         Finalizar partido
       </button>
+      </template>
     </template>
 
     <p v-if="message" class="text-xs text-mundial-green">{{ message }}</p>

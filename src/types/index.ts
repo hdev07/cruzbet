@@ -39,6 +39,10 @@ export interface Match {
   phase: string | null
   match_date: string | null
   venue: string | null
+  auto_sync_enabled?: boolean
+  live_sync_at?: string | null
+  live_sync_error?: string | null
+  external_event_id?: string | null
   created_at?: string
   home_team?: Team
   away_team?: Team

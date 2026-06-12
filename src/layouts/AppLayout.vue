@@ -10,7 +10,10 @@ import {
   PARTIDO_NAV,
   type QuinielaNavItem,
 } from '@/constants/quiniela-modes'
+import { useLiveSync } from '@/composables/useLiveSync'
 import { useAuthStore } from '@/stores/authStore'
+
+useLiveSync()
 
 const route = useRoute()
 const auth = useAuthStore()
