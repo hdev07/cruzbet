@@ -331,6 +331,14 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     if (error) throw error
   }
 
+  async function resetPlayerQuiniela(userId: string, roundId: string): Promise<void> {
+    const { error } = await supabase.rpc('admin_reset_base_quiniela', {
+      p_user_id: userId,
+      p_round_id: roundId,
+    })
+    if (error) throw error
+  }
+
   async function fetchUserHistory(userId: string) {
     const { data, error } = await supabase
       .from('base_predictions')
@@ -366,6 +374,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     fetchParticipantCountsByRound,
     fetchRoundParticipants,
     setPaymentVerified,
+    resetPlayerQuiniela,
     getPredictionForMatch,
     isQuinielaSubmitted,
     isRoundOpenForPredictions,

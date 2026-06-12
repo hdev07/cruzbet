@@ -5,8 +5,10 @@ import {
   CheckCircle2,
   CircleDashed,
   Loader2,
+  RotateCcw,
   Search,
 } from '@lucide/vue'
+import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 import { winnerCode } from '@/lib/baseQuinielaDisplay'
 import { teamDisplayName } from '@/lib/teamDisplay'
@@ -26,6 +28,8 @@ const baseStore = useBaseQuinielaStore()
 const participants = ref<BaseRoundParticipant[]>([])
 const loading = ref(false)
 const togglingUserId = ref<string | null>(null)
+const resettingUserId = ref<string | null>(null)
+const resetTarget = ref<BaseRoundParticipant | null>(null)
 const error = ref('')
 const userSearch = ref('')
 const paymentFilter = ref<PaymentFilter>('pending')
@@ -143,6 +147,34 @@ async function toggleVerified(participant: BaseRoundParticipant) {
     error.value = e instanceof Error ? e.message : 'Error al actualizar depósito'
   } finally {
     togglingUserId.value = null
+  }
+}
+
+function askResetQuiniela(participant: BaseRoundParticipant) {
+  resetTarget.value = participant
+}
+
+function cancelResetQuiniela() {
+  if (resettingUserId.value) return
+  resetTarget.value = null
+}
+
+async function confirmResetQuiniela() {
+  if (!resetTarget.value) return
+  const participant = resetTarget.value
+  resettingUserId.value = participant.user_id
+  error.value = ''
+  try {
+    await baseStore.resetPlayerQuiniela(participant.user_id, props.round.id)
+    if (expandedUserId.value === participant.user_id) {
+      expandedUserId.value = null
+    }
+    resetTarget.value = null
+    await loadParticipants()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Error al reestablecer quiniela'
+  } finally {
+    resettingUserId.value = null
   }
 }
 </script>
@@ -264,25 +296,41 @@ async function toggleVerified(participant: BaseRoundParticipant) {
               </span>
             </div>
 
-            <button
-              type="button"
-              class="inline-flex min-w-[7rem] shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 py-3 text-sm font-semibold disabled:opacity-50"
-              :class="
-                participant.verified
-                  ? 'border-mundial-green/40 bg-mundial-green/10 text-mundial-green'
-                  : 'border-amber-500/40 bg-amber-500/10 text-amber-200'
-              "
-              :disabled="togglingUserId === participant.user_id"
-              @click="toggleVerified(participant)"
-            >
-              <Loader2
-                v-if="togglingUserId === participant.user_id"
-                class="h-4 w-4 animate-spin"
-              />
-              <CheckCircle2 v-else-if="participant.verified" class="h-4 w-4 shrink-0" />
-              <CircleDashed v-else class="h-4 w-4 shrink-0" />
-              {{ participant.verified ? 'Pagado' : 'Pendiente' }}
-            </button>
+            <div class="flex shrink-0 flex-col gap-2">
+              <button
+                type="button"
+                class="inline-flex min-w-[7rem] items-center justify-center gap-1.5 rounded-xl border px-3 py-3 text-sm font-semibold disabled:opacity-50"
+                :class="
+                  participant.verified
+                    ? 'border-mundial-green/40 bg-mundial-green/10 text-mundial-green'
+                    : 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+                "
+                :disabled="togglingUserId === participant.user_id || resettingUserId === participant.user_id"
+                @click="toggleVerified(participant)"
+              >
+                <Loader2
+                  v-if="togglingUserId === participant.user_id"
+                  class="h-4 w-4 animate-spin"
+                />
+                <CheckCircle2 v-else-if="participant.verified" class="h-4 w-4 shrink-0" />
+                <CircleDashed v-else class="h-4 w-4 shrink-0" />
+                {{ participant.verified ? 'Pagado' : 'Pendiente' }}
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex min-w-[7rem] items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/15 disabled:opacity-50"
+                :disabled="resettingUserId === participant.user_id || togglingUserId === participant.user_id"
+                @click="askResetQuiniela(participant)"
+              >
+                <Loader2
+                  v-if="resettingUserId === participant.user_id"
+                  class="h-3.5 w-3.5 animate-spin"
+                />
+                <RotateCcw v-else class="h-3.5 w-3.5 shrink-0" />
+                Reestablecer
+              </button>
+            </div>
           </div>
 
           <button
@@ -341,7 +389,7 @@ async function toggleVerified(participant: BaseRoundParticipant) {
             class="grid grid-cols-[100px_1fr_2fr] items-start gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
             :class="participant.verified ? 'bg-mundial-green/[0.03]' : 'bg-amber-500/[0.02]'"
           >
-            <div>
+            <div class="space-y-1.5">
               <button
                 type="button"
                 class="inline-flex w-full items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold disabled:opacity-50"
@@ -350,7 +398,7 @@ async function toggleVerified(participant: BaseRoundParticipant) {
                     ? 'border-mundial-green/40 bg-mundial-green/10 text-mundial-green'
                     : 'border-amber-500/40 bg-amber-500/10 text-amber-200'
                 "
-                :disabled="togglingUserId === participant.user_id"
+                :disabled="togglingUserId === participant.user_id || resettingUserId === participant.user_id"
                 @click="toggleVerified(participant)"
               >
                 <Loader2
@@ -360,6 +408,21 @@ async function toggleVerified(participant: BaseRoundParticipant) {
                 <CheckCircle2 v-else-if="participant.verified" class="h-3.5 w-3.5 shrink-0" />
                 <CircleDashed v-else class="h-3.5 w-3.5 shrink-0" />
                 <span class="truncate">{{ participant.verified ? 'OK' : 'Pend.' }}</span>
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/15 disabled:opacity-50"
+                :disabled="resettingUserId === participant.user_id || togglingUserId === participant.user_id"
+                title="Borrar picks y permitir que vuelva a llenar la quiniela"
+                @click="askResetQuiniela(participant)"
+              >
+                <Loader2
+                  v-if="resettingUserId === participant.user_id"
+                  class="h-3 w-3 animate-spin"
+                />
+                <RotateCcw v-else class="h-3 w-3 shrink-0" />
+                Reset
               </button>
             </div>
 
@@ -423,5 +486,26 @@ async function toggleVerified(participant: BaseRoundParticipant) {
     >
       {{ error }}
     </p>
+
+    <ConfirmModal
+      :open="resetTarget != null"
+      title="¿Reestablecer quiniela?"
+      :subtitle="
+        resetTarget
+          ? `${resetTarget.profiles?.username ?? 'Este jugador'} perderá todos sus picks de ${round.title}.`
+          : undefined
+      "
+      :bullets="[
+        'Se borran todas las predicciones de la jornada.',
+        'El jugador podrá volver a marcar y guardar su quiniela.',
+        'El estado del depósito (pagado/pendiente) no cambia.',
+        'Si ya había puntos en partidos jugados, también se eliminan.',
+      ]"
+      confirm-label="Sí, reestablecer"
+      cancel-label="Cancelar"
+      :saving="resettingUserId != null"
+      @confirm="confirmResetQuiniela"
+      @cancel="cancelResetQuiniela"
+    />
   </section>
 </template>
