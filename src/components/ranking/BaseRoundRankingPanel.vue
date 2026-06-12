@@ -1,0 +1,116 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Trophy } from '@lucide/vue'
+import BaseRoundPredictionsMatrix from '@/components/ranking/BaseRoundPredictionsMatrix.vue'
+import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
+import { useAuthStore } from '@/stores/authStore'
+import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
+import type { BaseQuinielaRoundMatch } from '@/types'
+
+defineProps<{
+  roundId: string
+  roundMatches: BaseQuinielaRoundMatch[]
+  compact?: boolean
+}>()
+
+const auth = useAuthStore()
+const baseStore = useBaseQuinielaStore()
+const activeTab = ref<'standings' | 'predictions'>('standings')
+</script>
+
+<template>
+  <div>
+    <div class="mb-3 flex items-center gap-2">
+      <Trophy class="h-5 w-5 text-mundial-accent" />
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-mundial-accent">
+        Ranking de la jornada
+      </h2>
+    </div>
+
+    <div
+      class="mb-4 flex gap-1 rounded-lg bg-white/5 p-1"
+      :class="compact ? '' : 'lg:max-w-md'"
+    >
+      <button
+        type="button"
+        class="flex-1 rounded-md py-2 text-xs font-medium transition sm:text-sm"
+        :class="activeTab === 'standings' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
+        @click="activeTab = 'standings'"
+      >
+        Posiciones
+      </button>
+      <button
+        type="button"
+        class="flex-1 rounded-md py-2 text-xs font-medium transition sm:text-sm"
+        :class="activeTab === 'predictions' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
+        @click="activeTab = 'predictions'"
+      >
+        Pronósticos
+      </button>
+    </div>
+
+    <template v-if="activeTab === 'standings'">
+      <p class="mb-4 text-xs text-slate-500">
+        Solo participantes con los {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos marcados.
+        Orden: más aciertos, luego más puntos.
+      </p>
+
+      <div
+        v-if="!baseStore.leaderboard.length"
+        class="rounded-xl border border-dashed border-white/20 p-6 text-center text-slate-400"
+      >
+        Aún no hay quinielas completas en esta jornada.
+      </div>
+
+      <ol v-else class="space-y-2">
+        <li
+          v-for="(player, index) in baseStore.leaderboard"
+          :key="player.user_id"
+          class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+          :class="{ 'ring-1 ring-mundial-accent/50': player.user_id === auth.user?.id }"
+        >
+          <span
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+            :class="index < 3 ? 'bg-mundial-accent text-white' : 'bg-white/10 text-slate-400'"
+          >
+            {{ index + 1 }}
+          </span>
+
+          <img
+            v-if="player.avatar"
+            :src="player.avatar"
+            :alt="player.username ?? 'Jugador'"
+            class="h-10 w-10 rounded-full border border-white/20"
+          />
+          <span
+            v-else
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold"
+          >
+            {{ player.username?.[0]?.toUpperCase() ?? '?' }}
+          </span>
+
+          <span class="min-w-0 flex-1 truncate font-medium">
+            {{ player.username ?? 'Anónimo' }}
+            <span v-if="player.user_id === auth.user?.id" class="ml-1 text-xs text-mundial-accent">
+              (tú)
+            </span>
+          </span>
+
+          <div class="text-right">
+            <p class="text-lg font-bold tabular-nums text-mundial-accent">
+              {{ player.correct_count }} aciertos
+            </p>
+            <p class="text-xs text-slate-500">{{ player.total_points }} pts</p>
+          </div>
+        </li>
+      </ol>
+    </template>
+
+    <BaseRoundPredictionsMatrix
+      v-else
+      :round-id="roundId"
+      :round-matches="roundMatches"
+      :current-user-id="auth.user?.id"
+    />
+  </div>
+</template>
