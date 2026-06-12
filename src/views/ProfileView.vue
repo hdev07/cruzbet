@@ -2,17 +2,11 @@
 import { onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { Check, ChevronRight, LogOut, Pencil, Settings, Shield, X } from '@lucide/vue'
-import UserPredictionsList from '@/components/predictions/UserPredictionsList.vue'
 import { useAuthStore } from '@/stores/authStore'
-import { usePredictionStore } from '@/stores/predictionStore'
-import type { PredictionWithMatch } from '@/types'
 
 const auth = useAuthStore()
-const predictions = usePredictionStore()
 const router = useRouter()
 const loggingOut = ref(false)
-const loadingPredictions = ref(false)
-const userPredictions = ref<PredictionWithMatch[]>([])
 const editingUsername = ref(false)
 const usernameDraft = ref('')
 const savingUsername = ref(false)
@@ -56,12 +50,6 @@ async function saveUsername() {
 onMounted(async () => {
   if (!auth.user) return
   await auth.fetchProfile(auth.user.id)
-  loadingPredictions.value = true
-  try {
-    userPredictions.value = await predictions.fetchUserPredictions(auth.user.id)
-  } finally {
-    loadingPredictions.value = false
-  }
 })
 
 async function handleLogout() {
@@ -79,8 +67,7 @@ async function handleLogout() {
   <div>
     <h1 class="mb-6 text-2xl font-bold lg:text-3xl">Mi perfil</h1>
 
-    <div class="mb-6 grid gap-6 lg:grid-cols-2">
-    <div class="flex flex-col items-center rounded-xl border border-white/10 bg-white/5 p-6 text-center lg:p-8">
+    <div class="mb-6 flex flex-col items-center rounded-xl border border-white/10 bg-white/5 p-6 text-center lg:mx-auto lg:max-w-md lg:p-8">
       <img
         v-if="auth.profile?.avatar"
         :src="auth.profile.avatar"
@@ -149,41 +136,18 @@ async function handleLogout() {
       </p>
     </div>
 
-    <div class="flex flex-col items-center justify-center rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-5 text-center lg:p-8">
-      <p class="text-xs text-slate-400">Puntos acumulados</p>
-      <p class="text-4xl font-bold tabular-nums text-mundial-accent lg:text-5xl">
-        {{ auth.profile?.points ?? 0 }}
-      </p>
-      <RouterLink
-        to="/quiniela-partido/ranking"
-        class="mt-2 inline-flex items-center gap-1 text-sm text-mundial-accent hover:underline"
-      >
-        Ver ranking por partido
-        <ChevronRight class="h-4 w-4" />
-      </RouterLink>
-    </div>
-    </div>
-
-    <UserPredictionsList
-      class="mb-6"
-      :predictions="userPredictions"
-      :loading="loadingPredictions"
-      title="Historial — quiniela por partido"
-      empty-message="Aún no has hecho predicciones. Elige un partido y marca el minuto del primer gol y el ganador."
-    />
-
-    <div class="mb-6 flex flex-wrap gap-2">
-      <RouterLink
-        to="/quiniela-partido/historial"
-        class="rounded-lg border border-mundial-accent/30 bg-mundial-accent/10 px-3 py-2 text-sm font-medium text-mundial-accent hover:bg-mundial-accent/20"
-      >
-        Historial por partido
-      </RouterLink>
+    <div class="mb-6 flex flex-wrap justify-center gap-2">
       <RouterLink
         to="/quiniela-base/historial"
         class="rounded-lg border border-mundial-green/30 bg-mundial-green/10 px-3 py-2 text-sm font-medium text-mundial-green hover:bg-mundial-green/20"
       >
-        Historial quiniela base
+        Mi historial de jornadas
+      </RouterLink>
+      <RouterLink
+        to="/quiniela-base/ranking"
+        class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/10"
+      >
+        Ver ranking
       </RouterLink>
     </div>
 
@@ -192,17 +156,6 @@ async function handleLogout() {
         <h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
           Accesos rápidos
         </h2>
-
-        <RouterLink
-          to="/quiniela-partido/reglas"
-          class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-            <Settings class="h-4 w-4 text-slate-400" />
-            Reglas quiniela por partido
-          </span>
-          <ChevronRight class="h-4 w-4 text-slate-500" />
-        </RouterLink>
 
         <RouterLink
           to="/quiniela-base/reglas"

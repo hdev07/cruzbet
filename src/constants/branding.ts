@@ -1,7 +1,7 @@
 export const APP_NAME = 'CruzBet'
 export const APP_TAGLINE = 'Quiniela del Mundial 2026'
 export const APP_DESCRIPTION =
-  'Predice el minuto del primer gol y quién gana (L/E/V). Quiniela del Mundial 2026 con cuota de $10 MXN por partido.'
+  'Marca L, E o V en cada jornada del Mundial 2026. Quiniela base con tablas de grupos y partidos en vivo.'
 export const APP_URL = 'https://cruzbet.devifly.dev'
 export const APP_LOCALE = 'es_MX'
 export const THEME_COLOR = '#1a1a2e'

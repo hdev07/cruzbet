@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import QuinielaModeBanner from '@/components/layout/QuinielaModeBanner.vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
 import GroupStandingsSection from '@/components/shared/GroupStandingsSection.vue'
-import { QUINIELA_MODE_PARTIDO } from '@/constants/quiniela-modes'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 
 const standingsStore = useGroupStandingsStore()
@@ -15,11 +13,9 @@ onMounted(() => standingsStore.fetchStandingsData())
 
 <template>
   <div>
-    <QuinielaModeBanner />
-
     <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Grupos</h1>
     <p class="mb-6 text-sm text-slate-400">
-      {{ QUINIELA_MODE_PARTIDO.title }} — tablas de posiciones de la fase de grupos
+      Tablas de posiciones de la fase de grupos del Mundial 2026
     </p>
 
     <div class="mb-6 grid gap-3 sm:grid-cols-3">

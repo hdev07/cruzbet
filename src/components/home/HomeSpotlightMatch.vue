@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
-import { ChevronRight, Clock, Radio, Users } from '@lucide/vue'
-import { formatKickoff, isMatchOpenForPredictions } from '@/lib/matchRules'
+import { Clock, Radio } from '@lucide/vue'
+import { formatKickoff } from '@/lib/matchRules'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import type { Match } from '@/types'
 
 const props = defineProps<{
   match: Match
   isLive: boolean
-  participantCount?: number
 }>()
 
 const now = ref(Date.now())
@@ -48,18 +46,15 @@ const countdown = computed(() => {
   if (hours > 0) return `Faltan ${hours}h ${mins}m`
   return `Faltan ${mins} min`
 })
-
-const canPredict = computed(() => isMatchOpenForPredictions(props.match))
 </script>
 
 <template>
-  <RouterLink
-    :to="`/match/${match.id}`"
-    class="group block overflow-hidden rounded-2xl border-2 transition hover:brightness-105"
+  <div
+    class="overflow-hidden rounded-2xl border-2"
     :class="
       isLive
         ? 'border-mundial-green/60 bg-gradient-to-br from-mundial-green/20 via-mundial-green/5 to-transparent ring-1 ring-mundial-green/30'
-        : 'border-mundial-accent/40 bg-gradient-to-br from-mundial-accent/15 via-transparent to-transparent'
+        : 'border-white/15 bg-gradient-to-br from-white/[0.06] via-transparent to-transparent'
     "
   >
     <div class="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5 sm:px-5">
@@ -73,7 +68,7 @@ const canPredict = computed(() => isMatchOpenForPredictions(props.match))
         </span>
         <span
           v-else
-          class="inline-flex items-center gap-1.5 rounded-full border border-mundial-accent/40 bg-mundial-accent/15 px-2.5 py-0.5 text-xs font-semibold text-mundial-accent"
+          class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-xs font-semibold text-slate-300"
         >
           <Clock class="h-3 w-3" />
           Próximo partido
@@ -133,24 +128,5 @@ const canPredict = computed(() => isMatchOpenForPredictions(props.match))
         {{ match.venue }}
       </p>
     </div>
-
-    <div
-      class="flex items-center justify-between gap-2 border-t border-white/10 px-4 py-2.5 text-xs sm:px-5"
-    >
-      <span v-if="participantCount" class="flex items-center gap-1 text-slate-400">
-        <Users class="h-3.5 w-3.5" />
-        {{ participantCount }} {{ participantCount === 1 ? 'participante' : 'participantes' }}
-      </span>
-      <span v-else class="text-slate-500">
-        {{ isLive ? 'Sigue el partido' : canPredict ? 'Aún puedes predecir' : 'Ver detalles' }}
-      </span>
-      <span
-        class="inline-flex items-center gap-1 font-semibold transition group-hover:underline"
-        :class="isLive ? 'text-mundial-green' : 'text-mundial-accent'"
-      >
-        {{ isLive ? 'Ver en vivo' : canPredict ? 'Predecir ahora' : 'Abrir partido' }}
-        <ChevronRight class="h-3.5 w-3.5" />
-      </span>
-    </div>
-  </RouterLink>
+  </div>
 </template>

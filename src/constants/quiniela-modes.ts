@@ -3,6 +3,11 @@ import { ClipboardList, Grid3x3, History, LayoutGrid, Trophy, Zap } from '@lucid
 import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 import { ENTRY_FEE_MXN } from '@/constants/quiniela-rules'
 
+/** Quiniela por partido (minuto del primer gol + L/E/V) — desactivada; solo queda la base */
+export const PARTIDO_QUINIELA_ENABLED = false
+
+export const GRUPOS_PATH = '/grupos'
+
 export type QuinielaMode = 'partido' | 'base'
 
 export type QuinielaNavItem = {
@@ -63,6 +68,10 @@ export const BASE_NAV: QuinielaNavItem[] = [
 ]
 
 export function detectQuinielaMode(path: string): QuinielaMode | null {
+  if (!PARTIDO_QUINIELA_ENABLED) {
+    if (path.startsWith('/quiniela-base')) return 'base'
+    return null
+  }
   if (path.startsWith('/quiniela-partido') || path.startsWith('/match/')) return 'partido'
   if (path.startsWith('/quiniela-base')) return 'base'
   return null

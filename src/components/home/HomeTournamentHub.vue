@@ -1,26 +1,25 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Calendar, ChevronRight, Goal, LayoutGrid, Radio, Trophy, Zap } from '@lucide/vue'
+import { Calendar, ChevronRight, Goal, Grid3x3, LayoutGrid, Radio } from '@lucide/vue'
 import GroupStandingsMiniCard from '@/components/home/GroupStandingsMiniCard.vue'
 import HomeSpotlightMatch from '@/components/home/HomeSpotlightMatch.vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
 import MatchCard from '@/components/shared/MatchCard.vue'
 import { useHomeRealtime } from '@/composables/useHomeRealtime'
+import { GRUPOS_PATH, QUINIELA_MODE_BASE } from '@/constants/quiniela-modes'
 import { totalGoalsInMatches } from '@/lib/groupStandings'
 import { isEffectivelyLive } from '@/lib/matchLifecycle'
-import { isMatchOpenForPredictions } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
 import { teamDisplayName } from '@/lib/teamDisplay'
-import { useAuthStore } from '@/stores/authStore'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 import { useMatchStore } from '@/stores/matchStore'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-const auth = useAuthStore()
 const matchStore = useMatchStore()
 const standingsStore = useGroupStandingsStore()
-const { participantCounts } = useHomeRealtime()
+
+useHomeRealtime()
 
 let channel: RealtimeChannel | null = null
 
@@ -30,7 +29,6 @@ onMounted(async () => {
     matchStore.matches.length
       ? Promise.resolve()
       : Promise.all([matchStore.fetchMatches(), matchStore.fetchLiveMatches()]),
-    auth.user ? auth.fetchProfile(auth.user.id) : Promise.resolve(),
   ])
 
   channel = supabase
@@ -76,7 +74,7 @@ const upcomingMatches = computed(() =>
     .filter(
       (m) =>
         m.id !== spotlightMatch.value?.id &&
-        isMatchOpenForPredictions(m) &&
+        m.status !== 'finished' &&
         m.match_date,
     )
     .sort((a, b) => new Date(a.match_date!).getTime() - new Date(b.match_date!).getTime())
@@ -104,12 +102,6 @@ const stats = computed(() => [
     icon: Goal,
     accent: false,
   },
-  {
-    label: 'Tus puntos',
-    value: auth.isLoggedIn ? (auth.profile?.points ?? 0) : '—',
-    icon: Trophy,
-    accent: !!auth.isLoggedIn,
-  },
 ])
 </script>
 
@@ -125,11 +117,11 @@ const stats = computed(() => [
           </p>
           <h2 class="text-xl font-bold text-slate-100 sm:text-2xl">Mundial 2026</h2>
           <p class="mt-1 text-sm text-slate-400">
-            Tablas, partidos en vivo y lo que viene — todo en un solo lugar
+            Partidos en vivo, tablas de grupos y calendario del torneo
           </p>
         </div>
         <RouterLink
-          to="/quiniela-partido/grupos"
+          :to="GRUPOS_PATH"
           class="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-mundial-accent/40 hover:text-mundial-accent"
         >
           <LayoutGrid class="h-3.5 w-3.5" />
@@ -138,27 +130,22 @@ const stats = computed(() => [
       </div>
 
       <div v-if="spotlightMatch" class="mt-4">
-        <HomeSpotlightMatch
-          :match="spotlightMatch"
-          :is-live="spotlightIsLive"
-          :participant-count="participantCounts[spotlightMatch.id] ?? 0"
-        />
+        <HomeSpotlightMatch :match="spotlightMatch" :is-live="spotlightIsLive" />
 
         <div
           v-if="otherLiveMatches.length"
-          class="mt-2 flex gap-2 overflow-x-auto pb-1 app-scrollbar"
+          class="mt-2 flex flex-wrap gap-2"
         >
-          <RouterLink
+          <span
             v-for="match in otherLiveMatches"
             :key="match.id"
-            :to="`/match/${match.id}`"
-            class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-mundial-green/30 bg-mundial-green/10 px-3 py-1.5 text-xs font-medium text-mundial-green transition hover:bg-mundial-green/20"
+            class="inline-flex items-center gap-2 rounded-lg border border-mundial-green/30 bg-mundial-green/10 px-3 py-1.5 text-xs font-medium text-mundial-green"
           >
             <Radio class="h-3 w-3" />
             {{ teamDisplayName(match.home_team, 'Local') }}
             {{ match.home_score }}-{{ match.away_score }}
             {{ teamDisplayName(match.away_team, 'Visit.') }}
-          </RouterLink>
+          </span>
         </div>
       </div>
 
@@ -169,7 +156,7 @@ const stats = computed(() => [
         No hay partidos programados por ahora.
       </div>
 
-      <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div class="mt-4 grid grid-cols-3 gap-2">
         <div
           v-for="stat in stats"
           :key="stat.label"
@@ -242,22 +229,15 @@ const stats = computed(() => [
     <div class="px-4 py-5 sm:px-6">
       <div class="mb-3 flex items-center justify-between">
         <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-300">
-          Próximos partidos
+          Calendario
         </h3>
-        <RouterLink
-          to="/quiniela-partido"
-          class="inline-flex items-center gap-1 text-xs font-semibold text-mundial-accent hover:underline"
-        >
-          Predecir
-          <ChevronRight class="h-3.5 w-3.5" />
-        </RouterLink>
       </div>
 
       <div
         v-if="!upcomingMatches.length"
         class="rounded-xl border border-dashed border-white/20 p-5 text-center text-sm text-slate-400"
       >
-        No hay partidos abiertos para predecir ahora.
+        No hay más partidos próximos en el calendario.
       </div>
 
       <div v-else class="space-y-3">
@@ -265,25 +245,25 @@ const stats = computed(() => [
           v-for="match in upcomingMatches"
           :key="match.id"
           :match="match"
-          :participant-count="participantCounts[match.id] ?? 0"
-          show-predict-badge
+          :linkable="false"
         />
       </div>
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row">
         <RouterLink
-          to="/quiniela-partido"
-          class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-mundial-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-mundial-accent/90"
+          :to="QUINIELA_MODE_BASE.homePath"
+          class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-mundial-green px-4 py-3 text-sm font-semibold text-mundial-dark transition hover:bg-mundial-green/90"
         >
-          <Zap class="h-4 w-4" />
-          Ir a predecir partidos
+          <Grid3x3 class="h-4 w-4" />
+          Ir a la quiniela base
         </RouterLink>
         <RouterLink
-          to="/quiniela-partido/grupos"
+          :to="GRUPOS_PATH"
           class="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
         >
           <LayoutGrid class="h-4 w-4" />
           Explorar todos los grupos
+          <ChevronRight class="h-4 w-4 opacity-60" />
         </RouterLink>
       </div>
     </div>

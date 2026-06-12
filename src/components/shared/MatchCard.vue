@@ -3,7 +3,15 @@ import { ChevronRight, Radio, Users } from '@lucide/vue'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import type { Match } from '@/types'
 
-defineProps<{ match: Match; showPredictBadge?: boolean; participantCount?: number }>()
+withDefaults(
+  defineProps<{
+    match: Match
+    showPredictBadge?: boolean
+    participantCount?: number
+    linkable?: boolean
+  }>(),
+  { linkable: true },
+)
 
 const phaseLabels: Record<string, string> = {
   group: 'Grupos',
@@ -15,10 +23,14 @@ const phaseLabels: Record<string, string> = {
 </script>
 
 <template>
-  <RouterLink
-    :to="`/match/${match.id}`"
-    class="block rounded-xl border border-white/10 bg-white/5 p-4 transition hover:border-mundial-accent/50 hover:bg-white/10 lg:p-5"
-    :class="{ 'ring-2 ring-mundial-green animate-pulse': match.status === 'live' }"
+  <component
+    :is="linkable ? 'RouterLink' : 'div'"
+    :to="linkable ? `/match/${match.id}` : undefined"
+    class="block rounded-xl border border-white/10 bg-white/5 p-4 lg:p-5"
+    :class="[
+      linkable ? 'transition hover:border-mundial-accent/50 hover:bg-white/10' : '',
+      { 'ring-2 ring-mundial-green animate-pulse': match.status === 'live' },
+    ]"
   >
     <div class="mb-2 flex items-center justify-between text-xs text-slate-400">
       <span>{{ phaseLabels[match.phase ?? ''] ?? match.phase ?? 'Partido' }}</span>
@@ -82,5 +94,5 @@ const phaseLabels: Record<string, string> = {
         <ChevronRight class="h-3.5 w-3.5" />
       </span>
     </div>
-  </RouterLink>
+  </component>
 </template>

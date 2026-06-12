@@ -8,6 +8,7 @@ import AdminPaymentVerification from '@/components/admin/AdminPaymentVerificatio
 import QuinielaControl from '@/components/admin/QuinielaControl.vue'
 import { APP_NAME } from '@/constants/branding'
 import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
+import { PARTIDO_QUINIELA_ENABLED } from '@/constants/quiniela-modes'
 import { ENTRY_FEE_MXN } from '@/constants/quiniela-rules'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -22,7 +23,7 @@ const matchStore = useMatchStore()
 const predictionStore = usePredictionStore()
 const baseStore = useBaseQuinielaStore()
 
-const adminMode = ref<AdminMode>('partido')
+const adminMode = ref<AdminMode>(PARTIDO_QUINIELA_ENABLED ? 'partido' : 'base')
 const selectedMatchId = ref('')
 const selectedRoundId = ref('')
 const search = ref('')
@@ -144,7 +145,7 @@ watch(selectedRoundId, () => loadSelectedRound(), { immediate: true })
     class="-mx-4 -my-6 flex min-h-[calc(100dvh-3.5rem)] flex-col sm:-mx-0 sm:my-0 md:min-h-[calc(100dvh-4.5rem)]"
   >
     <!-- Selector de modo -->
-    <div class="shrink-0 border-b border-white/10 px-4 py-2 md:px-0">
+    <div v-if="PARTIDO_QUINIELA_ENABLED" class="shrink-0 border-b border-white/10 px-4 py-2 md:px-0">
       <div class="flex gap-1 rounded-xl bg-white/5 p-1 md:inline-flex">
         <button
           type="button"
@@ -176,7 +177,7 @@ watch(selectedRoundId, () => loadSelectedRound(), { immediate: true })
     </div>
 
     <!-- ═══ MODO PARTIDO ═══ -->
-    <template v-if="adminMode === 'partido'">
+    <template v-if="PARTIDO_QUINIELA_ENABLED && adminMode === 'partido'">
       <header v-if="mobileScreen === 'list'" class="shrink-0 border-b border-white/10 px-4 py-3 md:hidden">
         <h1 class="text-lg font-bold text-slate-100">Admin — Partido</h1>
         <p class="text-xs text-slate-500">Elige un partido para marcar goles y verificar pagos</p>

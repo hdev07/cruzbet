@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
-import { Target, ChevronRight } from '@lucide/vue'
+import { Target } from '@lucide/vue'
+import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
 import { APP_NAME, APP_TAGLINE } from '@/constants/branding'
-import { ENTRY_FEE_MXN } from '@/constants/quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
 
 const auth = useAuthStore()
@@ -30,12 +30,12 @@ async function loginWithGoogle() {
       <Target class="mx-auto mb-2 h-14 w-14 text-mundial-accent" :stroke-width="1.5" />
       <h1 class="mb-2 text-3xl font-bold text-mundial-accent">{{ APP_NAME }}</h1>
       <p class="mb-8 text-slate-400">
-        {{ APP_TAGLINE }} — predice el primer gol y el ganador antes del partido
+        {{ APP_TAGLINE }} — marca L, E o V en cada jornada
       </p>
 
       <p class="mb-6 text-sm text-slate-500">
-        Cuota: <strong class="text-slate-300">${{ ENTRY_FEE_MXN }} MXN</strong> por partido.
-        <RouterLink to="/" class="text-mundial-accent hover:underline">Ver quinielas y reglas</RouterLink>
+        Cuota: <strong class="text-slate-300">${{ BASE_ENTRY_FEE_MXN }} MXN</strong> por jornada.
+        <RouterLink to="/" class="text-mundial-accent hover:underline">Ver reglas</RouterLink>
       </p>
 
       <button
@@ -61,25 +61,14 @@ async function loginWithGoogle() {
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        {{ loading ? 'Redirigiendo...' : 'Continuar con Google' }}
+        {{ loading ? 'Conectando...' : 'Continuar con Google' }}
       </button>
 
       <p v-if="error" class="mt-4 text-sm text-red-400">{{ error }}</p>
 
-      <button
-        class="mt-6 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-300"
-        @click="router.push('/')"
-      >
-        Ver partidos sin cuenta
-        <ChevronRight class="h-4 w-4" />
-      </button>
-
-      <p class="mt-6 text-xs text-slate-500">
-        Al continuar, aceptas nuestros
-        <RouterLink to="/terminos" class="text-mundial-accent hover:underline">términos</RouterLink>
-        y
-        <RouterLink to="/privacidad" class="text-mundial-accent hover:underline">privacidad</RouterLink>.
-      </p>
+      <RouterLink to="/" class="mt-6 inline-block text-sm text-slate-500 hover:text-slate-300">
+        Volver al inicio
+      </RouterLink>
     </div>
   </div>
 </template>

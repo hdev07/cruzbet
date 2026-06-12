@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { ChevronRight } from '@lucide/vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
 import { supabase } from '@/lib/supabase'
+import { GRUPOS_PATH } from '@/constants/quiniela-modes'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 import { useMatchStore } from '@/stores/matchStore'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -64,7 +65,7 @@ watch(
       </div>
       <RouterLink
         v-if="showViewAllLink"
-        to="/quiniela-partido/grupos"
+        :to="GRUPOS_PATH"
         class="inline-flex items-center gap-1 text-xs text-mundial-accent hover:underline"
       >
         Ver todos los grupos
