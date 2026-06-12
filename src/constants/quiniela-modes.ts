@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { ClipboardList, Grid3x3, History, Trophy, Zap } from '@lucide/vue'
+import { ClipboardList, Grid3x3, History, LayoutGrid, Trophy, Zap } from '@lucide/vue'
 import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 import { ENTRY_FEE_MXN } from '@/constants/quiniela-rules'
 
@@ -49,6 +49,7 @@ export const QUINIELA_MODE_BASE = {
 
 export const PARTIDO_NAV: QuinielaNavItem[] = [
   { to: '/quiniela-partido', label: 'Partidos', icon: Zap },
+  { to: '/quiniela-partido/grupos', label: 'Grupos', icon: LayoutGrid },
   { to: '/quiniela-partido/ranking', label: 'Ranking', icon: Trophy },
   { to: '/quiniela-partido/reglas', label: 'Reglas', icon: ClipboardList },
   { to: '/quiniela-partido/historial', label: 'Historial', icon: History },

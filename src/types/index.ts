@@ -173,3 +173,21 @@ export interface BaseRoundParticipant {
   correct_count: number
   complete: boolean
 }
+
+export interface GroupStandingRow {
+  team: Team
+  position: number
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  goalsFor: number
+  goalsAgainst: number
+  goalDiff: number
+  points: number
+}
+
+export interface GroupStandings {
+  groupName: string
+  rows: GroupStandingRow[]
+}

@@ -20,6 +20,11 @@ const router = createRouter({
       meta: { layout: 'mobile', title: 'Partidos', quinielaMode: 'partido' },
     },
     {
+      path: '/quiniela-partido/grupos',
+      component: () => import('@/views/partido/PartidoGruposView.vue'),
+      meta: { layout: 'mobile', title: 'Grupos', quinielaMode: 'partido' },
+    },
+    {
       path: '/quiniela-partido/ranking',
       component: () => import('@/views/partido/PartidoRankingView.vue'),
       meta: { layout: 'mobile', title: 'Ranking', quinielaMode: 'partido' },
