@@ -310,7 +310,7 @@ function winnerCellClass(winner: PredictedWinner): string {
       <h2 class="font-semibold">Tus predicciones</h2>
       <p class="mt-1 text-xs text-slate-400">
         Cuota de ${{ ENTRY_FEE_MXN }} MXN por partido.
-        <RouterLink to="/quiniela-partido/reglas" class="text-mundial-accent hover:underline">Datos de pago</RouterLink>
+        <RouterLink to="/reglas" class="text-mundial-accent hover:underline">Datos de pago</RouterLink>
       </p>
       <p v-if="editHint && canPredict" class="mt-1 text-xs text-mundial-accent/90">{{ editHint }}</p>
       <p class="mt-2 text-xs font-medium text-slate-300">

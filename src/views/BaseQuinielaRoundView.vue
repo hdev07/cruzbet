@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { ArrowLeft, Trophy } from '@lucide/vue'
-import QuinielaModeBanner from '@/components/layout/QuinielaModeBanner.vue'
 import BaseQuinielaGrid from '@/components/predictions/BaseQuinielaGrid.vue'
 import {
   BASE_ENTRY_FEE_MXN,
@@ -49,10 +48,8 @@ async function onPredictionsUpdated() {
 
 <template>
   <div>
-    <QuinielaModeBanner />
-
     <RouterLink
-      to="/quiniela-base"
+      to="/jornadas/todas"
       class="mb-4 inline-flex items-center gap-1 text-sm text-slate-400 hover:text-mundial-green"
     >
       <ArrowLeft class="h-4 w-4" />

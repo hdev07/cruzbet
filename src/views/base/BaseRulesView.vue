@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Check, Copy } from '@lucide/vue'
-import QuinielaModeBanner from '@/components/layout/QuinielaModeBanner.vue'
 import {
   BASE_ENTRY_FEE_MXN,
   BASE_PAYMENT_INFO,
@@ -9,7 +8,7 @@ import {
   BASE_QUINIELA_MATCHES_PER_ROUND,
   BASE_QUINIELA_POINTS_PER_HIT,
 } from '@/constants/base-quiniela-rules'
-import { QUINIELA_MODE_BASE } from '@/constants/quiniela-modes'
+import { QUINIELA_SUMMARY } from '@/constants/nav'
 import { PAYMENT_NOTES } from '@/constants/quiniela-rules'
 
 const copiedField = ref<string | null>(null)
@@ -29,11 +28,9 @@ async function copyValue(value: string, field: string) {
 
 <template>
   <div>
-    <QuinielaModeBanner />
-
     <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Reglas y pagos</h1>
     <p class="mb-6 text-sm text-slate-400">
-      {{ QUINIELA_MODE_BASE.entryLabel }} · {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos por jornada
+      {{ QUINIELA_SUMMARY.entryLabel }} · {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos por jornada
     </p>
 
     <section class="mb-8">

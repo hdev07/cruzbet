@@ -1,15 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { Home, User } from '@lucide/vue'
 import InstallPrompt from '@/components/shared/InstallPrompt.vue'
 import { APP_NAME } from '@/constants/branding'
-import {
-  BASE_NAV,
-  detectQuinielaMode,
-  PARTIDO_NAV,
-  type QuinielaNavItem,
-} from '@/constants/quiniela-modes'
+import { HUB_NAV, isQuinielaRoute, QUINIELA_NAV, type NavItem } from '@/constants/nav'
 import { useLiveSync } from '@/composables/useLiveSync'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -18,31 +12,20 @@ useLiveSync()
 const route = useRoute()
 const auth = useAuthStore()
 
-const hubNav: QuinielaNavItem[] = [
-  { to: '/', label: 'Inicio', icon: Home },
-  { to: '/perfil', label: 'Perfil', icon: User },
-]
+const navItems = computed((): NavItem[] =>
+  isQuinielaRoute(route.path) ? QUINIELA_NAV : HUB_NAV,
+)
 
-const activeMode = computed(() => detectQuinielaMode(route.path))
-
-const navItems = computed((): QuinielaNavItem[] => {
-  if (activeMode.value === 'partido') return PARTIDO_NAV
-  if (activeMode.value === 'base') return BASE_NAV
-  return hubNav
-})
-
-function isNavActive(item: QuinielaNavItem): boolean {
+function isNavActive(item: NavItem): boolean {
   if (item.to === '/') return route.path === '/'
-  if (item.to === '/quiniela-partido') {
-    return route.path === '/quiniela-partido' || route.path.startsWith('/match/')
-  }
-  if (item.to === '/quiniela-base') {
-    const sub = route.path.slice('/quiniela-base/'.length)
+  if (item.to === '/perfil') return route.path === '/perfil'
+  if (item.to === '/jornadas') {
+    const sub = route.path.slice('/jornadas/'.length)
     const isRoundDetail =
-      route.path.startsWith('/quiniela-base/') &&
+      route.path.startsWith('/jornadas/') &&
       sub.length > 0 &&
-      !['ranking', 'reglas', 'historial'].includes(sub)
-    return route.path === '/quiniela-base' || isRoundDetail
+      !['todas'].includes(sub)
+    return route.path === '/jornadas' || route.path === '/jornadas/todas' || isRoundDetail
   }
   return route.path === item.to || route.path.startsWith(`${item.to}/`)
 }

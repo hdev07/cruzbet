@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
+import {
+  buildFirstKickoffByRoundId,
+  resolveActiveBaseRound,
+} from '@/lib/baseQuinielaRound'
 import { isMatchOpenForPredictions } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
 import type {
@@ -18,7 +22,12 @@ const MATCH_SELECT = '*, home_team:teams!home_team_id(*), away_team:teams!away_t
 
 export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   const rounds = ref<BaseQuinielaRound[]>([])
+  const roundFirstKickoff = ref<Record<string, number | null>>({})
   const currentRound = ref<BaseQuinielaRound | null>(null)
+
+  const activeRound = computed(() =>
+    resolveActiveBaseRound(rounds.value, roundFirstKickoff.value),
+  )
   const roundMatches = ref<BaseQuinielaRoundMatch[]>([])
   const myPredictions = ref<BasePrediction[]>([])
   const mySubmission = ref<BaseRoundPayment | null>(null)
@@ -28,12 +37,29 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
 
   async function fetchRounds() {
     loading.value = true
-    const { data, error } = await supabase
-      .from('base_quiniela_rounds')
-      .select('*')
-      .order('round_number', { ascending: true })
+    const [roundsResult, kickoffsResult] = await Promise.all([
+      supabase
+        .from('base_quiniela_rounds')
+        .select('*')
+        .order('round_number', { ascending: true }),
+      supabase
+        .from('base_quiniela_round_matches')
+        .select('round_id, match:matches(match_date)'),
+    ])
 
-    if (!error && data) rounds.value = data as BaseQuinielaRound[]
+    if (!roundsResult.error && roundsResult.data) {
+      rounds.value = roundsResult.data as BaseQuinielaRound[]
+    }
+
+    if (!kickoffsResult.error && kickoffsResult.data) {
+      roundFirstKickoff.value = buildFirstKickoffByRoundId(
+        kickoffsResult.data as unknown as {
+          round_id: string
+          match: { match_date: string | null } | null
+        }[],
+      )
+    }
+
     loading.value = false
   }
 
@@ -323,6 +349,8 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
 
   return {
     rounds,
+    roundFirstKickoff,
+    activeRound,
     currentRound,
     roundMatches,
     myPredictions,

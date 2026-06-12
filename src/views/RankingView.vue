@@ -45,7 +45,7 @@ onMounted(async () => {
         :class="activeTab === 'base' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
         @click="activeTab = 'base'"
       >
-        Quiniela base
+        Jornadas
       </button>
       <button
         class="flex-1 rounded-md py-2 text-sm font-medium transition"
@@ -110,14 +110,14 @@ onMounted(async () => {
         v-if="!baseStore.rounds.length"
         class="rounded-xl border border-dashed border-white/20 p-8 text-center text-slate-400"
       >
-        Aún no hay jornadas de quiniela base.
+        Aún no hay jornadas.
       </div>
 
       <div v-else class="space-y-2 lg:max-w-2xl">
         <RouterLink
           v-for="round in baseStore.rounds"
           :key="round.id"
-          :to="`/quiniela-base/${round.id}`"
+          :to="`/jornadas/${round.id}`"
           class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-mundial-accent/40"
         >
           <span
@@ -132,10 +132,10 @@ onMounted(async () => {
       </div>
 
       <RouterLink
-        to="/quiniela-base"
+        to="/jornadas"
         class="mt-4 inline-flex items-center gap-1 text-sm text-mundial-accent hover:underline"
       >
-        Ir a quiniela base
+        Ir a las jornadas
         <ChevronRight class="h-4 w-4" />
       </RouterLink>
     </template>

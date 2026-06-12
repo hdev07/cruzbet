@@ -138,13 +138,13 @@ async function handleLogout() {
 
     <div class="mb-6 flex flex-wrap justify-center gap-2">
       <RouterLink
-        to="/quiniela-base/historial"
+        to="/historial"
         class="rounded-lg border border-mundial-green/30 bg-mundial-green/10 px-3 py-2 text-sm font-medium text-mundial-green hover:bg-mundial-green/20"
       >
         Mi historial de jornadas
       </RouterLink>
       <RouterLink
-        to="/quiniela-base/ranking"
+        to="/ranking"
         class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/10"
       >
         Ver ranking
@@ -158,12 +158,12 @@ async function handleLogout() {
         </h2>
 
         <RouterLink
-          to="/quiniela-base/reglas"
+          to="/reglas"
           class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
         >
           <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
             <Settings class="h-4 w-4 text-slate-400" />
-            Reglas quiniela base
+            Reglas y pagos
           </span>
           <ChevronRight class="h-4 w-4 text-slate-500" />
         </RouterLink>

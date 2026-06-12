@@ -7,7 +7,7 @@ import HomeSpotlightMatch from '@/components/home/HomeSpotlightMatch.vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
 import MatchCard from '@/components/shared/MatchCard.vue'
 import { useHomeRealtime } from '@/composables/useHomeRealtime'
-import { GRUPOS_PATH, QUINIELA_MODE_BASE } from '@/constants/quiniela-modes'
+import { GRUPOS_PATH, JORNADAS_PATH } from '@/constants/nav'
 import { totalGoalsInMatches } from '@/lib/groupStandings'
 import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { supabase } from '@/lib/supabase'
@@ -251,11 +251,11 @@ const stats = computed(() => [
 
       <div class="mt-5 flex flex-col gap-2 sm:flex-row">
         <RouterLink
-          :to="QUINIELA_MODE_BASE.homePath"
+          :to="JORNADAS_PATH"
           class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-mundial-green px-4 py-3 text-sm font-semibold text-mundial-dark transition hover:bg-mundial-green/90"
         >
           <Grid3x3 class="h-4 w-4" />
-          Ir a la quiniela base
+          Ir a las jornadas
         </RouterLink>
         <RouterLink
           :to="GRUPOS_PATH"

@@ -6,7 +6,6 @@ import {
   BASE_QUINIELA_MATCHES_PER_ROUND,
   BASE_QUINIELA_POINTS_PER_HIT,
 } from '@/constants/base-quiniela-rules'
-import { QUINIELA_MODE_BASE } from '@/constants/quiniela-modes'
 </script>
 
 <template>
@@ -25,7 +24,7 @@ import { QUINIELA_MODE_BASE } from '@/constants/quiniela-modes'
           <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-mundial-green">
             Quiniela
           </p>
-          <h3 class="text-xl font-bold text-slate-100">{{ QUINIELA_MODE_BASE.title }}</h3>
+          <h3 class="text-xl font-bold text-slate-100">Jornadas</h3>
         </div>
         <span
           class="rounded-full bg-mundial-green/20 px-3 py-1 text-sm font-bold text-mundial-green"
@@ -85,7 +84,7 @@ import { QUINIELA_MODE_BASE } from '@/constants/quiniela-modes'
       </ol>
 
       <RouterLink
-        :to="`${QUINIELA_MODE_BASE.homePath}/reglas`"
+        to="/reglas"
         class="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-mundial-green hover:underline"
       >
         Ver reglas y datos de pago

@@ -9,7 +9,7 @@ export const BASE_QUINIELA_MAX_POINTS =
 export const BASE_PAYMENT_INFO = {
   ...PAYMENT_INFO,
   amountLabel: `$${BASE_ENTRY_FEE_MXN} MXN por jornada`,
-  concept: 'Quiniela base — incluye concepto y número de jornada',
+  concept: 'Quiniela — incluye concepto y número de jornada',
 } as const
 
 export const BASE_QUINIELA_FILL_TIP = {
@@ -38,7 +38,7 @@ export const BASE_QUINIELA_SAVE_ALERT = {
 } as const
 
 export const BASE_QUINIELA_LOGIC = {
-  title: 'Quiniela base',
+  title: 'Quiniela',
   summary: `Deposita $${BASE_ENTRY_FEE_MXN} MXN por jornada. Marca L, E o V en ${BASE_QUINIELA_MATCHES_PER_ROUND} partidos. Cada acierto suma ${BASE_QUINIELA_POINTS_PER_HIT} puntos. Ranking independiente por jornada.`,
   howItWorks: [
     `Transfiere $${BASE_ENTRY_FEE_MXN} MXN por cada jornada en la que participes.`,

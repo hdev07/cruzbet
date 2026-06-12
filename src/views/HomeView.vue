@@ -3,7 +3,7 @@ import { RouterLink } from 'vue-router'
 import { ChevronRight, Grid3x3 } from '@lucide/vue'
 import HomeLandingRules from '@/components/home/HomeLandingRules.vue'
 import HomeTournamentHub from '@/components/home/HomeTournamentHub.vue'
-import { QUINIELA_MODE_BASE } from '@/constants/quiniela-modes'
+import { JORNADAS_PATH, QUINIELA_SUMMARY } from '@/constants/nav'
 import { APP_NAME, APP_TAGLINE } from '@/constants/branding'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -43,11 +43,11 @@ const auth = useAuthStore()
       <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-mundial-green">
         Empieza aquí
       </p>
-      <h2 class="text-xl font-bold text-slate-100 lg:text-2xl">Quiniela base</h2>
+      <h2 class="text-xl font-bold text-slate-100 lg:text-2xl">Tu quiniela</h2>
     </header>
 
     <RouterLink
-      :to="QUINIELA_MODE_BASE.homePath"
+      :to="JORNADAS_PATH"
       class="group mb-8 flex flex-col rounded-2xl border-2 border-mundial-green/50 bg-gradient-to-br from-mundial-green/15 to-transparent p-6 transition hover:border-mundial-green hover:shadow-lg hover:shadow-mundial-green/10 lg:p-8"
     >
       <div class="mb-4 flex items-start justify-between gap-3">
@@ -55,15 +55,15 @@ const auth = useAuthStore()
           <Grid3x3 class="h-7 w-7 text-mundial-green" />
         </span>
         <span class="rounded-full bg-mundial-green px-3 py-1 text-xs font-bold text-mundial-dark">
-          {{ QUINIELA_MODE_BASE.entryLabel }}
+          {{ QUINIELA_SUMMARY.entryLabel }}
         </span>
       </div>
 
-      <h3 class="text-2xl font-bold text-slate-100">{{ QUINIELA_MODE_BASE.title }}</h3>
-      <p class="mt-2 text-sm text-slate-300 lg:text-base">{{ QUINIELA_MODE_BASE.tagline }}</p>
+      <h3 class="text-2xl font-bold text-slate-100">Jornadas</h3>
+      <p class="mt-2 text-sm text-slate-300 lg:text-base">{{ QUINIELA_SUMMARY.tagline }}</p>
 
       <ul class="mt-4 space-y-2 text-sm text-slate-400">
-        <li v-for="feature in QUINIELA_MODE_BASE.features" :key="feature" class="flex gap-2">
+        <li v-for="feature in QUINIELA_SUMMARY.features" :key="feature" class="flex gap-2">
           <span class="text-mundial-green">✓</span>
           <span>{{ feature }}</span>
         </li>
@@ -72,7 +72,7 @@ const auth = useAuthStore()
       <p
         class="mt-6 flex items-center gap-1 text-sm font-semibold text-mundial-green group-hover:underline lg:text-base"
       >
-        Ir a la quiniela base
+        Ir a las jornadas
         <ChevronRight class="h-4 w-4" />
       </p>
     </RouterLink>

@@ -2,10 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ChevronRight } from '@lucide/vue'
-import QuinielaModeBanner from '@/components/layout/QuinielaModeBanner.vue'
 import { winnerCode } from '@/lib/baseQuinielaDisplay'
 import { teamDisplayName } from '@/lib/teamDisplay'
-import { QUINIELA_MODE_BASE } from '@/constants/quiniela-modes'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BasePrediction, BaseQuinielaRound, Match } from '@/types'
@@ -47,12 +45,8 @@ const groupedByRound = computed(() => {
 
 <template>
   <div>
-    <QuinielaModeBanner />
-
     <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Historial</h1>
-    <p class="mb-6 text-sm text-slate-400">
-      {{ QUINIELA_MODE_BASE.title }} — tus picks L/E/V por jornada
-    </p>
+    <p class="mb-6 text-sm text-slate-400">Tus picks L/E/V por jornada</p>
 
     <div
       v-if="!auth.isLoggedIn"
@@ -74,7 +68,7 @@ const groupedByRound = computed(() => {
         v-else-if="!groupedByRound.length"
         class="rounded-xl border border-dashed border-white/20 p-8 text-center text-slate-400"
       >
-        Aún no tienes predicciones en la quiniela base.
+        Aún no tienes predicciones.
       </div>
 
       <div v-else class="space-y-4">
@@ -89,7 +83,7 @@ const groupedByRound = computed(() => {
             </h2>
             <RouterLink
               v-if="group.round"
-              :to="`/quiniela-base/${group.round.id}`"
+              :to="`/jornadas/${group.round.id}`"
               class="inline-flex items-center gap-1 text-xs text-mundial-green hover:underline"
             >
               Ver jornada
