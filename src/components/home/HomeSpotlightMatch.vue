@@ -14,9 +14,11 @@ const now = ref(Date.now())
 let timer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
+  const intervalMs =
+    props.match.match_date && !props.isLive ? 1_000 : 30_000
   timer = setInterval(() => {
     now.value = Date.now()
-  }, 30_000)
+  }, intervalMs)
 })
 
 onUnmounted(() => {
@@ -44,7 +46,9 @@ const countdown = computed(() => {
     return `Faltan ${days} ${days === 1 ? 'día' : 'días'}`
   }
   if (hours > 0) return `Faltan ${hours}h ${mins}m`
-  return `Faltan ${mins} min`
+  const secs = Math.floor((diff % 60_000) / 1_000)
+  if (mins > 0) return `Faltan ${mins}m ${secs}s`
+  return `Faltan ${secs}s`
 })
 </script>
 

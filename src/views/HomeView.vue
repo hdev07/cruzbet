@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight, Grid3x3, LayoutGrid, Trophy, User } from '@lucide/vue'
+import { Grid3x3, LayoutGrid, Trophy, User } from '@lucide/vue'
 import HomeLandingRules from '@/components/home/HomeLandingRules.vue'
+import HomeNextMatchSection from '@/components/home/HomeNextMatchSection.vue'
 import {
   JORNADAS_PATH,
   MUNDIAL_PATH,
@@ -9,111 +11,91 @@ import {
   QUINIELA_SUMMARY,
   RANKING_PATH,
 } from '@/constants/nav'
-import { APP_NAME, APP_TAGLINE } from '@/constants/branding'
+import { APP_TAGLINE } from '@/constants/branding'
 import { useAuthStore } from '@/stores/authStore'
 
 const auth = useAuthStore()
 
-const sections = [
-  {
-    to: MUNDIAL_PATH,
-    label: 'Mundial',
-    description: 'Partidos en vivo, grupos y calendario del torneo',
-    icon: LayoutGrid,
-    accent: 'mundial-accent',
-  },
-  {
-    to: JORNADAS_PATH,
-    label: 'Quiniela',
-    description: QUINIELA_SUMMARY.tagline,
-    icon: Grid3x3,
-    accent: 'mundial-green',
-    badge: QUINIELA_SUMMARY.entryLabel,
-  },
-  {
-    to: RANKING_PATH,
-    label: 'Ranking',
-    description: 'Posiciones y pronósticos por jornada',
-    icon: Trophy,
-    accent: 'mundial-accent',
-  },
+const greeting = computed(() => {
+  if (auth.isLoggedIn && auth.profile?.username) {
+    return `Hola, ${auth.profile.username}`
+  }
+  return '¿Listo para el Mundial?'
+})
+
+const subtitle = computed(() => {
+  if (auth.isLoggedIn) {
+    return 'Aquí tienes lo más importante del torneo y tu quiniela'
+  }
+  return APP_TAGLINE
+})
+
+const quickLinks = [
+  { to: MUNDIAL_PATH, label: 'Mundial', icon: LayoutGrid },
+  { to: JORNADAS_PATH, label: 'Quiniela', icon: Grid3x3, highlight: true },
+  { to: RANKING_PATH, label: 'Ranking', icon: Trophy },
   {
     to: auth.isLoggedIn ? PERFIL_PATH : '/login',
-    label: auth.isLoggedIn ? 'Mi perfil' : 'Entrar',
-    description: auth.isLoggedIn
-      ? 'Tu cuenta, historial y configuración'
-      : 'Inicia sesión para guardar tus picks',
+    label: auth.isLoggedIn ? 'Perfil' : 'Entrar',
     icon: User,
-    accent: 'slate-300',
   },
 ] as const
 </script>
 
 <template>
-  <div class="mx-auto w-full lg:max-w-5xl">
-    <div class="mb-8 text-center lg:mb-10">
-      <h1 class="text-3xl font-bold tracking-tight text-slate-100 lg:text-4xl">{{ APP_NAME }}</h1>
-      <p class="mx-auto mt-3 max-w-md text-base text-slate-300 lg:text-lg">
-        {{ APP_TAGLINE }}
+  <div class="mx-auto w-full lg:max-w-3xl">
+    <header class="mb-6 lg:mb-8">
+      <p class="text-xs font-semibold uppercase tracking-widest text-mundial-accent">
+        Inicio
       </p>
-      <p class="mx-auto mt-2 max-w-lg text-sm text-slate-500">
-        Elige una sección para empezar
+      <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-100 lg:text-3xl">
+        {{ greeting }}
+      </h1>
+      <p class="mt-2 max-w-md text-sm text-slate-400 lg:text-base">
+        {{ subtitle }}
       </p>
-    </div>
+    </header>
+
+    <HomeNextMatchSection />
 
     <div
       v-if="!auth.isLoggedIn"
-      class="mb-6 rounded-xl border border-white/10 bg-white/5 p-4 text-center"
+      class="mt-5 rounded-xl border border-mundial-green/25 bg-mundial-green/5 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4"
     >
-      <p class="mb-3 text-sm text-slate-300">
-        Entra con Google para guardar tus picks y ver cómo vas
-      </p>
+      <div class="mb-3 sm:mb-0">
+        <p class="text-sm font-medium text-slate-200">Guarda tus picks y compite</p>
+        <p class="mt-0.5 text-xs text-slate-400">
+          Entra con Google para participar en la quiniela
+        </p>
+      </div>
       <RouterLink
         to="/login"
-        class="inline-block rounded-lg bg-mundial-accent px-5 py-2 text-sm font-semibold"
+        class="inline-flex shrink-0 items-center justify-center rounded-lg bg-mundial-green px-4 py-2.5 text-sm font-semibold text-mundial-dark transition hover:bg-mundial-green/90"
       >
         Entrar con Google
       </RouterLink>
     </div>
 
-    <div class="mb-10 grid gap-3 sm:grid-cols-2">
+    <nav class="mt-6 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <RouterLink
-        v-for="section in sections"
-        :key="section.to"
-        :to="section.to"
-        class="group flex flex-col rounded-2xl border border-white/10 bg-white/5 p-5 transition hover:border-white/20 hover:bg-white/[0.07] lg:p-6"
-        :class="section.label === 'Quiniela' ? 'sm:col-span-2 border-mundial-green/30 bg-mundial-green/5 hover:border-mundial-green/50' : ''"
+        v-for="link in quickLinks"
+        :key="link.to"
+        :to="link.to"
+        class="inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition"
+        :class="
+          'highlight' in link && link.highlight
+            ? 'border-mundial-green/40 bg-mundial-green/10 text-mundial-green hover:bg-mundial-green/15'
+            : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/[0.07]'
+        "
       >
-        <div class="mb-3 flex items-start justify-between gap-3">
-          <span
-            class="flex h-11 w-11 items-center justify-center rounded-xl"
-            :class="
-              section.accent === 'mundial-green'
-                ? 'bg-mundial-green/20 text-mundial-green'
-                : section.accent === 'mundial-accent'
-                  ? 'bg-mundial-accent/15 text-mundial-accent'
-                  : 'bg-white/10 text-slate-300'
-            "
-          >
-            <component :is="section.icon" class="h-5 w-5" />
-          </span>
-          <span
-            v-if="'badge' in section && section.badge"
-            class="rounded-full bg-mundial-green/20 px-2.5 py-0.5 text-xs font-bold text-mundial-green"
-          >
-            {{ section.badge }}
-          </span>
-        </div>
-
-        <h2 class="text-lg font-bold text-slate-100">{{ section.label }}</h2>
-        <p class="mt-1 flex-1 text-sm text-slate-400">{{ section.description }}</p>
-
-        <p class="mt-4 flex items-center gap-1 text-sm font-semibold text-mundial-accent group-hover:underline">
-          Ir
-          <ChevronRight class="h-4 w-4" />
-        </p>
+        <component :is="link.icon" class="h-4 w-4" />
+        {{ link.label }}
       </RouterLink>
-    </div>
+    </nav>
+
+    <p class="mt-3 text-center text-xs text-slate-500">
+      {{ QUINIELA_SUMMARY.entryLabel }} · {{ QUINIELA_SUMMARY.tagline }}
+    </p>
 
     <HomeLandingRules />
   </div>
