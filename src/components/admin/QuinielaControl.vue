@@ -96,7 +96,7 @@ function syncForm(match: Match) {
   goalMinute.value = Math.max((match.current_minute ?? 0) + 1, 1)
   goalSecond.value = 0
   goalExtraTime.value = 0
-  goalTeamId.value = match.home_team_id
+  goalTeamId.value = match.home_team_id ?? ''
   autoSyncEnabled.value = match.auto_sync_enabled !== false
 }
 
@@ -267,7 +267,7 @@ function startEditGoal(event: MatchEvent) {
   editMinute.value = event.minute
   editSecond.value = event.event_second ?? 0
   editExtraTime.value = event.extra_time ?? 0
-  editTeamId.value = event.team_id ?? props.match.home_team_id
+  editTeamId.value = event.team_id ?? props.match.home_team_id ?? ''
 }
 
 function cancelEditGoal() {

@@ -23,6 +23,8 @@ const MATCH_SELECT = `
   away_team_id,
   status,
   match_date,
+  current_minute,
+  live_clock_display,
   auto_sync_enabled,
   external_event_id,
   home_team:teams!home_team_id(code, name),

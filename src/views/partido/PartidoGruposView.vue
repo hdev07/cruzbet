@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ArrowLeft } from '@lucide/vue'
+import { ArrowLeft, GitBranch } from '@lucide/vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
-import { MUNDIAL_PATH } from '@/constants/nav'
+import { ELIMINATORIA_PATH, MUNDIAL_PATH } from '@/constants/nav'
 import GroupStandingsSection from '@/components/shared/GroupStandingsSection.vue'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 
@@ -63,7 +63,17 @@ onMounted(() => standingsStore.fetchStandingsData())
       </div>
     </div>
 
-    <div class="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-slate-500 lg:text-sm">
+    <div class="mt-8 flex flex-col gap-4 sm:flex-row">
+      <RouterLink
+        :to="ELIMINATORIA_PATH"
+        class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-4 py-3 text-sm font-semibold text-mundial-accent transition hover:bg-mundial-accent/20"
+      >
+        <GitBranch class="h-4 w-4" />
+        Ver árbol de eliminatoria
+      </RouterLink>
+    </div>
+
+    <div class="mt-4 rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-slate-500 lg:text-sm">
       <p class="mb-2 font-semibold text-slate-300">Criterios de clasificación</p>
       <ul class="list-inside list-disc space-y-1">
         <li>Los 2 primeros de cada grupo avanzan a los dieciseisavos de final.</li>

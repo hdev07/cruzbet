@@ -1,5 +1,18 @@
 export type MatchStatus = 'scheduled' | 'live' | 'finished'
 
+export type BracketSlot =
+  | { type: 'group_pos'; group: string; pos: number }
+  | { type: 'best_third'; groups: string[] }
+  | { type: 'winner'; match: number }
+  | { type: 'loser'; match: number }
+
+export interface BracketMeta {
+  match_number: number
+  home: BracketSlot
+  away: BracketSlot
+  label?: string
+}
+
 export type EventType =
   | 'goal'
   | 'corner'
@@ -30,8 +43,8 @@ export interface Player {
 
 export interface Match {
   id: string
-  home_team_id: string
-  away_team_id: string
+  home_team_id: string | null
+  away_team_id: string | null
   home_score: number
   away_score: number
   current_minute: number | null
@@ -40,6 +53,8 @@ export interface Match {
   phase: string | null
   match_date: string | null
   venue: string | null
+  bracket_key?: string | null
+  bracket_meta?: BracketMeta | null
   auto_sync_enabled?: boolean
   live_sync_at?: string | null
   live_sync_error?: string | null

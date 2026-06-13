@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Calendar, ChevronRight, Goal, Grid3x3, LayoutGrid, Radio } from '@lucide/vue'
+import { Calendar, ChevronRight, GitBranch, Goal, Grid3x3, LayoutGrid, Radio } from '@lucide/vue'
 import GroupStandingsMiniCard from '@/components/home/GroupStandingsMiniCard.vue'
 import HomeSpotlightMatch from '@/components/home/HomeSpotlightMatch.vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
 import MatchCard from '@/components/shared/MatchCard.vue'
-import { GRUPOS_PATH, JORNADAS_PATH } from '@/constants/nav'
+import { ELIMINATORIA_PATH, GRUPOS_PATH, JORNADAS_PATH } from '@/constants/nav'
 import { totalGoalsInMatches } from '@/lib/groupStandings'
 import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { teamDisplayName } from '@/lib/teamDisplay'
@@ -89,13 +89,20 @@ const stats = computed(() => [
     class="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent"
   >
     <div class="border-b border-white/10 px-4 py-5 sm:px-6">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="mb-4 flex flex-wrap items-center gap-2">
         <RouterLink
           :to="GRUPOS_PATH"
           class="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-mundial-accent/40 hover:text-mundial-accent"
         >
           <LayoutGrid class="h-3.5 w-3.5" />
           Ver 12 grupos
+        </RouterLink>
+        <RouterLink
+          :to="ELIMINATORIA_PATH"
+          class="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-mundial-accent/40 hover:text-mundial-accent"
+        >
+          <GitBranch class="h-3.5 w-3.5" />
+          Eliminatoria
         </RouterLink>
       </div>
 

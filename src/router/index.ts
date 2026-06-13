@@ -24,6 +24,11 @@ const router = createRouter({
       meta: { layout: 'mobile', title: 'Grupos' },
     },
     {
+      path: '/eliminatoria',
+      component: () => import('@/views/partido/PartidoEliminatoriaView.vue'),
+      meta: { layout: 'mobile', title: 'Eliminatoria' },
+    },
+    {
       path: '/jornadas',
       component: () => import('@/views/BaseQuinielaListView.vue'),
       meta: { layout: 'mobile', title: 'Jornadas' },

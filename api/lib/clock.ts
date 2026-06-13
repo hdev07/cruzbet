@@ -89,3 +89,25 @@ export function extractClockFromEspnStatus(
 
   return { current_minute: 0, live_clock_display: null }
 }
+
+/** Evita que datos viejos de ESPN retrocedan el reloj (ej. 90+2 → 73). */
+export function mergeLiveClock(
+  incoming: { current_minute: number; live_clock_display: string | null },
+  previous?: { current_minute?: number | null; live_clock_display?: string | null } | null,
+): { current_minute: number; live_clock_display: string | null } {
+  if (incoming.live_clock_display === 'HT' || incoming.live_clock_display === 'FT') {
+    return incoming
+  }
+
+  const prevMin = previous?.current_minute ?? 0
+  const prevDisplay = previous?.live_clock_display ?? null
+
+  if (prevMin > 0 && incoming.current_minute < prevMin) {
+    return {
+      current_minute: prevMin,
+      live_clock_display: prevDisplay ?? incoming.live_clock_display,
+    }
+  }
+
+  return incoming
+}

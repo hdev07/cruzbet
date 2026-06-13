@@ -27,6 +27,8 @@ export interface DbMatchRow {
   away_team_id: string
   status: MatchStatus
   match_date: string | null
+  current_minute: number | null
+  live_clock_display: string | null
   auto_sync_enabled: boolean
   external_event_id: string | null
   home_team: { code: string; name: string }

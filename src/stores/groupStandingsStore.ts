@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { mergeLiveClockPatch } from '@/lib/matchClock'
 import { allGroupLetters, computeGroupStandings } from '@/lib/groupStandings'
 import { supabase } from '@/lib/supabase'
 import type { GroupStandings, Match, Team } from '@/types'
@@ -72,7 +73,7 @@ export const useGroupStandingsStore = defineStore('groupStandings', () => {
     const existing = groupMatches.value.find((m) => m.id === match.id)
     if (existing) {
       const idx = groupMatches.value.findIndex((m) => m.id === match.id)
-      groupMatches.value[idx] = { ...existing, ...match }
+      groupMatches.value[idx] = mergeLiveClockPatch(existing, match)
       return
     }
 

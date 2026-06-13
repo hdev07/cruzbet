@@ -1,5 +1,6 @@
 import {
   extractClockFromEspnStatus,
+  mergeLiveClock,
   parseClockDisplay,
 } from './clock.js'
 import type { DbMatchRow, LiveMatchSnapshot, ParsedGoal } from './types.js'
@@ -203,6 +204,7 @@ async function buildEspnSnapshotFromCompetition(
   eventId: string,
   comp: EspnCompetition,
   summary?: EspnSummary | null,
+  previousClock?: { current_minute?: number | null; live_clock_display?: string | null } | null,
 ): Promise<LiveMatchSnapshot> {
   const status = comp.status
   const homeComp = comp.competitors.find((c) => c.homeAway === 'home')
@@ -222,7 +224,10 @@ async function buildEspnSnapshotFromCompetition(
     goals = parseGoalsFromKeyEvents(fetchedSummary?.keyEvents, homeTeamId)
   }
 
-  const clock = extractClockFromEspnStatus(status, matchStatus)
+  const clock = mergeLiveClock(
+    extractClockFromEspnStatus(status, matchStatus),
+    previousClock,
+  )
 
   return {
     status: matchStatus,
@@ -240,20 +245,22 @@ export async function buildEspnSnapshot(
   event: EspnEvent,
   _homeCode: string,
   _awayCode: string,
+  previousClock?: { current_minute?: number | null; live_clock_display?: string | null } | null,
 ): Promise<LiveMatchSnapshot> {
   const comp = event.competitions[0]!
   const summary = await fetchEspnSummary(event.id)
   const headerComp = summary?.header?.competitions?.[0]
-  return buildEspnSnapshotFromCompetition(event.id, headerComp ?? comp, summary)
+  return buildEspnSnapshotFromCompetition(event.id, headerComp ?? comp, summary, previousClock)
 }
 
 async function fetchSnapshotByEventId(
   eventId: string,
+  previousClock?: { current_minute?: number | null; live_clock_display?: string | null } | null,
 ): Promise<LiveMatchSnapshot | null> {
   const summary = await fetchEspnSummary(eventId)
   const comp = summary?.header?.competitions?.[0]
   if (!comp) return null
-  return buildEspnSnapshotFromCompetition(eventId, comp, summary)
+  return buildEspnSnapshotFromCompetition(eventId, comp, summary, previousClock)
 }
 
 async function resolveEspnEventsForMatch(
@@ -271,8 +278,13 @@ export async function fetchLiveSnapshotForMatch(
   match: DbMatchRow,
   cachedEvents?: EspnEvent[],
 ): Promise<LiveMatchSnapshot | null> {
+  const previousClock = {
+    current_minute: match.current_minute,
+    live_clock_display: match.live_clock_display,
+  }
+
   if (match.external_event_id) {
-    const direct = await fetchSnapshotByEventId(match.external_event_id)
+    const direct = await fetchSnapshotByEventId(match.external_event_id, previousClock)
     if (direct) return direct
   }
 
@@ -282,5 +294,5 @@ export async function fetchLiveSnapshotForMatch(
   const event = findEspnEvent(events, match.home_team.code, match.away_team.code)
   if (!event) return null
 
-  return buildEspnSnapshot(event, match.home_team.code, match.away_team.code)
+  return buildEspnSnapshot(event, match.home_team.code, match.away_team.code, previousClock)
 }

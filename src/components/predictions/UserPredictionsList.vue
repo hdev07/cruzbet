@@ -56,13 +56,13 @@ const teamOptions = computed(() => {
       if (!inGroup) continue
     }
 
-    if (match.home_team) {
+    if (match.home_team && match.home_team_id) {
       teams.set(match.home_team_id, {
         name: teamDisplayName(match.home_team, 'Local'),
         flag_url: match.home_team.flag_url,
       })
     }
-    if (match.away_team) {
+    if (match.away_team && match.away_team_id) {
       teams.set(match.away_team_id, {
         name: teamDisplayName(match.away_team, 'Visitante'),
         flag_url: match.away_team.flag_url,

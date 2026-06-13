@@ -1,6 +1,6 @@
 -- Seed: Mundial 2026 — Fase de grupos (48 equipos, 72 partidos)
 -- Ejecutar en Supabase SQL Editor después de schema.sql
--- Horarios convertidos de ET (EDT, UTC-4) a timestamptz UTC
+-- Horarios: hora local de la sede → timestamptz UTC
 
 INSERT INTO teams (code, name, flag_url, group_name)
 VALUES
@@ -113,7 +113,7 @@ WHERE h.code = 'HAI' AND a.code = 'SCO'
   );
 
 INSERT INTO matches (home_team_id, away_team_id, phase, match_date, venue, status)
-SELECT h.id, a.id, 'group', timestamptz '2026-06-13T04:00:00+00', 'BC Place, Vancouver', 'scheduled'
+SELECT h.id, a.id, 'group', timestamptz '2026-06-14T04:00:00+00', 'BC Place, Vancouver', 'scheduled'
 FROM teams h, teams a
 WHERE h.code = 'AUS' AND a.code = 'TUR'
   AND NOT EXISTS (
@@ -135,7 +135,7 @@ WHERE h.code = 'BRA' AND a.code = 'MAR'
   );
 
 INSERT INTO matches (home_team_id, away_team_id, phase, match_date, venue, status)
-SELECT h.id, a.id, 'group', timestamptz '2026-06-13T19:00:00+00', 'Levi''s Stadium, San Francisco', 'scheduled'
+SELECT h.id, a.id, 'group', timestamptz '2026-06-13T19:00:00+00', 'Levi''s Stadium, San Francisco Bay Area', 'scheduled'
 FROM teams h, teams a
 WHERE h.code = 'QAT' AND a.code = 'SUI'
   AND NOT EXISTS (
@@ -267,7 +267,7 @@ WHERE h.code = 'ARG' AND a.code = 'ALG'
   );
 
 INSERT INTO matches (home_team_id, away_team_id, phase, match_date, venue, status)
-SELECT h.id, a.id, 'group', timestamptz '2026-06-16T04:00:00+00', 'Levi''s Stadium, San Francisco', 'scheduled'
+SELECT h.id, a.id, 'group', timestamptz '2026-06-17T04:00:00+00', 'Levi''s Stadium, San Francisco Bay Area', 'scheduled'
 FROM teams h, teams a
 WHERE h.code = 'AUT' AND a.code = 'JOR'
   AND NOT EXISTS (
@@ -388,7 +388,7 @@ WHERE h.code = 'SCO' AND a.code = 'MAR'
   );
 
 INSERT INTO matches (home_team_id, away_team_id, phase, match_date, venue, status)
-SELECT h.id, a.id, 'group', timestamptz '2026-06-20T03:00:00+00', 'Levi''s Stadium, San Francisco', 'scheduled'
+SELECT h.id, a.id, 'group', timestamptz '2026-06-20T03:00:00+00', 'Levi''s Stadium, San Francisco Bay Area', 'scheduled'
 FROM teams h, teams a
 WHERE h.code = 'TUR' AND a.code = 'PAR'
   AND NOT EXISTS (
@@ -443,7 +443,7 @@ WHERE h.code = 'NED' AND a.code = 'SWE'
   );
 
 INSERT INTO matches (home_team_id, away_team_id, phase, match_date, venue, status)
-SELECT h.id, a.id, 'group', timestamptz '2026-06-20T04:00:00+00', 'Estadio BBVA, Monterrey', 'scheduled'
+SELECT h.id, a.id, 'group', timestamptz '2026-06-21T04:00:00+00', 'Estadio BBVA, Monterrey', 'scheduled'
 FROM teams h, teams a
 WHERE h.code = 'TUN' AND a.code = 'JPN'
   AND NOT EXISTS (
@@ -531,7 +531,7 @@ WHERE h.code = 'ARG' AND a.code = 'AUT'
   );
 
 INSERT INTO matches (home_team_id, away_team_id, phase, match_date, venue, status)
-SELECT h.id, a.id, 'group', timestamptz '2026-06-23T03:00:00+00', 'Levi''s Stadium, San Francisco', 'scheduled'
+SELECT h.id, a.id, 'group', timestamptz '2026-06-23T03:00:00+00', 'Levi''s Stadium, San Francisco Bay Area', 'scheduled'
 FROM teams h, teams a
 WHERE h.code = 'JOR' AND a.code = 'ALG'
   AND NOT EXISTS (
@@ -707,7 +707,7 @@ WHERE h.code = 'TUR' AND a.code = 'USA'
   );
 
 INSERT INTO matches (home_team_id, away_team_id, phase, match_date, venue, status)
-SELECT h.id, a.id, 'group', timestamptz '2026-06-26T02:00:00+00', 'Levi''s Stadium, San Francisco', 'scheduled'
+SELECT h.id, a.id, 'group', timestamptz '2026-06-26T02:00:00+00', 'Levi''s Stadium, San Francisco Bay Area', 'scheduled'
 FROM teams h, teams a
 WHERE h.code = 'PAR' AND a.code = 'AUS'
   AND NOT EXISTS (

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Radio, Users } from '@lucide/vue'
 import { formatMatchClock } from '@/lib/matchClock'
+import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchStatus } from '@/types'
@@ -22,14 +23,6 @@ const emit = defineEmits<{
 }>()
 
 const matchStore = useMatchStore()
-
-const phaseLabels: Record<string, string> = {
-  group: 'Grupos',
-  r16: 'Octavos',
-  qf: 'Cuartos',
-  sf: 'Semifinal',
-  final: 'Final',
-}
 
 const filteredMatches = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -130,7 +123,7 @@ function formatDate(match: Match) {
           @click="selectMatch(match.id)"
         >
           <div class="mb-2 flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide text-slate-500">
-            <span>{{ phaseLabels[match.phase ?? ''] ?? match.phase }}</span>
+            <span>{{ phaseLabel(match.phase) }}</span>
             <span class="flex items-center gap-1">
               <span
                 v-if="match.auto_sync_enabled !== false"

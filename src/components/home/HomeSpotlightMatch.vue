@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Clock, Radio } from '@lucide/vue'
 import { formatLiveStatusLabel } from '@/lib/matchClock'
 import { formatKickoff } from '@/lib/matchRules'
+import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import type { Match } from '@/types'
 
@@ -25,14 +26,6 @@ onMounted(() => {
 onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
-
-const phaseLabels: Record<string, string> = {
-  group: 'Fase de grupos',
-  r16: 'Octavos de final',
-  qf: 'Cuartos de final',
-  sf: 'Semifinal',
-  final: 'Final',
-}
 
 const kickoffLabel = computed(() => formatKickoff(props.match))
 
@@ -79,7 +72,7 @@ const countdown = computed(() => {
           Próximo partido
         </span>
         <span class="hidden text-xs text-slate-500 sm:inline">
-          {{ phaseLabels[match.phase ?? ''] ?? match.phase }}
+          {{ phaseLabel(match.phase) }}
         </span>
       </div>
       <span v-if="countdown" class="text-xs font-medium tabular-nums text-slate-400">

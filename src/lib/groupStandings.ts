@@ -66,6 +66,7 @@ export function computeGroupStandings(teams: Team[], matches: Match[]): GroupSta
     const teamIds = new Set(groupTeams.map((t) => t.id))
 
     for (const match of standingMatches) {
+      if (!match.home_team_id || !match.away_team_id) continue
       if (!teamIds.has(match.home_team_id) || !teamIds.has(match.away_team_id)) continue
 
       const home = statsMap.get(match.home_team_id)!
@@ -116,6 +117,8 @@ export function countFinishedMatchesInGroup(group: GroupStandings, matches: Matc
     (m) =>
       m.phase === 'group' &&
       m.status === 'finished' &&
+      m.home_team_id &&
+      m.away_team_id &&
       teamIds.has(m.home_team_id) &&
       teamIds.has(m.away_team_id),
   ).length

@@ -4,6 +4,7 @@ import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants
 
 export const MUNDIAL_PATH = '/mundial'
 export const GRUPOS_PATH = '/grupos'
+export const ELIMINATORIA_PATH = '/eliminatoria'
 export const JORNADAS_PATH = '/jornadas'
 export const RANKING_PATH = '/ranking'
 export const PERFIL_PATH = '/perfil'
@@ -51,7 +52,7 @@ export function isQuinielaSectionRoute(path: string): boolean {
 }
 
 export function isMundialSectionRoute(path: string): boolean {
-  return path === MUNDIAL_PATH || path === GRUPOS_PATH || path.startsWith('/grupos/')
+  return path === MUNDIAL_PATH || path === GRUPOS_PATH || path === ELIMINATORIA_PATH || path.startsWith('/grupos/')
 }
 
 export function navItemHref(item: NavItem, isLoggedIn: boolean): string {

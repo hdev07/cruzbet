@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ChevronRight, Radio, Users } from '@lucide/vue'
+import { bracketParticipantLabel } from '@/lib/knockoutBracket'
+import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { formatLiveStatusLabel } from '@/lib/matchClock'
 import type { Match } from '@/types'
@@ -14,12 +16,14 @@ withDefaults(
   { linkable: true },
 )
 
-const phaseLabels: Record<string, string> = {
-  group: 'Grupos',
-  r16: 'Octavos',
-  qf: 'Cuartos',
-  sf: 'Semifinal',
-  final: 'Final',
+function homeLabel(match: Match) {
+  if (match.home_team) return teamDisplayName(match.home_team, 'Local')
+  return bracketParticipantLabel(match, 'home')
+}
+
+function awayLabel(match: Match) {
+  if (match.away_team) return teamDisplayName(match.away_team, 'Visitante')
+  return bracketParticipantLabel(match, 'away')
 }
 </script>
 
@@ -34,7 +38,7 @@ const phaseLabels: Record<string, string> = {
     ]"
   >
     <div class="mb-2 flex items-center justify-between text-xs text-slate-400">
-      <span>{{ phaseLabels[match.phase ?? ''] ?? match.phase ?? 'Partido' }}</span>
+      <span>{{ phaseLabel(match.phase) }}</span>
       <span
         v-if="match.status === 'live'"
         class="inline-flex items-center gap-1 rounded-full bg-mundial-green px-2 py-0.5 font-semibold text-white"
@@ -56,7 +60,7 @@ const phaseLabels: Record<string, string> = {
           :alt="teamDisplayName(match.home_team, 'Local')"
           class="h-6 w-8 shrink-0 object-cover"
         />
-        <span class="truncate font-medium">{{ teamDisplayName(match.home_team, 'Local') }}</span>
+        <span class="truncate font-medium">{{ homeLabel(match) }}</span>
       </div>
 
       <div class="shrink-0 px-1 text-lg font-bold tabular-nums sm:text-xl">
@@ -67,7 +71,7 @@ const phaseLabels: Record<string, string> = {
       </div>
 
       <div class="flex min-w-0 flex-1 items-center justify-end gap-2">
-        <span class="truncate font-medium">{{ teamDisplayName(match.away_team, 'Visitante') }}</span>
+        <span class="truncate font-medium">{{ awayLabel(match) }}</span>
         <img
           v-if="match.away_team?.flag_url"
           :src="match.away_team.flag_url"

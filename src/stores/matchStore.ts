@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { isEffectivelyLive, withEffectiveMatchState } from '@/lib/matchLifecycle'
+import { mergeLiveClockPatch } from '@/lib/matchClock'
 import { supabase } from '@/lib/supabase'
 import type { Match, MatchEvent } from '@/types'
 
@@ -93,7 +94,7 @@ export const useMatchStore = defineStore('match', () => {
   function applyMatchPatch(patch: Match) {
     const existing = matches.value.find((m) => m.id === patch.id)
     if (existing) {
-      updateMatch({ ...existing, ...patch })
+      updateMatch(mergeLiveClockPatch(existing, patch))
       return
     }
     void fetchMatch(patch.id)
