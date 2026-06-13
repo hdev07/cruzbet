@@ -48,8 +48,8 @@ export function computeGroupStandings(teams: Team[], matches: Match[]): GroupSta
     teamsByGroup.set(group, list)
   }
 
-  const finishedGroupMatches = matches.filter(
-    (m) => m.phase === 'group' && m.status === 'finished',
+  const standingMatches = matches.filter(
+    (m) => m.phase === 'group' && (m.status === 'finished' || m.status === 'live'),
   )
 
   const standings: GroupStandings[] = []
@@ -65,7 +65,7 @@ export function computeGroupStandings(teams: Team[], matches: Match[]): GroupSta
 
     const teamIds = new Set(groupTeams.map((t) => t.id))
 
-    for (const match of finishedGroupMatches) {
+    for (const match of standingMatches) {
       if (!teamIds.has(match.home_team_id) || !teamIds.has(match.away_team_id)) continue
 
       const home = statsMap.get(match.home_team_id)!
@@ -122,5 +122,7 @@ export function countFinishedMatchesInGroup(group: GroupStandings, matches: Matc
 }
 
 export function totalGoalsInMatches(matches: Match[]): number {
-  return matches.reduce((sum, m) => sum + m.home_score + m.away_score, 0)
+  return matches
+    .filter((m) => m.phase === 'group' && (m.status === 'finished' || m.status === 'live'))
+    .reduce((sum, m) => sum + m.home_score + m.away_score, 0)
 }

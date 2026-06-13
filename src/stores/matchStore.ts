@@ -31,14 +31,11 @@ export const useMatchStore = defineStore('match', () => {
     const { data, error } = await supabase
       .from('matches')
       .select(MATCH_SELECT)
-      .in('status', ['scheduled', 'live'])
-      .not('match_date', 'is', null)
+      .eq('status', 'live')
       .order('match_date', { ascending: true })
 
     if (!error && data) {
-      liveMatches.value = (data as Match[])
-        .map((m) => withEffectiveMatchState(m))
-        .filter((m) => isEffectivelyLive(m))
+      liveMatches.value = (data as Match[]).map((m) => withEffectiveMatchState(m))
     }
     loading.value = false
   }
@@ -77,7 +74,6 @@ export const useMatchStore = defineStore('match', () => {
 
   function updateMatch(match: Match) {
     const effective = withEffectiveMatchState(match)
-    currentMatch.value = effective
     const idx = matches.value.findIndex((m) => m.id === match.id)
     if (idx >= 0) matches.value[idx] = effective
 
@@ -88,6 +84,19 @@ export const useMatchStore = defineStore('match', () => {
     } else if (liveIdx >= 0) {
       liveMatches.value.splice(liveIdx, 1)
     }
+
+    if (currentMatch.value?.id === match.id) {
+      currentMatch.value = effective
+    }
+  }
+
+  function applyMatchPatch(patch: Match) {
+    const existing = matches.value.find((m) => m.id === patch.id)
+    if (existing) {
+      updateMatch({ ...existing, ...patch })
+      return
+    }
+    void fetchMatch(patch.id)
   }
 
   function refreshEffectiveStates() {
@@ -110,6 +119,7 @@ export const useMatchStore = defineStore('match', () => {
     fetchEvents,
     addEvent,
     updateMatch,
+    applyMatchPatch,
     refreshEffectiveStates,
   }
 })

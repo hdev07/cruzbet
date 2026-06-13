@@ -138,6 +138,32 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     leaderboard.value = (data ?? []) as BaseRoundLeaderboardEntry[]
   }
 
+  async function refreshLeaderboardForMatch(matchId: string) {
+    const { data, error } = await supabase
+      .from('base_quiniela_round_matches')
+      .select('round_id')
+      .eq('match_id', matchId)
+
+    if (error || !data?.length) return
+
+    const roundIds = [...new Set(data.map((row) => row.round_id as string))]
+    for (const roundId of roundIds) {
+      if (currentRound.value?.id === roundId || activeRound.value?.id === roundId) {
+        await fetchRoundLeaderboard(roundId)
+      }
+    }
+  }
+
+  function patchRoundMatch(match: Match) {
+    const idx = roundMatches.value.findIndex((rm) => rm.match_id === match.id)
+    if (idx < 0 || !roundMatches.value[idx]?.match) return
+
+    roundMatches.value[idx] = {
+      ...roundMatches.value[idx],
+      match: { ...roundMatches.value[idx].match!, ...match },
+    }
+  }
+
   function getPredictionForMatch(matchId: string): BasePrediction | undefined {
     return myPredictions.value.find((p) => p.match_id === matchId)
   }
@@ -370,6 +396,8 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     fetchRound,
     fetchMyPredictions,
     fetchRoundLeaderboard,
+    refreshLeaderboardForMatch,
+    patchRoundMatch,
     fetchUserHistory,
     fetchParticipantCountsByRound,
     fetchRoundParticipants,

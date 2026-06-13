@@ -4,14 +4,11 @@ import { RouterLink } from 'vue-router'
 import { ChevronRight, Grid3x3, LayoutGrid, Radio, Trophy } from '@lucide/vue'
 import HomeSpotlightMatch from '@/components/home/HomeSpotlightMatch.vue'
 import MatchCard from '@/components/shared/MatchCard.vue'
-import { useHomeRealtime } from '@/composables/useHomeRealtime'
 import { JORNADAS_PATH, MUNDIAL_PATH, RANKING_PATH } from '@/constants/nav'
 import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import { useMatchStore } from '@/stores/matchStore'
-
-useHomeRealtime()
 
 const matchStore = useMatchStore()
 const baseStore = useBaseQuinielaStore()

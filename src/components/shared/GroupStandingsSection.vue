@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ChevronRight } from '@lucide/vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
-import { supabase } from '@/lib/supabase'
 import { GRUPOS_PATH } from '@/constants/nav'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 import { useMatchStore } from '@/stores/matchStore'
-import type { RealtimeChannel } from '@supabase/supabase-js'
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     showHeader?: boolean
     showLegend?: boolean
@@ -26,22 +24,11 @@ const props = withDefaults(
 
 const standingsStore = useGroupStandingsStore()
 const matchStore = useMatchStore()
-let channel: RealtimeChannel | null = null
 
-onMounted(async () => {
-  await standingsStore.fetchStandingsData()
-
-  channel = supabase
-    .channel('group-standings')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, async () => {
-      await matchStore.fetchMatches()
-      standingsStore.refreshFromMatches(matchStore.matches)
-    })
-    .subscribe()
-})
-
-onUnmounted(() => {
-  if (channel) supabase.removeChannel(channel)
+onMounted(() => {
+  if (!standingsStore.teams.length) {
+    void standingsStore.fetchStandingsData()
+  }
 })
 
 watch(
@@ -49,6 +36,7 @@ watch(
   (matches) => {
     if (matches.length) standingsStore.refreshFromMatches(matches)
   },
+  { deep: true },
 )
 </script>
 
@@ -60,7 +48,7 @@ watch(
           Tabla de grupos
         </h2>
         <p class="mt-0.5 text-xs text-slate-500">
-          Clasificación de la fase de grupos del Mundial 2026
+          Se actualiza en vivo con cada gol
         </p>
       </div>
       <RouterLink

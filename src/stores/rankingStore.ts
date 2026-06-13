@@ -19,5 +19,17 @@ export const useRankingStore = defineStore('ranking', () => {
     loading.value = false
   }
 
-  return { leaders, loading, fetchGlobalRanking }
+  function patchProfile(profile: Profile) {
+    const idx = leaders.value.findIndex((p) => p.id === profile.id)
+    if (idx >= 0) {
+      leaders.value[idx] = profile
+      leaders.value.sort((a, b) => b.points - a.points)
+      return
+    }
+    if (profile.points > 0) {
+      void fetchGlobalRanking()
+    }
+  }
+
+  return { leaders, loading, fetchGlobalRanking, patchProfile }
 })

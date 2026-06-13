@@ -1,47 +1,25 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Calendar, ChevronRight, Goal, Grid3x3, LayoutGrid, Radio } from '@lucide/vue'
 import GroupStandingsMiniCard from '@/components/home/GroupStandingsMiniCard.vue'
 import HomeSpotlightMatch from '@/components/home/HomeSpotlightMatch.vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
 import MatchCard from '@/components/shared/MatchCard.vue'
-import { useHomeRealtime } from '@/composables/useHomeRealtime'
 import { GRUPOS_PATH, JORNADAS_PATH } from '@/constants/nav'
 import { totalGoalsInMatches } from '@/lib/groupStandings'
 import { isEffectivelyLive } from '@/lib/matchLifecycle'
-import { supabase } from '@/lib/supabase'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 import { useMatchStore } from '@/stores/matchStore'
-import type { RealtimeChannel } from '@supabase/supabase-js'
 
 const matchStore = useMatchStore()
 const standingsStore = useGroupStandingsStore()
 
-useHomeRealtime()
-
-let channel: RealtimeChannel | null = null
-
 onMounted(async () => {
-  await Promise.all([
-    standingsStore.fetchStandingsData(),
-    matchStore.matches.length
-      ? Promise.resolve()
-      : Promise.all([matchStore.fetchMatches(), matchStore.fetchLiveMatches()]),
-  ])
-
-  channel = supabase
-    .channel('home-tournament-hub')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, async () => {
-      await Promise.all([matchStore.fetchMatches(), matchStore.fetchLiveMatches()])
-      standingsStore.refreshFromMatches(matchStore.matches)
-    })
-    .subscribe()
-})
-
-onUnmounted(() => {
-  if (channel) supabase.removeChannel(channel)
+  if (!standingsStore.teams.length) {
+    await standingsStore.fetchStandingsData()
+  }
 })
 
 watch(
@@ -49,6 +27,7 @@ watch(
   (matches) => {
     if (matches.length) standingsStore.refreshFromMatches(matches)
   },
+  { deep: true },
 )
 
 const liveMatches = computed(() => matchStore.liveMatches)
@@ -92,7 +71,7 @@ const stats = computed(() => [
   },
   {
     label: 'Partidos jugados',
-    value: standingsStore.groupMatches.length,
+    value: standingsStore.groupMatches.filter((m) => m.status === 'finished').length,
     icon: Calendar,
     accent: false,
   },
@@ -175,7 +154,7 @@ const stats = computed(() => [
             Tabla de grupos
           </h3>
           <p class="mt-0.5 text-xs text-slate-500">
-            Toca un grupo para ver la clasificación completa
+            Toca un grupo · se actualiza en vivo
           </p>
         </div>
       </div>

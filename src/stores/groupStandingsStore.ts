@@ -32,7 +32,7 @@ export const useGroupStandingsStore = defineStore('groupStandings', () => {
         .from('matches')
         .select(MATCH_SELECT)
         .eq('phase', 'group')
-        .eq('status', 'finished')
+        .in('status', ['finished', 'live'])
         .order('match_date'),
     ])
 
@@ -56,7 +56,27 @@ export const useGroupStandingsStore = defineStore('groupStandings', () => {
   }
 
   function refreshFromMatches(matches: Match[]) {
-    groupMatches.value = matches.filter((m) => m.phase === 'group' && m.status === 'finished')
+    groupMatches.value = matches.filter(
+      (m) => m.phase === 'group' && (m.status === 'finished' || m.status === 'live'),
+    )
+  }
+
+  function patchMatch(match: Match) {
+    if (match.phase !== 'group') return
+
+    if (match.status !== 'finished' && match.status !== 'live') {
+      groupMatches.value = groupMatches.value.filter((m) => m.id !== match.id)
+      return
+    }
+
+    const existing = groupMatches.value.find((m) => m.id === match.id)
+    if (existing) {
+      const idx = groupMatches.value.findIndex((m) => m.id === match.id)
+      groupMatches.value[idx] = { ...existing, ...match }
+      return
+    }
+
+    groupMatches.value.push(match)
   }
 
   return {
@@ -70,5 +90,6 @@ export const useGroupStandingsStore = defineStore('groupStandings', () => {
     fetchStandingsData,
     setSelectedGroup,
     refreshFromMatches,
+    patchMatch,
   }
 })

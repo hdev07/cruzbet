@@ -11,9 +11,11 @@ import {
   type NavItem,
 } from '@/constants/nav'
 import { useLiveSync } from '@/composables/useLiveSync'
+import { useAppRealtime } from '@/composables/useAppRealtime'
 import { useAuthStore } from '@/stores/authStore'
 
 useLiveSync()
+useAppRealtime()
 
 const route = useRoute()
 const auth = useAuthStore()

@@ -9,7 +9,9 @@ import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 
 const standingsStore = useGroupStandingsStore()
 
-const finishedMatchesCount = computed(() => standingsStore.groupMatches.length)
+const finishedMatchesCount = computed(
+  () => standingsStore.groupMatches.filter((m) => m.status === 'finished').length,
+)
 
 onMounted(() => standingsStore.fetchStandingsData())
 </script>
@@ -67,7 +69,7 @@ onMounted(() => standingsStore.fetchStandingsData())
         <li>Los 2 primeros de cada grupo avanzan a los dieciseisavos de final.</li>
         <li>Los 8 mejores terceros también clasifican (32 equipos en eliminatoria).</li>
         <li>Orden en la tabla: puntos → diferencia de goles → goles a favor.</li>
-        <li>Solo cuentan partidos de fase de grupos ya finalizados.</li>
+        <li>Incluye partidos en vivo (provisional) y finalizados.</li>
       </ul>
     </div>
   </div>
