@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import { fetchGoogleSportsSnapshot } from './google-sports.js'
-import { fetchEspnScoreboard, fetchLiveSnapshotForMatch, formatEspnDate } from './espn-provider.js'
+import {
+  fetchEspnScoreboard,
+  fetchLiveSnapshotForMatch,
+  getEspnDateCandidates,
+  mergeEspnEvents,
+} from './espn-provider.js'
 import type { DbMatchRow, LiveMatchSnapshot } from './types.js'
 
 function getSupabaseAdmin() {
@@ -58,18 +63,17 @@ export async function syncAllLiveMatches(): Promise<{
   const errors: string[] = []
   let updated = 0
 
-  const byDate = new Map<string, DbMatchRow[]>()
+  const scoreboardDates = new Set<string>()
   for (const row of rows) {
     if (!row.match_date) continue
-    const key = formatEspnDate(row.match_date)
-    const list = byDate.get(key) ?? []
-    list.push(row)
-    byDate.set(key, list)
+    for (const dateYmd of getEspnDateCandidates(row.match_date)) {
+      scoreboardDates.add(dateYmd)
+    }
   }
 
   const scoreboardCache = new Map<string, Awaited<ReturnType<typeof fetchEspnScoreboard>>>()
 
-  for (const [dateYmd, dateMatches] of byDate) {
+  for (const dateYmd of scoreboardDates) {
     try {
       scoreboardCache.set(dateYmd, await fetchEspnScoreboard(dateYmd))
     } catch (err) {
@@ -80,7 +84,11 @@ export async function syncAllLiveMatches(): Promise<{
   for (const match of rows) {
     try {
       const cached = match.match_date
-        ? scoreboardCache.get(formatEspnDate(match.match_date))
+        ? mergeEspnEvents(
+            ...getEspnDateCandidates(match.match_date).map(
+              (dateYmd) => scoreboardCache.get(dateYmd) ?? [],
+            ),
+          )
         : undefined
       const snapshot = await resolveSnapshot(match, cached)
 
