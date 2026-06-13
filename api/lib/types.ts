@@ -13,6 +13,7 @@ export interface ParsedGoal {
 export interface LiveMatchSnapshot {
   status: MatchStatus
   current_minute: number
+  live_clock_display: string | null
   home_score: number
   away_score: number
   goals: ParsedGoal[]

@@ -1,4 +1,4 @@
-import { parseClockDisplay, toCurrentMinute } from './clock.js'
+import { formatClockLabel, parseClockDisplay, toCurrentMinute } from './clock.js'
 import type { LiveMatchSnapshot, ParsedGoal } from './types.js'
 
 const GOOGLE_HEADERS = {
@@ -36,16 +36,24 @@ function parseGoogleSportsHtml(html: string): LiveMatchSnapshot | null {
   const statusMatch = html.match(/Finalizado|En vivo|(?:^|[^\d])(\d{1,2}(?:\+\d+)?)'(?:[^\d]|$)/i)
   let status: LiveMatchSnapshot['status'] = 'scheduled'
   let currentMinute = 0
+  let liveClockDisplay: string | null = null
 
   if (/Finalizado/i.test(html)) {
     status = 'finished'
+    liveClockDisplay = 'FT'
+    currentMinute = 90
   } else if (/En vivo/i.test(html)) {
     status = 'live'
     const clock = html.match(/(\d{1,2}(?:\+\d+)?)'/)
     if (clock) {
+      liveClockDisplay = formatClockLabel(clock[1]!)
       const parsed = parseClockDisplay(clock[1]!)
       currentMinute = toCurrentMinute(parsed.minute, parsed.extra_time)
     }
+  } else if (/Entretiempo|Medio tiempo/i.test(html)) {
+    status = 'live'
+    liveClockDisplay = 'HT'
+    currentMinute = 45
   }
 
   if (statusMatch && status === 'scheduled' && /\d/.test(statusMatch[0])) {
@@ -74,6 +82,7 @@ function parseGoogleSportsHtml(html: string): LiveMatchSnapshot | null {
   return {
     status,
     current_minute: currentMinute,
+    live_clock_display: liveClockDisplay,
     home_score: Number.parseInt(scoreMatch[1]!, 10),
     away_score: Number.parseInt(scoreMatch[2]!, 10),
     goals,

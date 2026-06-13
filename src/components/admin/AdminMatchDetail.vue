@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { formatMatchClock } from '@/lib/matchClock'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import AdminPaymentVerification from '@/components/admin/AdminPaymentVerification.vue'
 import QuinielaControl from '@/components/admin/QuinielaControl.vue'
@@ -72,7 +73,7 @@ function formatDate() {
       <div class="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs">
         <span class="rounded-full px-2.5 py-0.5 font-semibold" :class="statusClass">
           {{ statusLabel }}
-          <template v-if="match.status === 'live'"> · {{ match.current_minute ?? 0 }}'</template>
+          <template v-if="match.status === 'live'"> · {{ formatMatchClock(match) || `${match.current_minute ?? 0}'` }}</template>
         </span>
         <span class="text-slate-500">{{ formatDate() }}</span>
         <span v-if="match.venue" class="text-slate-500">· {{ match.venue }}</span>

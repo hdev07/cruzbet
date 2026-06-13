@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronRight, Radio, Users } from '@lucide/vue'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import { formatLiveStatusLabel } from '@/lib/matchClock'
 import type { Match } from '@/types'
 
 withDefaults(
@@ -39,7 +40,7 @@ const phaseLabels: Record<string, string> = {
         class="inline-flex items-center gap-1 rounded-full bg-mundial-green px-2 py-0.5 font-semibold text-white"
       >
         <Radio class="h-3 w-3" />
-        {{ match.current_minute ?? 0 }}' EN VIVO
+        {{ formatLiveStatusLabel(match) }}
       </span>
       <span v-else-if="match.status === 'finished'">Finalizado</span>
       <span v-else class="text-slate-500">

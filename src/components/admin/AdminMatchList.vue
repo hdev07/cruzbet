@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Radio, Users } from '@lucide/vue'
+import { formatMatchClock } from '@/lib/matchClock'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchStatus } from '@/types'
@@ -143,7 +144,7 @@ function formatDate(match: Match) {
                 class="inline-flex items-center gap-0.5 rounded-full bg-mundial-green px-1.5 py-0.5 font-semibold normal-case text-white"
               >
                 <Radio class="h-2.5 w-2.5" />
-                {{ match.current_minute ?? 0 }}'
+                {{ formatMatchClock(match) || `${match.current_minute ?? 0}'` }}
               </span>
               <span v-else-if="match.status === 'finished'" class="normal-case">Fin</span>
               <span v-else class="normal-case">{{ formatDate(match) ?? '—' }}</span>

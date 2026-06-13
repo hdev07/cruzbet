@@ -1,4 +1,7 @@
-import { parseClockDisplay, toCurrentMinute } from './clock.js'
+import {
+  extractClockFromEspnStatus,
+  parseClockDisplay,
+} from './clock.js'
 import type { DbMatchRow, LiveMatchSnapshot, ParsedGoal } from './types.js'
 
 const ESPN_SCOREBOARD =
@@ -18,7 +21,13 @@ interface EspnCompetitor {
 interface EspnCompetition {
   id: string
   status: {
-    type: { state: string; completed: boolean; description?: string }
+    type: {
+      state: string
+      completed: boolean
+      description?: string
+      detail?: string
+      shortDetail?: string
+    }
     displayClock?: string
     period?: number
   }
@@ -137,18 +146,6 @@ function parseGoalsFromKeyEvents(
   })
 }
 
-function currentMinuteFromStatus(
-  status: EspnCompetition['status'],
-  matchStatus: LiveMatchSnapshot['status'],
-): number {
-  if (status.displayClock) {
-    const parsed = parseClockDisplay(status.displayClock)
-    return toCurrentMinute(parsed.minute, parsed.extra_time)
-  }
-  if (matchStatus === 'finished') return 90
-  return 0
-}
-
 async function fetchEspnJson<T>(url: string): Promise<T | null> {
   for (let attempt = 0; attempt <= ESPN_FETCH_RETRIES; attempt++) {
     try {
@@ -225,9 +222,12 @@ async function buildEspnSnapshotFromCompetition(
     goals = parseGoalsFromKeyEvents(fetchedSummary?.keyEvents, homeTeamId)
   }
 
+  const clock = extractClockFromEspnStatus(status, matchStatus)
+
   return {
     status: matchStatus,
-    current_minute: currentMinuteFromStatus(status, matchStatus),
+    current_minute: clock.current_minute,
+    live_clock_display: clock.live_clock_display,
     home_score: Number.parseInt(homeComp?.score ?? '0', 10),
     away_score: Number.parseInt(awayComp?.score ?? '0', 10),
     goals,

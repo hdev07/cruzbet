@@ -35,6 +35,7 @@ export interface Match {
   home_score: number
   away_score: number
   current_minute: number | null
+  live_clock_display?: string | null
   status: MatchStatus
   phase: string | null
   match_date: string | null

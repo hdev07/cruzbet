@@ -22,7 +22,7 @@ export function getElapsedMinutesSinceKickoff(
   return Math.floor((now - kickoff) / 60_000)
 }
 
-/** Minuto de juego estimado según la hora del kickoff */
+/** Solo para estimaciones locales; el sync ESPN es la fuente de verdad del minuto. */
 export function estimateCurrentMinuteFromKickoff(
   match: Pick<Match, 'match_date'>,
   now = Date.now(),
@@ -38,35 +38,17 @@ export function estimateCurrentMinuteFromKickoff(
   )
 }
 
-export function getEffectiveMatchStatus(match: Match, now = Date.now()): MatchStatus {
+/** El estado en vivo lo define el sync (ESPN), no la hora programada del kickoff. */
+export function getEffectiveMatchStatus(match: Match, _now = Date.now()): MatchStatus {
   if (match.status === 'finished') return 'finished'
-
-  const kickoff = getKickoffTime(match)
-  if (kickoff === null) return match.status
-
-  const elapsed = now - kickoff
-  const finishedAt = MATCH_TOTAL_DURATION_MIN * 60_000
-
-  if (elapsed >= finishedAt) return 'finished'
-  if (elapsed >= 0) return 'live'
   if (match.status === 'live') return 'live'
-
   return 'scheduled'
 }
 
 export function withEffectiveMatchState(match: Match, now = Date.now()): Match {
   const status = getEffectiveMatchStatus(match, now)
-  if (status === 'scheduled') return match
-
-  const estimatedMinute = estimateCurrentMinuteFromKickoff(match, now)
-  const currentMinute =
-    status === 'live'
-      ? Math.max(match.current_minute ?? 0, estimatedMinute)
-      : match.current_minute
-
-  if (status === match.status && currentMinute === match.current_minute) return match
-
-  return { ...match, status, current_minute: currentMinute }
+  if (status === match.status) return match
+  return { ...match, status }
 }
 
 export function isEffectivelyLive(match: Match, now = Date.now()): boolean {

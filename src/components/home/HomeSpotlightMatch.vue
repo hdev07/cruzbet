@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Clock, Radio } from '@lucide/vue'
+import { formatLiveStatusLabel } from '@/lib/matchClock'
 import { formatKickoff } from '@/lib/matchRules'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import type { Match } from '@/types'
@@ -68,7 +69,7 @@ const countdown = computed(() => {
           class="inline-flex items-center gap-1.5 rounded-full bg-mundial-green px-2.5 py-0.5 text-xs font-bold text-white"
         >
           <Radio class="h-3 w-3 animate-pulse" />
-          EN VIVO · {{ match.current_minute ?? 0 }}'
+          {{ formatLiveStatusLabel(match) }}
         </span>
         <span
           v-else

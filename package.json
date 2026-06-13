@@ -12,7 +12,8 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "seed:generate": "node scripts/generate-group-seed.mjs"
+    "seed:generate": "node scripts/generate-group-seed.mjs",
+    "validate:espn": "node scripts/validate-espn-matches.mjs"
   },
   "dependencies": {
     "@lucide/vue": "^1.17.0",
