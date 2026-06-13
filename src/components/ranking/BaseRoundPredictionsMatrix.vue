@@ -144,9 +144,12 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
           <thead>
             <tr class="bg-black/40 text-xs text-slate-400">
               <th
-                class="sticky left-0 z-10 min-w-[8rem] border border-white/10 bg-black/90 px-3 py-2 text-left"
+                class="border border-white/10 bg-black/90 px-3 py-2 text-left md:sticky md:left-0 md:z-10 md:min-w-[8rem]"
               >
-                Jugador
+                <div class="flex min-w-0 items-center gap-2 md:block">
+                  <span class="w-7 shrink-0 md:hidden" aria-hidden="true" />
+                  <span class="whitespace-nowrap">Jugador</span>
+                </div>
               </th>
               <th
                 v-for="match in sortedMatches"
@@ -179,30 +182,35 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
               :class="{ 'ring-1 ring-inset ring-mundial-accent/40': player.user_id === currentUserId }"
             >
               <td
-                class="sticky left-0 z-10 border border-white/10 bg-mundial-dark/95 px-3 py-2"
-                :class="{ 'bg-mundial-accent/10': player.user_id === currentUserId }"
+                class="border border-white/10 px-3 py-2 md:sticky md:left-0 md:z-10 md:min-w-[8rem] md:bg-mundial-dark/95"
+                :class="{ 'md:bg-mundial-accent/10': player.user_id === currentUserId }"
               >
                 <div class="flex min-w-0 items-center gap-2">
+                  <div
+                    class="sticky left-0 z-10 order-1 -ml-3 flex shrink-0 items-center bg-mundial-dark/95 py-0.5 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0"
+                    :class="{ 'bg-mundial-accent/10 md:bg-transparent': player.user_id === currentUserId }"
+                  >
+                    <img
+                      v-if="player.profiles?.avatar"
+                      :src="player.profiles.avatar"
+                      :alt="player.profiles.username ?? 'Jugador'"
+                      class="h-7 w-7 shrink-0 rounded-full border border-white/20"
+                    />
+                    <span
+                      v-else
+                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold"
+                    >
+                      {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
+                    </span>
+                  </div>
                   <span
-                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold"
+                    class="order-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
                     :class="index < 3 ? 'bg-mundial-accent text-white' : 'bg-white/10 text-slate-400'"
                   >
                     {{ index + 1 }}
                   </span>
-                  <img
-                    v-if="player.profiles?.avatar"
-                    :src="player.profiles.avatar"
-                    :alt="player.profiles.username ?? 'Jugador'"
-                    class="h-7 w-7 shrink-0 rounded-full border border-white/20"
-                  />
-                  <span
-                    v-else
-                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold"
-                  >
-                    {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
-                  </span>
-                  <div class="min-w-0">
-                    <p class="truncate font-medium text-slate-200">
+                  <div class="order-3 min-w-[5.5rem] shrink-0 md:min-w-0">
+                    <p class="whitespace-nowrap font-medium text-slate-200">
                       {{ player.profiles?.username ?? 'Anónimo' }}
                       <span
                         v-if="player.user_id === currentUserId"
@@ -213,7 +221,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     </p>
                     <p
                       v-if="rivalryLabel(player.user_id, player.correct_count)"
-                      class="text-[0.65rem] font-medium text-amber-400/90"
+                      class="whitespace-nowrap text-[0.65rem] font-medium text-amber-400/90"
                     >
                       {{ rivalryLabel(player.user_id, player.correct_count) }} contigo
                     </p>
