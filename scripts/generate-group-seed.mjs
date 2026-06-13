@@ -196,11 +196,13 @@ function venueLabel(venue, cityKey) {
   return `${venue}, ${city.label}`
 }
 
-function matchInsert(home, away, date, time, venue, cityKey) {
+function matchInsert(home, away, date, time, venue, cityKey, matchNumber) {
   const ts = localToUtc(date, time, cities[cityKey].tz)
   const venueStr = venueLabel(venue, cityKey).replace(/'/g, "''")
-  return `INSERT INTO matches (home_team_id, away_team_id, phase, match_date, venue, status)
-SELECT h.id, a.id, 'group', timestamptz '${ts}', '${venueStr}', 'scheduled'
+  const bracketKey = `M${matchNumber}`
+  const bracketMeta = JSON.stringify({ match_number: matchNumber }).replace(/'/g, "''")
+  return `INSERT INTO matches (home_team_id, away_team_id, phase, match_date, venue, status, bracket_key, bracket_meta)
+SELECT h.id, a.id, 'group', timestamptz '${ts}', '${venueStr}', 'scheduled', '${bracketKey}', '${bracketMeta}'::jsonb
 FROM teams h, teams a
 WHERE h.code = '${home}' AND a.code = '${away}'
   AND NOT EXISTS (
@@ -211,12 +213,16 @@ WHERE h.code = '${home}' AND a.code = '${away}'
   );`
 }
 
-function matchUpdate(home, away, date, time, venue, cityKey) {
+function matchUpdate(home, away, date, time, venue, cityKey, matchNumber) {
   const ts = localToUtc(date, time, cities[cityKey].tz)
   const venueStr = venueLabel(venue, cityKey).replace(/'/g, "''")
+  const bracketKey = `M${matchNumber}`
+  const bracketMeta = JSON.stringify({ match_number: matchNumber }).replace(/'/g, "''")
   return `UPDATE matches m
 SET match_date = timestamptz '${ts}',
-    venue = '${venueStr}'
+    venue = '${venueStr}',
+    bracket_key = '${bracketKey}',
+    bracket_meta = '${bracketMeta}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
@@ -244,13 +250,13 @@ ON CONFLICT (code) DO UPDATE SET
   flag_url = EXCLUDED.flag_url,
   group_name = EXCLUDED.group_name;
 
-${matches.map(([h, a, _g, d, t, v, c]) => matchInsert(h, a, d, t, v, c)).join('\n\n')}
+${matches.map(([h, a, _g, d, t, v, c], i) => matchInsert(h, a, d, t, v, c, i + 1)).join('\n\n')}
 `
 
 const updateSql = `-- Actualizar horarios (hora local) y sedes de fase de grupos
 -- Ejecutar en SQL Editor de Supabase si ya tienes los partidos cargados
 
-${matches.map(([h, a, _g, d, t, v, c]) => matchUpdate(h, a, d, t, v, c)).join('\n\n')}
+${matches.map(([h, a, _g, d, t, v, c], i) => matchUpdate(h, a, d, t, v, c, i + 1)).join('\n\n')}
 `
 
 const root = join(__dirname, '..', 'supabase')

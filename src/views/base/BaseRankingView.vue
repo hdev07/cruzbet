@@ -112,9 +112,17 @@ watch(
       <RouterLink
         v-if="activeRoundId"
         :to="`/jornadas/${activeRoundId}`"
-        class="mt-6 inline-flex items-center gap-1 text-sm text-mundial-accent hover:underline"
+        class="mt-4 inline-flex items-center gap-1 text-sm text-mundial-green hover:underline"
       >
         Ir a la jornada para marcar tus picks
+        <ChevronRight class="h-4 w-4" />
+      </RouterLink>
+
+      <RouterLink
+        to="/resultados"
+        class="mt-6 inline-flex items-center gap-1 text-sm text-mundial-accent hover:underline"
+      >
+        Ver ganadores y podio por jornada
         <ChevronRight class="h-4 w-4" />
       </RouterLink>
     </template>

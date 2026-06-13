@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { ClipboardList, Grid3x3, History, Home, LayoutGrid, Trophy, User } from '@lucide/vue'
+import { ClipboardList, Grid3x3, History, Home, LayoutGrid, Medal, Trophy, User } from '@lucide/vue'
 import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 
 export const MUNDIAL_PATH = '/mundial'
@@ -30,6 +30,7 @@ export const MAIN_NAV: NavItem[] = [
 export const QUINIELA_SUB_NAV: NavItem[] = [
   { to: JORNADAS_PATH, label: 'Jornadas', icon: Grid3x3 },
   { to: '/historial', label: 'Historial', icon: History, requiresAuth: true },
+  { to: '/resultados', label: 'Resultados', icon: Medal },
   { to: '/reglas', label: 'Reglas', icon: ClipboardList },
 ]
 
@@ -43,7 +44,7 @@ export const QUINIELA_SUMMARY = {
   ],
 } as const
 
-const QUINIELA_SECTION_ROUTES = new Set(['/jornadas', '/historial', '/reglas'])
+const QUINIELA_SECTION_ROUTES = new Set(['/jornadas', '/historial', '/resultados', '/reglas'])
 
 export function isQuinielaSectionRoute(path: string): boolean {
   if (QUINIELA_SECTION_ROUTES.has(path)) return true

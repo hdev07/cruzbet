@@ -190,6 +190,15 @@ export interface BaseRoundParticipant {
   complete: boolean
 }
 
+export interface BaseRoundResultSummary {
+  round: BaseQuinielaRound
+  winner: BaseRoundLeaderboardEntry | null
+  topThree: BaseRoundLeaderboardEntry[]
+  myEntry: BaseRoundLeaderboardEntry | null
+  isActive: boolean
+  participantCount: number
+}
+
 export interface GroupStandingRow {
   team: Team
   position: number

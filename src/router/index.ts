@@ -58,12 +58,18 @@ const router = createRouter({
       component: () => import('@/views/base/BaseHistorialView.vue'),
       meta: { layout: 'mobile', title: 'Historial', requiresAuth: true },
     },
+    {
+      path: '/resultados',
+      component: () => import('@/views/base/BaseRoundResultsView.vue'),
+      meta: { layout: 'mobile', title: 'Resultados' },
+    },
     // Redirecciones de URLs antiguas
     { path: '/quiniela-base', redirect: '/jornadas' },
     { path: '/quiniela-base/jornadas', redirect: '/jornadas/todas' },
     { path: '/quiniela-base/ranking', redirect: '/ranking' },
     { path: '/quiniela-base/reglas', redirect: '/reglas' },
     { path: '/quiniela-base/historial', redirect: '/historial' },
+    { path: '/quiniela-base/resultados', redirect: '/resultados' },
     { path: '/quiniela-base/:id', redirect: (to) => `/jornadas/${to.params.id}` },
     { path: '/quiniela-partido', redirect: '/jornadas' },
     { path: '/quiniela-partido/grupos', redirect: '/grupos' },

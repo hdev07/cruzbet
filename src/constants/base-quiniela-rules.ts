@@ -42,7 +42,7 @@ export const BASE_QUINIELA_LOGIC = {
   summary: `Deposita $${BASE_ENTRY_FEE_MXN} MXN por jornada. Marca L, E o V en ${BASE_QUINIELA_MATCHES_PER_ROUND} partidos. Cada acierto suma ${BASE_QUINIELA_POINTS_PER_HIT} puntos. Ranking independiente por jornada.`,
   howItWorks: [
     `Transfiere $${BASE_ENTRY_FEE_MXN} MXN por cada jornada en la que participes.`,
-    `Los partidos se agrupan en jornadas de ${BASE_QUINIELA_MATCHES_PER_ROUND}, en orden de calendario.`,
+    `Los partidos se agrupan en jornadas de ${BASE_QUINIELA_MATCHES_PER_ROUND}, del más temprano al más tarde.`,
     'Marca L, E o V para cada partido antes de que empiece.',
     'Puedes cambiar tus picks mientras no hayas guardado la quiniela.',
     'Al guardar la quiniela (16 partidos marcados), tus picks quedan bloqueados definitivamente.',

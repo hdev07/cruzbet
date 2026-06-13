@@ -63,7 +63,7 @@ const roundCount = computed(() => baseStore.rounds.length)
       <p class="mb-1 font-semibold text-slate-300">Sin jornadas aún</p>
       <p class="text-sm">
         Las jornadas se generan agrupando los partidos de {{ BASE_QUINIELA_MATCHES_PER_ROUND }} en
-        {{ BASE_QUINIELA_MATCHES_PER_ROUND }}, en orden de calendario.
+        {{ BASE_QUINIELA_MATCHES_PER_ROUND }}, del más temprano al más tarde.
       </p>
     </div>
 
