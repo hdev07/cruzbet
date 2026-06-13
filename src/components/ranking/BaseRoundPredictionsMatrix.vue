@@ -99,9 +99,8 @@ function rivalryLabel(userId: string, correctCount: number): string | null {
   }
   const diff = correctCount - myCorrectCount.value
   if (diff === 0) return 'Empatado'
-  if (diff === 1) return '+1'
-  if (diff === -1) return '-1'
-  return null
+  if (diff > 0) return `+${diff}`
+  return `${diff}`
 }
 
 function matchTooltip(match: BaseQuinielaRoundMatch): string {
@@ -185,7 +184,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                 class="border border-white/10 px-3 py-2 md:sticky md:left-0 md:z-10 md:min-w-[8rem] md:bg-mundial-dark/95"
                 :class="{ 'md:bg-mundial-accent/10': player.user_id === currentUserId }"
               >
-                <div class="flex min-w-0 items-center gap-2">
+                <div class="flex min-w-0 items-start gap-2">
                   <div
                     class="sticky left-0 z-10 order-1 -ml-3 flex shrink-0 items-center bg-mundial-dark/95 py-0.5 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0"
                     :class="{ 'bg-mundial-accent/10 md:bg-transparent': player.user_id === currentUserId }"
@@ -204,13 +203,13 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     </span>
                   </div>
                   <span
-                    class="order-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
+                    class="order-2 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
                     :class="index < 3 ? 'bg-mundial-accent text-white' : 'bg-white/10 text-slate-400'"
                   >
                     {{ index + 1 }}
                   </span>
                   <div class="order-3 min-w-[5.5rem] shrink-0 md:min-w-0">
-                    <p class="whitespace-nowrap font-medium text-slate-200">
+                    <p class="whitespace-nowrap font-medium leading-tight text-slate-200">
                       {{ player.profiles?.username ?? 'Anónimo' }}
                       <span
                         v-if="player.user_id === currentUserId"
@@ -221,7 +220,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     </p>
                     <p
                       v-if="rivalryLabel(player.user_id, player.correct_count)"
-                      class="whitespace-nowrap text-[0.65rem] font-medium text-amber-400/90"
+                      class="mt-0.5 whitespace-nowrap text-[0.65rem] font-medium leading-tight text-amber-400/90"
                     >
                       {{ rivalryLabel(player.user_id, player.correct_count) }} contigo
                     </p>
