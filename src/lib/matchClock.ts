@@ -25,10 +25,20 @@ export function formatMatchClock(
   match: Pick<Match, 'current_minute' | 'live_clock_display' | 'status'>,
 ): string {
   if (match.live_clock_display === 'HT') return 'Entretiempo'
-  if (match.live_clock_display) return match.live_clock_display
+  if (match.live_clock_display === 'FT') return 'FT'
 
-  if (match.status === 'live' && match.current_minute != null && match.current_minute > 0) {
-    return `${match.current_minute}'`
+  const totalMinute = match.current_minute ?? 0
+
+  if (match.live_clock_display) {
+    if (totalMinute > 90 && match.live_clock_display === "90'") {
+      return `90+${totalMinute - 90}'`
+    }
+    return match.live_clock_display
+  }
+
+  if (match.status === 'live' && totalMinute > 0) {
+    if (totalMinute > 90) return `90+${totalMinute - 90}'`
+    return `${totalMinute}'`
   }
 
   return ''

@@ -8,7 +8,8 @@ export function parseClockDisplay(display: string): {
     return { minute: trimmed === 'HT' ? 45 : 0, extra_time: 0 }
   }
 
-  const match = trimmed.match(/^(\d+)(?:\+(\d+))?'?$/)
+  // ESPN usa "90'+3'" además de "90+3'" o "67'"
+  const match = trimmed.match(/^(\d+)'?(?:\+(\d+))?'?$/)
   if (!match) return { minute: 0, extra_time: 0 }
 
   return {
