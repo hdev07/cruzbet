@@ -33,6 +33,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   const myPredictions = ref<BasePrediction[]>([])
   const mySubmission = ref<BaseRoundPayment | null>(null)
   const leaderboard = ref<BaseRoundLeaderboardEntry[]>([])
+  const leaderboardRoundId = ref<string | null>(null)
   const loading = ref(false)
   const saving = ref(false)
 
@@ -143,6 +144,10 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   }
 
   async function fetchRoundLeaderboard(roundId: string) {
+    if (leaderboardRoundId.value !== roundId) {
+      leaderboard.value = []
+      leaderboardRoundId.value = roundId
+    }
     leaderboard.value = await queryRoundLeaderboard(roundId)
   }
 
@@ -451,6 +456,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     myPredictions,
     mySubmission,
     leaderboard,
+    leaderboardRoundId,
     loading,
     saving,
     fetchRounds,

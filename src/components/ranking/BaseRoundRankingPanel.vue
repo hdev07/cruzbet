@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Trophy } from '@lucide/vue'
 import BaseRoundPredictionsMatrix from '@/components/ranking/BaseRoundPredictionsMatrix.vue'
 import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
@@ -7,15 +7,22 @@ import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseQuinielaRoundMatch } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   roundId: string
   roundMatches: BaseQuinielaRoundMatch[]
   compact?: boolean
+  loading?: boolean
 }>()
 
 const auth = useAuthStore()
 const baseStore = useBaseQuinielaStore()
 const activeTab = ref<'standings' | 'predictions'>('standings')
+
+const isLeaderboardReady = computed(
+  () =>
+    !props.loading &&
+    baseStore.leaderboardRoundId === props.roundId,
+)
 </script>
 
 <template>
@@ -55,8 +62,12 @@ const activeTab = ref<'standings' | 'predictions'>('standings')
         Orden: más aciertos, luego más puntos.
       </p>
 
+      <p v-if="loading || !isLeaderboardReady" class="text-sm text-slate-400">
+        Cargando posiciones...
+      </p>
+
       <div
-        v-if="!baseStore.leaderboard.length"
+        v-else-if="!baseStore.leaderboard.length"
         class="rounded-xl border border-dashed border-white/20 p-6 text-center text-slate-400"
       >
         Aún no hay quinielas completas en esta jornada.

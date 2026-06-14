@@ -9,23 +9,31 @@ import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 const auth = useAuthStore()
 const baseStore = useBaseQuinielaStore()
 const loadError = ref<string | null>(null)
+const roundLoading = ref(false)
 const selectedRoundId = ref<string | null>(null)
-const initialLoadDone = ref(false)
+let loadSeq = 0
 
 const activeRoundId = computed(() => selectedRoundId.value ?? baseStore.activeRound?.id ?? null)
 
 async function loadRoundData(roundId: string) {
+  const seq = ++loadSeq
   loadError.value = null
+  roundLoading.value = true
   try {
-    await Promise.all([
-      baseStore.fetchRound(roundId),
-      baseStore.fetchRoundLeaderboard(roundId),
-    ])
+    await baseStore.fetchRound(roundId)
+    if (seq !== loadSeq) return
+
+    await baseStore.fetchRoundLeaderboard(roundId)
+    if (seq !== loadSeq) return
+
     if (auth.user) {
       await baseStore.fetchMyPredictions(roundId, auth.user.id)
     }
   } catch (err) {
+    if (seq !== loadSeq) return
     loadError.value = err instanceof Error ? err.message : 'No se pudo cargar el ranking'
+  } finally {
+    if (seq === loadSeq) roundLoading.value = false
   }
 }
 
@@ -33,24 +41,21 @@ onMounted(async () => {
   loadError.value = null
   try {
     await baseStore.fetchRounds()
-    if (baseStore.activeRound) {
+    if (!selectedRoundId.value && baseStore.activeRound) {
       selectedRoundId.value = baseStore.activeRound.id
+    }
+    if (activeRoundId.value) {
+      await loadRoundData(activeRoundId.value)
     }
   } catch (err) {
     loadError.value = err instanceof Error ? err.message : 'No se pudo cargar el ranking'
-  } finally {
-    initialLoadDone.value = true
   }
 })
 
-watch(
-  activeRoundId,
-  (roundId) => {
-    if (!initialLoadDone.value || !roundId) return
-    void loadRoundData(roundId)
-  },
-  { immediate: true },
-)
+watch(activeRoundId, (roundId, prevRoundId) => {
+  if (!roundId || roundId === prevRoundId) return
+  void loadRoundData(roundId)
+})
 </script>
 
 <template>
@@ -107,6 +112,7 @@ watch(
         v-if="activeRoundId"
         :round-id="activeRoundId"
         :round-matches="baseStore.roundMatches"
+        :loading="roundLoading"
       />
 
       <RouterLink
