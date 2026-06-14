@@ -3,6 +3,10 @@ import {
   createWebHistory,
   type RouteLocationNormalized,
 } from 'vue-router'
+import {
+  isStaleChunkLoadError,
+  reloadForStaleChunks,
+} from '@/lib/chunkLoadRecovery'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = createRouter({
@@ -112,6 +116,10 @@ router.beforeEach((to: RouteLocationNormalized) => {
   if (to.path === '/login' && auth.isLoggedIn) return '/'
   if (to.meta.requiresAuth && !auth.isLoggedIn) return '/login'
   if (to.meta.requiresAdmin && !auth.isAdmin) return '/login'
+})
+
+router.onError((error) => {
+  if (isStaleChunkLoadError(error)) reloadForStaleChunks()
 })
 
 export default router

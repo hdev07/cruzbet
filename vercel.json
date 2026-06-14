@@ -5,7 +5,7 @@
       "destination": "/privacidad/index.html"
     },
     {
-      "source": "/((?!api/|privacidad).*)",
+      "source": "/((?!api/|assets/|privacidad).*)",
       "destination": "/index.html"
     }
   ]

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import { supabase } from '@/lib/supabase'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { triggerLiveSync } from '@/lib/liveSync'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchEvent } from '@/types'
+
+type PendingConfirm = 'revertToScheduled' | 'reopenMatch' | 'finishMatch' | 'deleteGoal'
 
 const props = defineProps<{
   match: Match
@@ -30,6 +33,8 @@ const editSecond = ref(0)
 const editExtraTime = ref(0)
 const editTeamId = ref('')
 const autoSyncEnabled = ref(true)
+const pendingConfirm = ref<PendingConfirm | null>(null)
+const pendingDeleteEvent = ref<MatchEvent | null>(null)
 
 const btnPrimary = computed(() =>
   props.mobile
@@ -177,14 +182,105 @@ async function startLive() {
   }
 }
 
-async function revertToScheduled() {
-  if (
-    !confirm(
-      '¿Volver a programado? Se borran goles, se resetea marcador y se reabren predicciones.',
-    )
-  ) {
-    return
+const confirmModalTitle = computed(() => {
+  switch (pendingConfirm.value) {
+    case 'revertToScheduled':
+      return '¿Volver a programado?'
+    case 'reopenMatch':
+      return '¿Reactivar partido?'
+    case 'finishMatch':
+      return '¿Finalizar partido?'
+    case 'deleteGoal': {
+      const event = pendingDeleteEvent.value
+      if (!event) return '¿Eliminar gol?'
+      return `¿Eliminar gol al ${formatGoalTime(event.minute, event.event_second ?? 0, event.extra_time ?? 0)}?`
+    }
+    default:
+      return ''
   }
+})
+
+const confirmModalSubtitle = computed(() => {
+  switch (pendingConfirm.value) {
+    case 'revertToScheduled':
+      return 'Se borran goles, se resetea marcador y se reabren predicciones.'
+    case 'reopenMatch':
+      return 'Vuelve a programado, anula puntos y borra goles/marcador.'
+    case 'finishMatch':
+      return 'Se calcularán los puntos de las predicciones.'
+    case 'deleteGoal':
+      return pendingDeleteEvent.value
+        ? `${teamLabel(pendingDeleteEvent.value.team_id)} dejará de contar en el marcador.`
+        : undefined
+    default:
+      return undefined
+  }
+})
+
+const confirmModalLabel = computed(() => {
+  switch (pendingConfirm.value) {
+    case 'revertToScheduled':
+      return 'Sí, volver a programado'
+    case 'reopenMatch':
+      return 'Sí, reactivar'
+    case 'finishMatch':
+      return 'Sí, finalizar'
+    case 'deleteGoal':
+      return 'Sí, eliminar'
+    default:
+      return 'Confirmar'
+  }
+})
+
+function requestRevertToScheduled() {
+  pendingConfirm.value = 'revertToScheduled'
+}
+
+function requestReopenMatch() {
+  pendingConfirm.value = 'reopenMatch'
+}
+
+function requestFinishMatch() {
+  pendingConfirm.value = 'finishMatch'
+}
+
+function requestDeleteGoal(event: MatchEvent) {
+  pendingDeleteEvent.value = event
+  pendingConfirm.value = 'deleteGoal'
+}
+
+function cancelPendingConfirm() {
+  if (saving.value) return
+  pendingConfirm.value = null
+  pendingDeleteEvent.value = null
+}
+
+async function confirmPendingAction() {
+  const action = pendingConfirm.value
+  if (!action) return
+
+  switch (action) {
+    case 'revertToScheduled':
+      await revertToScheduled()
+      break
+    case 'reopenMatch':
+      await reopenMatch()
+      break
+    case 'finishMatch':
+      await finishMatch()
+      break
+    case 'deleteGoal': {
+      const deleteEvent = pendingDeleteEvent.value
+      if (deleteEvent) await deleteGoal(deleteEvent)
+      break
+    }
+  }
+
+  pendingConfirm.value = null
+  pendingDeleteEvent.value = null
+}
+
+async function revertToScheduled() {
   saving.value = true
   error.value = ''
   const { error: err } = await supabase
@@ -200,13 +296,6 @@ async function revertToScheduled() {
 }
 
 async function reopenMatch() {
-  if (
-    !confirm(
-      '¿Reactivar? Vuelve a programado, anula puntos y borra goles/marcador.',
-    )
-  ) {
-    return
-  }
   saving.value = true
   error.value = ''
   const { error: err } = await supabase
@@ -298,9 +387,6 @@ async function saveEditGoal() {
 }
 
 async function deleteGoal(event: MatchEvent) {
-  if (!confirm(`¿Eliminar gol al ${formatGoalTime(event.minute, event.event_second ?? 0, event.extra_time ?? 0)}?`)) {
-    return
-  }
   saving.value = true
   error.value = ''
   const { error: err } = await supabase.from('match_events').delete().eq('id', event.id)
@@ -314,7 +400,6 @@ async function deleteGoal(event: MatchEvent) {
 }
 
 async function finishMatch() {
-  if (!confirm('¿Finalizar partido y calcular puntos?')) return
   saving.value = true
   error.value = ''
   const { error: err } = await supabase
@@ -393,7 +478,7 @@ async function finishMatch() {
           type="button"
           :class="[btnSecondary, 'border border-amber-500/40 text-amber-200']"
           :disabled="saving"
-          @click="reopenMatch"
+          @click="requestReopenMatch"
         >
           Reactivar partido
         </button>
@@ -429,7 +514,7 @@ async function finishMatch() {
           type="button"
           :class="[btnPrimary, 'border border-white/20 bg-white/5 text-slate-200']"
           :disabled="saving"
-          @click="finishMatch"
+          @click="requestFinishMatch"
         >
           Finalizar partido
         </button>
@@ -437,7 +522,7 @@ async function finishMatch() {
           type="button"
           :class="[btnSecondary, 'border border-red-500/30 text-red-300']"
           :disabled="saving"
-          @click="revertToScheduled"
+          @click="requestRevertToScheduled"
         >
           Volver a programado
         </button>
@@ -504,7 +589,7 @@ async function finishMatch() {
                 <button type="button" class="rounded px-2 py-1 text-xs text-slate-400 hover:bg-white/10" @click="startEditGoal(event)">
                   Editar
                 </button>
-                <button type="button" class="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/10" @click="deleteGoal(event)">
+                <button type="button" class="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/10" @click="requestDeleteGoal(event)">
                   Borrar
                 </button>
               </div>
@@ -549,5 +634,16 @@ async function finishMatch() {
 
     <p v-if="message" class="text-xs text-mundial-green">{{ message }}</p>
     <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
+
+    <ConfirmModal
+      :open="pendingConfirm != null"
+      :title="confirmModalTitle"
+      :subtitle="confirmModalSubtitle"
+      :confirm-label="confirmModalLabel"
+      cancel-label="Cancelar"
+      :saving="saving"
+      @confirm="confirmPendingAction"
+      @cancel="cancelPendingConfirm"
+    />
   </div>
 </template>
