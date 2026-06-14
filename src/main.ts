@@ -9,6 +9,7 @@ import {
   clearStaleChunkReloadFlag,
   reloadForStaleChunks,
 } from './lib/chunkLoadRecovery'
+import { pwaNeedRefresh, setApplyPwaUpdate } from './lib/pwaUpdate'
 import router from './router'
 import { useAuthStore } from './stores/authStore'
 
@@ -19,7 +20,14 @@ window.addEventListener('vite:preloadError', (event) => {
   reloadForStaleChunks()
 })
 
-registerSW({ immediate: true })
+setApplyPwaUpdate(
+  registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      pwaNeedRefresh.value = true
+    },
+  }),
+)
 
 const app = createApp(App)
 const pinia = createPinia()

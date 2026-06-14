@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import { usePageMeta } from '@/composables/usePageMeta'
+import UpdatePrompt from '@/components/shared/UpdatePrompt.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
 usePageMeta()
@@ -13,4 +14,5 @@ usePageMeta()
     </AppLayout>
     <component :is="Component" v-else />
   </RouterView>
+  <UpdatePrompt />
 </template>

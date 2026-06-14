@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     ...(mode === 'development' ? [vueDevTools()] : []),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['icon-192.svg', 'icon-512.svg', 'og-image.svg'],
       manifest: {
         name: APP_TITLE,
