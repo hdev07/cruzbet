@@ -111,8 +111,9 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to: RouteLocationNormalized) => {
+router.beforeEach(async (to: RouteLocationNormalized) => {
   const auth = useAuthStore()
+  if (!auth.authReady) await auth.init()
   if (to.path === '/login' && auth.isLoggedIn) return '/'
   if (to.meta.requiresAuth && !auth.isLoggedIn) return '/login'
   if (to.meta.requiresAdmin && !auth.isAdmin) return '/login'

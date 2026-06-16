@@ -434,8 +434,8 @@ SELECT h.id,
   timestamptz '2026-06-14T01:00:00+00',
   'Gillette Stadium, Boston',
   'scheduled',
-  'M5',
-  '{"match_number":5}'::jsonb
+  'M7',
+  '{"match_number":7}'::jsonb
 FROM teams h,
   teams a
 WHERE h.code = 'HAI'
@@ -465,8 +465,8 @@ SELECT h.id,
   timestamptz '2026-06-14T04:00:00+00',
   'BC Place, Vancouver',
   'scheduled',
-  'M6',
-  '{"match_number":6}'::jsonb
+  'M8',
+  '{"match_number":8}'::jsonb
 FROM teams h,
   teams a
 WHERE h.code = 'AUS'
@@ -496,8 +496,8 @@ SELECT h.id,
   timestamptz '2026-06-13T22:00:00+00',
   'MetLife Stadium, New York/New Jersey',
   'scheduled',
-  'M7',
-  '{"match_number":7}'::jsonb
+  'M6',
+  '{"match_number":6}'::jsonb
 FROM teams h,
   teams a
 WHERE h.code = 'BRA'
@@ -527,8 +527,8 @@ SELECT h.id,
   timestamptz '2026-06-13T19:00:00+00',
   'Levi''s Stadium, San Francisco Bay Area',
   'scheduled',
-  'M8',
-  '{"match_number":8}'::jsonb
+  'M5',
+  '{"match_number":5}'::jsonb
 FROM teams h,
   teams a
 WHERE h.code = 'QAT'
@@ -558,8 +558,8 @@ SELECT h.id,
   timestamptz '2026-06-14T23:00:00+00',
   'Lincoln Financial Field, Philadelphia',
   'scheduled',
-  'M9',
-  '{"match_number":9}'::jsonb
+  'M11',
+  '{"match_number":11}'::jsonb
 FROM teams h,
   teams a
 WHERE h.code = 'CIV'
@@ -589,8 +589,8 @@ SELECT h.id,
   timestamptz '2026-06-14T17:00:00+00',
   'NRG Stadium, Houston',
   'scheduled',
-  'M10',
-  '{"match_number":10}'::jsonb
+  'M9',
+  '{"match_number":9}'::jsonb
 FROM teams h,
   teams a
 WHERE h.code = 'GER'
@@ -620,8 +620,8 @@ SELECT h.id,
   timestamptz '2026-06-14T20:00:00+00',
   'AT&T Stadium, Dallas',
   'scheduled',
-  'M11',
-  '{"match_number":11}'::jsonb
+  'M10',
+  '{"match_number":10}'::jsonb
 FROM teams h,
   teams a
 WHERE h.code = 'NED'

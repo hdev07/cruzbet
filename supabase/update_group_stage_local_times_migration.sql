@@ -52,8 +52,8 @@ WHERE m.home_team_id = h.id
 UPDATE matches m
 SET match_date = timestamptz '2026-06-14T01:00:00+00',
     venue = 'Gillette Stadium, Boston',
-    bracket_key = 'M5',
-    bracket_meta = '{"match_number":5}'::jsonb
+    bracket_key = 'M7',
+    bracket_meta = '{"match_number":7}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
@@ -64,8 +64,8 @@ WHERE m.home_team_id = h.id
 UPDATE matches m
 SET match_date = timestamptz '2026-06-14T04:00:00+00',
     venue = 'BC Place, Vancouver',
-    bracket_key = 'M6',
-    bracket_meta = '{"match_number":6}'::jsonb
+    bracket_key = 'M8',
+    bracket_meta = '{"match_number":8}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
@@ -76,8 +76,8 @@ WHERE m.home_team_id = h.id
 UPDATE matches m
 SET match_date = timestamptz '2026-06-13T22:00:00+00',
     venue = 'MetLife Stadium, New York/New Jersey',
-    bracket_key = 'M7',
-    bracket_meta = '{"match_number":7}'::jsonb
+    bracket_key = 'M6',
+    bracket_meta = '{"match_number":6}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
@@ -88,8 +88,8 @@ WHERE m.home_team_id = h.id
 UPDATE matches m
 SET match_date = timestamptz '2026-06-13T19:00:00+00',
     venue = 'Levi''s Stadium, San Francisco Bay Area',
-    bracket_key = 'M8',
-    bracket_meta = '{"match_number":8}'::jsonb
+    bracket_key = 'M5',
+    bracket_meta = '{"match_number":5}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
@@ -100,8 +100,8 @@ WHERE m.home_team_id = h.id
 UPDATE matches m
 SET match_date = timestamptz '2026-06-14T23:00:00+00',
     venue = 'Lincoln Financial Field, Philadelphia',
-    bracket_key = 'M9',
-    bracket_meta = '{"match_number":9}'::jsonb
+    bracket_key = 'M11',
+    bracket_meta = '{"match_number":11}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
@@ -112,8 +112,8 @@ WHERE m.home_team_id = h.id
 UPDATE matches m
 SET match_date = timestamptz '2026-06-14T17:00:00+00',
     venue = 'NRG Stadium, Houston',
-    bracket_key = 'M10',
-    bracket_meta = '{"match_number":10}'::jsonb
+    bracket_key = 'M9',
+    bracket_meta = '{"match_number":9}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
@@ -124,8 +124,8 @@ WHERE m.home_team_id = h.id
 UPDATE matches m
 SET match_date = timestamptz '2026-06-14T20:00:00+00',
     venue = 'AT&T Stadium, Dallas',
-    bracket_key = 'M11',
-    bracket_meta = '{"match_number":11}'::jsonb
+    bracket_key = 'M10',
+    bracket_meta = '{"match_number":10}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id

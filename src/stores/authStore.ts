@@ -4,12 +4,21 @@ import { cleanupOAuthUrl, hasOAuthCallbackInUrl } from '@/lib/authCallback'
 import { getAuthRedirectUrl } from '@/lib/authRedirect'
 import { ADMIN_EMAIL } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
+import {
+  clearStoredAuthPassword,
+  generateAuthPassword,
+  getStoredAuthPassword,
+  storeAuthPassword,
+  usernameToAuthEmail,
+  validateUsernameFormat,
+} from '@/lib/usernameAuth'
 import type { Profile } from '@/types'
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const profile = ref<Profile | null>(null)
+  const authReady = ref(false)
   let initialized = false
 
   const isLoggedIn = computed(() => !!user.value)
@@ -33,33 +42,52 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function init() {
-    if (initialized) return
+    if (initialized) {
+      if (!authReady.value) await waitForAuthReady()
+      return
+    }
     initialized = true
 
-    const oauthCallback = hasOAuthCallbackInUrl()
+    try {
+      const oauthCallback = hasOAuthCallbackInUrl()
 
-    const { data, error } = await supabase.auth.getSession()
-    if (error) console.error('Error al restaurar sesión:', error.message)
+      const { data, error } = await supabase.auth.getSession()
+      if (error) console.error('Error al restaurar sesión:', error.message)
 
-    user.value = data.session?.user ?? null
-    if (user.value) await fetchProfile(user.value.id)
+      user.value = data.session?.user ?? null
+      if (user.value) await fetchProfile(user.value.id)
 
-    if (oauthCallback && data.session) {
-      cleanupOAuthUrl()
-    }
-
-    // No usar async/await aquí: bloquea getSession() y deja la app sin montar tras OAuth.
-    supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
-      user.value = session?.user ?? null
-      if (user.value) {
-        void fetchProfile(user.value.id)
-      } else {
-        profile.value = null
-      }
-
-      if (oauthCallback && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+      if (oauthCallback && data.session) {
         cleanupOAuthUrl()
       }
+
+      // No usar async/await aquí: bloquea getSession() y deja la app sin montar tras OAuth.
+      supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+        user.value = session?.user ?? null
+        if (user.value) {
+          void fetchProfile(user.value.id)
+        } else {
+          profile.value = null
+        }
+
+        if (oauthCallback && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+          cleanupOAuthUrl()
+        }
+      })
+    } finally {
+      authReady.value = true
+    }
+  }
+
+  function waitForAuthReady(): Promise<void> {
+    if (authReady.value) return Promise.resolve()
+    return new Promise((resolve) => {
+      const stop = setInterval(() => {
+        if (authReady.value) {
+          clearInterval(stop)
+          resolve()
+        }
+      }, 10)
     })
   }
 
@@ -73,6 +101,85 @@ export const useAuthStore = defineStore('auth', () => {
     if (error) throw error
   }
 
+  async function isUsernameTaken(displayUsername: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('username', displayUsername.trim())
+      .maybeSingle()
+
+    if (error) throw error
+    return !!data
+  }
+
+  async function loginWithUsername(username: string) {
+    const validationError = validateUsername(username)
+    if (validationError) throw new Error(validationError)
+
+    const trimmed = username.trim()
+    const email = usernameToAuthEmail(trimmed)
+    let password = getStoredAuthPassword(trimmed)
+
+    if (password) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (!error && data.user) {
+        user.value = data.user
+        await fetchProfile(data.user.id)
+        return
+      }
+
+      if (error && !error.message.toLowerCase().includes('invalid login credentials')) {
+        throw error
+      }
+
+      clearStoredAuthPassword(trimmed)
+      password = null
+    }
+
+    if (await isUsernameTaken(trimmed)) {
+      throw new Error(
+        'Ese nombre ya está en uso. Si es tu cuenta, usa el mismo navegador donde te registraste o continúa con Google.',
+      )
+    }
+
+    password = generateAuthPassword()
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username: trimmed },
+      },
+    })
+
+    if (error) {
+      if (error.message.toLowerCase().includes('already registered')) {
+        throw new Error(
+          'Ese nombre ya está en uso. Si es tu cuenta, usa el mismo navegador donde te registraste o continúa con Google.',
+        )
+      }
+      throw error
+    }
+
+    if (!data.user) throw new Error('No se pudo crear la cuenta')
+
+    storeAuthPassword(trimmed, password)
+    user.value = data.user
+
+    if (!data.session) {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (signInError) throw signInError
+      user.value = signInData.user
+    }
+
+    if (user.value) await fetchProfile(user.value.id)
+    if (profile.value?.username !== trimmed) {
+      await updateUsername(trimmed)
+    }
+  }
+
   async function logout() {
     await supabase.auth.signOut()
     user.value = null
@@ -80,11 +187,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function validateUsername(value: string): string | null {
-    const trimmed = value.trim()
-    if (!trimmed) return 'El nombre no puede estar vacío'
-    if (trimmed.length < 2) return 'Mínimo 2 caracteres'
-    if (trimmed.length > 30) return 'Máximo 30 caracteres'
-    return null
+    return validateUsernameFormat(value)
   }
 
   async function updateUsername(username: string) {
@@ -108,11 +211,13 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     profile,
+    authReady,
     isLoggedIn,
     isAdmin,
     init,
     fetchProfile,
     loginWithGoogle,
+    loginWithUsername,
     logout,
     updateUsername,
   }

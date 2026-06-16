@@ -41,39 +41,15 @@ WHERE m.home_team_id = h.id
   AND a.code = 'PAR'
   AND m.phase = 'group';
 
+-- Liberar M5-M11 antes de reasignar (bracket_key es único)
+UPDATE matches m
+SET bracket_key = NULL
+WHERE m.phase = 'group'
+  AND m.bracket_key IN ('M5', 'M6', 'M7', 'M8', 'M9', 'M10', 'M11');
+
 UPDATE matches m
 SET bracket_key = 'M5',
     bracket_meta = '{"match_number":5}'::jsonb
-FROM teams h, teams a
-WHERE m.home_team_id = h.id
-  AND m.away_team_id = a.id
-  AND h.code = 'HAI'
-  AND a.code = 'SCO'
-  AND m.phase = 'group';
-
-UPDATE matches m
-SET bracket_key = 'M6',
-    bracket_meta = '{"match_number":6}'::jsonb
-FROM teams h, teams a
-WHERE m.home_team_id = h.id
-  AND m.away_team_id = a.id
-  AND h.code = 'AUS'
-  AND a.code = 'TUR'
-  AND m.phase = 'group';
-
-UPDATE matches m
-SET bracket_key = 'M7',
-    bracket_meta = '{"match_number":7}'::jsonb
-FROM teams h, teams a
-WHERE m.home_team_id = h.id
-  AND m.away_team_id = a.id
-  AND h.code = 'BRA'
-  AND a.code = 'MAR'
-  AND m.phase = 'group';
-
-UPDATE matches m
-SET bracket_key = 'M8',
-    bracket_meta = '{"match_number":8}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
@@ -82,18 +58,38 @@ WHERE m.home_team_id = h.id
   AND m.phase = 'group';
 
 UPDATE matches m
-SET bracket_key = 'M9',
-    bracket_meta = '{"match_number":9}'::jsonb
+SET bracket_key = 'M6',
+    bracket_meta = '{"match_number":6}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
-  AND h.code = 'CIV'
-  AND a.code = 'ECU'
+  AND h.code = 'BRA'
+  AND a.code = 'MAR'
   AND m.phase = 'group';
 
 UPDATE matches m
-SET bracket_key = 'M10',
-    bracket_meta = '{"match_number":10}'::jsonb
+SET bracket_key = 'M7',
+    bracket_meta = '{"match_number":7}'::jsonb
+FROM teams h, teams a
+WHERE m.home_team_id = h.id
+  AND m.away_team_id = a.id
+  AND h.code = 'HAI'
+  AND a.code = 'SCO'
+  AND m.phase = 'group';
+
+UPDATE matches m
+SET bracket_key = 'M8',
+    bracket_meta = '{"match_number":8}'::jsonb
+FROM teams h, teams a
+WHERE m.home_team_id = h.id
+  AND m.away_team_id = a.id
+  AND h.code = 'AUS'
+  AND a.code = 'TUR'
+  AND m.phase = 'group';
+
+UPDATE matches m
+SET bracket_key = 'M9',
+    bracket_meta = '{"match_number":9}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
@@ -102,13 +98,23 @@ WHERE m.home_team_id = h.id
   AND m.phase = 'group';
 
 UPDATE matches m
-SET bracket_key = 'M11',
-    bracket_meta = '{"match_number":11}'::jsonb
+SET bracket_key = 'M10',
+    bracket_meta = '{"match_number":10}'::jsonb
 FROM teams h, teams a
 WHERE m.home_team_id = h.id
   AND m.away_team_id = a.id
   AND h.code = 'NED'
   AND a.code = 'JPN'
+  AND m.phase = 'group';
+
+UPDATE matches m
+SET bracket_key = 'M11',
+    bracket_meta = '{"match_number":11}'::jsonb
+FROM teams h, teams a
+WHERE m.home_team_id = h.id
+  AND m.away_team_id = a.id
+  AND h.code = 'CIV'
+  AND a.code = 'ECU'
   AND m.phase = 'group';
 
 UPDATE matches m

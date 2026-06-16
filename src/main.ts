@@ -36,6 +36,6 @@ app.use(pinia)
 app.use(router)
 
 const auth = useAuthStore()
-void auth.init()
+await auth.init()
 
 app.mount('#app')
