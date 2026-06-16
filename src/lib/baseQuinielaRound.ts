@@ -1,3 +1,4 @@
+import { BASE_QUINIELA_MIN_ACTIVE_ROUND } from '@/constants/base-quiniela-rules'
 import type { BaseQuinielaRound } from '@/types'
 
 export function hasRoundStarted(
@@ -28,6 +29,13 @@ export function resolveActiveBaseRound(
       active = round
     } else {
       break
+    }
+  }
+
+  if (BASE_QUINIELA_MIN_ACTIVE_ROUND > 1) {
+    const floor = sorted.find((r) => r.round_number >= BASE_QUINIELA_MIN_ACTIVE_ROUND)
+    if (floor && active.round_number < floor.round_number) {
+      active = floor
     }
   }
 

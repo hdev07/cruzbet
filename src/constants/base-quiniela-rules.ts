@@ -3,6 +3,8 @@ import { PAYMENT_INFO } from '@/constants/quiniela-rules'
 export const BASE_ENTRY_FEE_MXN = 50
 export const BASE_QUINIELA_MATCHES_PER_ROUND = 16
 export const BASE_QUINIELA_POINTS_PER_HIT = 50
+/** Jornada activa por defecto al entrar a la quiniela (mínimo). */
+export const BASE_QUINIELA_MIN_ACTIVE_ROUND = 2
 export const BASE_QUINIELA_MAX_POINTS =
   BASE_QUINIELA_MATCHES_PER_ROUND * BASE_QUINIELA_POINTS_PER_HIT
 
