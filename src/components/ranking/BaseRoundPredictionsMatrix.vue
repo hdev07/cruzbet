@@ -81,16 +81,16 @@ function cellClass(userId: string, match: BaseQuinielaRoundMatch): string {
   const base =
     'flex h-8 w-8 items-center justify-center rounded text-xs font-bold tabular-nums'
 
-  if (!pick) return `${base} bg-black/20 text-slate-600`
+  if (!pick) return `${base} theme-cell-idle text-slate-600`
 
   if (!match.match || match.match.status !== 'finished') {
-    return `${base} bg-white/10 text-slate-300`
+    return `${base} theme-cell-pending text-slate-300`
   }
 
   const correct = isPredictionCorrect(pick.predicted_winner, match.match)
   if (correct === true) return `${base} bg-mundial-green/25 text-mundial-green`
   if (correct === false) return `${base} bg-red-500/15 text-red-400`
-  return `${base} bg-white/10 text-slate-300`
+  return `${base} theme-cell-pending text-slate-300`
 }
 
 function rivalryLabel(userId: string, correctCount: number): string | null {
@@ -138,12 +138,12 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
         <span v-if="currentUserId"> Tu fila está resaltada.</span>
       </p>
 
-      <div class="overflow-x-auto rounded-xl border border-white/10">
-        <table class="w-full min-w-[40rem] border-collapse text-sm">
+      <div class="theme-table-wrap">
+        <table class="theme-table min-w-[40rem] text-sm">
           <thead>
-            <tr class="bg-black/40 text-xs text-slate-400">
+            <tr class="theme-table-head text-xs text-slate-400">
               <th
-                class="border border-white/10 bg-black/90 px-3 py-2 text-left md:sticky md:left-0 md:z-10 md:min-w-[8rem]"
+                class="theme-table-sticky border border-white/10 px-3 py-2 text-left md:sticky md:left-0 md:z-10 md:min-w-[8rem]"
               >
                 <div class="flex min-w-0 items-center gap-2 md:block">
                   <span class="w-7 shrink-0 md:hidden" aria-hidden="true" />
@@ -177,16 +177,16 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
             <tr
               v-for="(player, index) in competitors"
               :key="player.user_id"
-              class="bg-white/[0.02]"
+              class="theme-table-row"
               :class="{ 'ring-1 ring-inset ring-mundial-accent/40': player.user_id === currentUserId }"
             >
               <td
-                class="border border-white/10 px-3 py-2 md:sticky md:left-0 md:z-10 md:min-w-[8rem] md:bg-mundial-dark/95"
+                class="theme-table-sticky border border-white/10 px-3 py-2 md:sticky md:left-0 md:z-10 md:min-w-[8rem]"
                 :class="{ 'md:bg-mundial-accent/10': player.user_id === currentUserId }"
               >
                 <div class="flex min-w-0 items-start gap-2">
                   <div
-                    class="sticky left-0 z-10 order-1 -ml-3 flex shrink-0 items-center bg-mundial-dark/95 py-0.5 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0"
+                    class="theme-table-sticky sticky left-0 z-10 order-1 -ml-3 flex shrink-0 items-center py-0.5 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0"
                     :class="{ 'bg-mundial-accent/10 md:bg-transparent': player.user_id === currentUserId }"
                   >
                     <img
@@ -197,14 +197,14 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     />
                     <span
                       v-else
-                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold"
+                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full theme-cell-pending text-xs font-semibold"
                     >
                       {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
                     </span>
                   </div>
                   <span
                     class="order-2 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
-                    :class="index < 3 ? 'bg-mundial-accent text-white' : 'bg-white/10 text-slate-400'"
+                    :class="index < 3 ? 'bg-mundial-accent text-white' : 'theme-cell-pending text-slate-400'"
                   >
                     {{ index + 1 }}
                   </span>
@@ -262,7 +262,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
           Fallo
         </span>
         <span class="inline-flex items-center gap-1">
-          <span class="h-3 w-3 rounded bg-white/10" />
+          <span class="h-3 w-3 rounded theme-cell-pending" />
           Pendiente
         </span>
       </div>

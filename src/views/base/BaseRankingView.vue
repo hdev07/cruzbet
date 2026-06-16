@@ -63,7 +63,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
     <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-mundial-accent">
       Clasificación
     </p>
-    <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Ranking</h1>
+    <h1 class="mb-2 text-2xl font-bold text-app-text lg:text-3xl">Ranking</h1>
     <p class="mb-6 text-sm text-slate-400 lg:text-base">
       Posiciones y pronósticos por jornada
     </p>
@@ -88,7 +88,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
         <span class="mb-1 block text-xs text-slate-400">Jornada</span>
         <select
           v-model="selectedRoundId"
-          class="w-full rounded-lg border border-white/10 bg-mundial-dark px-3 py-2 text-sm"
+          class="theme-field w-full rounded-lg px-3 py-2 text-sm"
         >
           <option v-for="round in baseStore.rounds" :key="round.id" :value="round.id">
             {{ round.title }}

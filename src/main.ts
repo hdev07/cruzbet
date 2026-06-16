@@ -1,5 +1,6 @@
 import './assets/main.css'
 
+import { initTheme } from './lib/theme'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { registerSW } from 'virtual:pwa-register'
@@ -12,7 +13,9 @@ import {
 import { pwaNeedRefresh, setApplyPwaUpdate } from './lib/pwaUpdate'
 import router from './router'
 import { useAuthStore } from './stores/authStore'
+import { useThemeStore } from './stores/themeStore'
 
+initTheme()
 clearStaleChunkReloadFlag()
 
 window.addEventListener('vite:preloadError', (event) => {
@@ -34,6 +37,8 @@ const pinia = createPinia()
 
 app.use(pinia)
 app.use(router)
+
+useThemeStore()
 
 const auth = useAuthStore()
 await auth.init()

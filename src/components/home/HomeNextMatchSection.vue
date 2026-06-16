@@ -58,7 +58,7 @@ const loading = computed(() => !matchStore.matches.length && matchStore.loading)
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] via-white/[0.02] to-transparent">
+  <section class="overflow-hidden rounded-2xl border border-white/10 theme-surface-gradient-via">
     <div v-if="loading" class="p-6">
       <div class="mb-4 h-5 w-32 animate-pulse rounded-lg bg-white/10" />
       <div class="h-44 animate-pulse rounded-2xl bg-white/5" />

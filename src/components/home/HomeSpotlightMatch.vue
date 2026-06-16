@@ -52,7 +52,7 @@ const countdown = computed(() => {
     :class="
       isLive
         ? 'border-mundial-green/60 bg-gradient-to-br from-mundial-green/20 via-mundial-green/5 to-transparent ring-1 ring-mundial-green/30'
-        : 'border-white/15 bg-gradient-to-br from-white/[0.06] via-transparent to-transparent'
+        : 'border-white/15 theme-spotlight-idle'
     "
   >
     <div class="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5 sm:px-5">

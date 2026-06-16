@@ -86,7 +86,7 @@ const stats = computed(() => [
 
 <template>
   <section
-    class="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent"
+    class="overflow-hidden rounded-2xl border border-white/10 theme-surface-gradient"
   >
     <div class="border-b border-white/10 px-4 py-5 sm:px-6">
       <div class="mb-4 flex flex-wrap items-center gap-2">

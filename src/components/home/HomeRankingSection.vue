@@ -53,7 +53,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
         <p class="text-xs font-semibold uppercase tracking-widest text-mundial-accent">
           Clasificación
         </p>
-        <h2 class="mt-1 text-lg font-bold text-slate-100">
+        <h2 class="mt-1 text-lg font-bold text-app-text">
           Posiciones
           <span v-if="baseStore.activeRound" class="font-normal text-slate-400">
             · {{ baseStore.activeRound.title }}

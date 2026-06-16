@@ -38,7 +38,7 @@ const isLeaderboardReady = computed(
 
     <div
       v-if="!standingsOnly"
-      class="mb-4 flex gap-1 rounded-lg bg-white/5 p-1"
+      class="theme-tab-bar mb-4 flex gap-1"
       :class="compact ? '' : 'lg:max-w-md'"
     >
       <button
@@ -80,12 +80,12 @@ const isLeaderboardReady = computed(
         <li
           v-for="(player, index) in baseStore.leaderboard"
           :key="player.user_id"
-          class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+          class="theme-card flex items-center gap-3 rounded-xl px-4 py-3"
           :class="{ 'ring-1 ring-mundial-accent/50': player.user_id === auth.user?.id }"
         >
           <span
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-            :class="index < 3 ? 'bg-mundial-accent text-white' : 'bg-white/10 text-slate-400'"
+            :class="index < 3 ? 'bg-mundial-accent text-white' : 'theme-cell-pending text-slate-400'"
           >
             {{ index + 1 }}
           </span>
@@ -98,12 +98,12 @@ const isLeaderboardReady = computed(
           />
           <span
             v-else
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold"
+            class="flex h-10 w-10 items-center justify-center rounded-full theme-cell-pending text-sm font-semibold"
           >
             {{ player.username?.[0]?.toUpperCase() ?? '?' }}
           </span>
 
-          <span class="min-w-0 flex-1 truncate font-medium">
+          <span class="min-w-0 flex-1 truncate font-medium text-app-text">
             {{ player.username ?? 'Anónimo' }}
             <span v-if="player.user_id === auth.user?.id" class="ml-1 text-xs text-mundial-accent">
               (tú)

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import InstallPrompt from '@/components/shared/InstallPrompt.vue'
+import ThemeToggle from '@/components/shared/ThemeToggle.vue'
 import QuinielaSubNav from '@/components/navigation/QuinielaSubNav.vue'
 import { APP_NAME } from '@/constants/branding'
 import {
@@ -67,6 +68,7 @@ function isNavActive(item: NavItem): boolean {
         </nav>
 
         <div v-if="auth.isLoggedIn" class="flex shrink-0 items-center gap-2 lg:gap-3">
+          <ThemeToggle size="sm" />
           <RouterLink
             v-if="auth.isAdmin"
             to="/admin"
@@ -98,6 +100,7 @@ function isNavActive(item: NavItem): boolean {
         </div>
 
         <div v-else-if="route.path !== '/login'" class="flex shrink-0 items-center gap-2">
+          <ThemeToggle size="sm" />
           <RouterLink
             v-if="auth.isAdmin"
             to="/admin"

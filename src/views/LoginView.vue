@@ -4,6 +4,7 @@ import { useRouter, RouterLink } from 'vue-router'
 import { Target } from '@lucide/vue'
 import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
 import { APP_NAME, APP_TAGLINE } from '@/constants/branding'
+import ThemeToggle from '@/components/shared/ThemeToggle.vue'
 import { useAuthStore } from '@/stores/authStore'
 
 const auth = useAuthStore()
@@ -42,7 +43,10 @@ async function loginWithGoogle() {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center bg-mundial-dark px-6 lg:px-8">
+  <div class="relative flex min-h-screen flex-col items-center justify-center bg-app-bg px-6 lg:px-8">
+    <div class="absolute right-4 top-4 lg:right-8 lg:top-8">
+      <ThemeToggle />
+    </div>
     <div class="w-full max-w-sm text-center lg:max-w-md lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/5 lg:p-10 lg:shadow-xl">
       <Target class="mx-auto mb-2 h-14 w-14 text-mundial-accent" :stroke-width="1.5" />
       <h1 class="mb-2 text-3xl font-bold text-mundial-accent">{{ APP_NAME }}</h1>
@@ -104,7 +108,7 @@ async function loginWithGoogle() {
           <div class="w-full border-t border-white/10" />
         </div>
         <div class="relative flex justify-center text-xs uppercase">
-          <span class="bg-mundial-dark px-2 text-slate-500 lg:bg-transparent">o</span>
+          <span class="bg-app-bg px-2 text-slate-500 lg:bg-transparent">o</span>
         </div>
       </div>
 

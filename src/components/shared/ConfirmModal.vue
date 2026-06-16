@@ -40,7 +40,7 @@ const emit = defineEmits<{
       />
 
       <div
-        class="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-mundial-accent/30 bg-slate-900 shadow-2xl"
+        class="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-mundial-accent/30 bg-mundial-dark shadow-2xl"
       >
         <div class="shrink-0 border-b border-white/10 px-4 py-4">
           <button
