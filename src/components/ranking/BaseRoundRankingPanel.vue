@@ -12,6 +12,8 @@ const props = defineProps<{
   roundMatches: BaseQuinielaRoundMatch[]
   compact?: boolean
   loading?: boolean
+  /** Solo muestra la tabla de posiciones (sin pestaña de pronósticos). */
+  standingsOnly?: boolean
 }>()
 
 const auth = useAuthStore()
@@ -35,6 +37,7 @@ const isLeaderboardReady = computed(
     </div>
 
     <div
+      v-if="!standingsOnly"
       class="mb-4 flex gap-1 rounded-lg bg-white/5 p-1"
       :class="compact ? '' : 'lg:max-w-md'"
     >

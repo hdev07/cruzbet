@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { Grid3x3, LayoutGrid, Trophy, User } from '@lucide/vue'
 import HomeLandingRules from '@/components/home/HomeLandingRules.vue'
 import HomeNextMatchSection from '@/components/home/HomeNextMatchSection.vue'
+import HomeRankingSection from '@/components/home/HomeRankingSection.vue'
 import {
   JORNADAS_PATH,
   MUNDIAL_PATH,
@@ -57,6 +58,8 @@ const quickLinks = [
     </header>
 
     <HomeNextMatchSection />
+
+    <HomeRankingSection />
 
     <div
       v-if="!auth.isLoggedIn"
