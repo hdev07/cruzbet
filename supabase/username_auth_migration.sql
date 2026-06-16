@@ -1,4 +1,4 @@
--- Login por nombre de usuario (email interno + contraseña generada en el navegador)
+-- Login por nombre de usuario (email interno + PIN de 4-8 dígitos del jugador)
 --
 -- En Supabase Dashboard → Authentication → Providers:
 --   1. Email: activado

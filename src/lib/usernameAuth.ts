@@ -9,6 +9,15 @@ export function validateUsernameFormat(value: string): string | null {
   return null
 }
 
+export function validatePinFormat(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return 'El PIN no puede estar vacío'
+  if (!/^\d+$/.test(trimmed)) return 'El PIN solo puede contener números'
+  if (trimmed.length < 4) return 'Mínimo 4 dígitos'
+  if (trimmed.length > 8) return 'Máximo 8 dígitos'
+  return null
+}
+
 function slugifyUsername(username: string): string {
   const slug = username
     .trim()
@@ -37,10 +46,6 @@ export function getStoredAuthPassword(username: string): string | null {
   }
 }
 
-export function storeAuthPassword(username: string, password: string): void {
-  localStorage.setItem(storageKey(usernameToAuthEmail(username)), password)
-}
-
 export function clearStoredAuthPassword(username: string): void {
   try {
     localStorage.removeItem(storageKey(usernameToAuthEmail(username)))
@@ -49,6 +54,13 @@ export function clearStoredAuthPassword(username: string): void {
   }
 }
 
-export function generateAuthPassword(): string {
-  return crypto.randomUUID()
+/** Contraseña determinista para Supabase Auth a partir de nombre + PIN. */
+export async function deriveAuthPassword(username: string, pin: string): Promise<string> {
+  const normalized = username.trim().toLowerCase()
+  const payload = `quiniela:v1:${normalized}:${pin.trim()}`
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload))
+  const bytes = new Uint8Array(hash)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }

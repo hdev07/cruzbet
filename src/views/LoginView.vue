@@ -10,14 +10,17 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const username = ref('')
+const pin = ref('')
 const error = ref('')
 const loading = ref(false)
+
+const pinValid = () => /^\d{4,8}$/.test(pin.value.trim())
 
 async function loginWithUsername() {
   loading.value = true
   error.value = ''
   try {
-    await auth.loginWithUsername(username.value)
+    await auth.loginWithUsername(username.value, pin.value)
     await router.push('/')
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error al iniciar sesión'
@@ -67,17 +70,33 @@ async function loginWithGoogle() {
           :disabled="loading"
         />
 
+        <label for="login-pin" class="mb-2 block text-sm font-medium text-slate-300">
+          Tu PIN
+        </label>
+        <input
+          id="login-pin"
+          v-model="pin"
+          type="password"
+          inputmode="numeric"
+          autocomplete="current-password"
+          maxlength="8"
+          pattern="[0-9]*"
+          placeholder="4 a 8 dígitos"
+          class="mb-4 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:border-mundial-accent/50 focus:outline-none focus:ring-2 focus:ring-mundial-accent/30"
+          :disabled="loading"
+        />
+
         <button
           type="submit"
           class="w-full rounded-xl bg-mundial-accent px-4 py-3 font-semibold text-mundial-dark transition hover:brightness-110 disabled:opacity-50"
-          :disabled="loading || !username.trim()"
+          :disabled="loading || !username.trim() || !pinValid()"
         >
           {{ loading ? 'Entrando...' : 'Entrar con tu nombre' }}
         </button>
       </form>
 
       <p class="my-4 text-xs text-slate-500">
-        Tu sesión se guarda en este navegador. Al volver, entrarás automáticamente.
+        Elige un PIN de 4 a 8 dígitos. Lo usarás para volver a entrar si cierras sesión o cambias de dispositivo.
       </p>
 
       <div class="relative my-6">

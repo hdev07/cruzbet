@@ -6,10 +6,10 @@ import { ADMIN_EMAIL } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
 import {
   clearStoredAuthPassword,
-  generateAuthPassword,
+  deriveAuthPassword,
   getStoredAuthPassword,
-  storeAuthPassword,
   usernameToAuthEmail,
+  validatePinFormat,
   validateUsernameFormat,
 } from '@/lib/usernameAuth'
 import type { Profile } from '@/types'
@@ -112,38 +112,50 @@ export const useAuthStore = defineStore('auth', () => {
     return !!data
   }
 
-  async function loginWithUsername(username: string) {
+  async function loginWithUsername(username: string, pin: string) {
     const validationError = validateUsername(username)
     if (validationError) throw new Error(validationError)
 
+    const pinError = validatePinFormat(pin)
+    if (pinError) throw new Error(pinError)
+
     const trimmed = username.trim()
     const email = usernameToAuthEmail(trimmed)
-    let password = getStoredAuthPassword(trimmed)
+    const password = await deriveAuthPassword(trimmed, pin)
 
-    if (password) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (!error && data.user) {
-        user.value = data.user
-        await fetchProfile(data.user.id)
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!error && data.user) {
+      user.value = data.user
+      clearStoredAuthPassword(trimmed)
+      await fetchProfile(data.user.id)
+      return
+    }
+
+    if (error && !error.message.toLowerCase().includes('invalid login credentials')) {
+      throw error
+    }
+
+    const legacyPassword = getStoredAuthPassword(trimmed)
+    if (legacyPassword) {
+      const { data: legacyData, error: legacyError } = await supabase.auth.signInWithPassword({
+        email,
+        password: legacyPassword,
+      })
+      if (!legacyError && legacyData.user) {
+        const { error: updateError } = await supabase.auth.updateUser({ password })
+        if (updateError) throw updateError
+        clearStoredAuthPassword(trimmed)
+        user.value = legacyData.user
+        await fetchProfile(legacyData.user.id)
         return
       }
-
-      if (error && !error.message.toLowerCase().includes('invalid login credentials')) {
-        throw error
-      }
-
-      clearStoredAuthPassword(trimmed)
-      password = null
     }
 
     if (await isUsernameTaken(trimmed)) {
-      throw new Error(
-        'Ese nombre ya está en uso. Si es tu cuenta, usa el mismo navegador donde te registraste o continúa con Google.',
-      )
+      throw new Error('Nombre o PIN incorrectos.')
     }
 
-    password = generateAuthPassword()
-    const { data, error } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -151,21 +163,18 @@ export const useAuthStore = defineStore('auth', () => {
       },
     })
 
-    if (error) {
-      if (error.message.toLowerCase().includes('already registered')) {
-        throw new Error(
-          'Ese nombre ya está en uso. Si es tu cuenta, usa el mismo navegador donde te registraste o continúa con Google.',
-        )
+    if (signUpError) {
+      if (signUpError.message.toLowerCase().includes('already registered')) {
+        throw new Error('Nombre o PIN incorrectos.')
       }
-      throw error
+      throw signUpError
     }
 
-    if (!data.user) throw new Error('No se pudo crear la cuenta')
+    if (!signUpData.user) throw new Error('No se pudo crear la cuenta')
 
-    storeAuthPassword(trimmed, password)
-    user.value = data.user
+    user.value = signUpData.user
 
-    if (!data.session) {
+    if (!signUpData.session) {
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
