@@ -43,8 +43,8 @@ async function loginWithGoogle() {
 </script>
 
 <template>
-  <div class="relative flex min-h-screen flex-col items-center justify-center bg-app-bg px-6 lg:px-8">
-    <div class="absolute right-4 top-4 lg:right-8 lg:top-8">
+  <div class="relative flex min-h-screen flex-col items-center justify-center bg-app-bg px-6 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] lg:px-8">
+    <div class="absolute right-4 top-[calc(1rem+env(safe-area-inset-top,0px))] lg:right-8 lg:top-8">
       <ThemeToggle />
     </div>
     <div class="w-full max-w-sm text-center lg:max-w-md lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/5 lg:p-10 lg:shadow-xl">

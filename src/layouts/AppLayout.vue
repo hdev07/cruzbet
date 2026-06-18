@@ -41,7 +41,7 @@ function isNavActive(item: NavItem): boolean {
     class="flex min-h-screen flex-col"
     :class="route.meta.hideBottomNav ? 'pb-0' : 'pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-0'"
   >
-    <header class="sticky top-0 z-40 border-b border-white/10 bg-mundial-dark/95 backdrop-blur">
+    <header class="sticky top-0 z-40 border-b border-white/10 bg-mundial-dark/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
       <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6 lg:max-w-7xl lg:px-8">
         <RouterLink to="/" class="shrink-0 text-lg font-bold text-mundial-accent lg:text-xl">
           {{ APP_NAME }}
