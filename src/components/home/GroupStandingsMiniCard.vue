@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { MATCHES_PER_GROUP, countFinishedMatchesInGroup } from '@/lib/groupStandings'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 import type { GroupStandings, Match } from '@/types'
 
 const props = defineProps<{
@@ -49,11 +50,11 @@ const leaders = computed(() => props.group.rows.slice(0, 2))
         >
           {{ row.position }}
         </span>
-        <img
+        <TeamFlag
           v-if="row.team.flag_url"
           :src="row.team.flag_url"
           :alt="teamDisplayName(row.team)"
-          class="h-3.5 w-5 shrink-0 object-cover"
+          img-class="h-3.5 w-5 shrink-0 object-cover"
         />
         <span class="min-w-0 flex-1 truncate text-slate-300">{{ teamDisplayName(row.team) }}</span>
         <span class="shrink-0 font-bold tabular-nums text-slate-100">{{ row.points }}</span>

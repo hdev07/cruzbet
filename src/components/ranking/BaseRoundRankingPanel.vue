@@ -14,6 +14,8 @@ const props = defineProps<{
   loading?: boolean
   /** Solo muestra la tabla de posiciones (sin pestaña de pronósticos). */
   standingsOnly?: boolean
+  /** Limita filas visibles (p. ej. vista compacta en inicio). */
+  maxRows?: number
 }>()
 
 const auth = useAuthStore()
@@ -25,6 +27,12 @@ const isLeaderboardReady = computed(
     !props.loading &&
     baseStore.leaderboardRoundId === props.roundId,
 )
+
+const visibleLeaderboard = computed(() => {
+  const rows = baseStore.leaderboard
+  if (props.maxRows == null || props.maxRows <= 0) return rows
+  return rows.slice(0, props.maxRows)
+})
 </script>
 
 <template>
@@ -78,7 +86,7 @@ const isLeaderboardReady = computed(
 
       <ol v-else class="space-y-2">
         <li
-          v-for="(player, index) in baseStore.leaderboard"
+          v-for="(player, index) in visibleLeaderboard"
           :key="player.user_id"
           class="theme-card flex items-center gap-3 rounded-xl px-4 py-3"
           :class="{ 'ring-1 ring-mundial-accent/50': player.user_id === auth.user?.id }"

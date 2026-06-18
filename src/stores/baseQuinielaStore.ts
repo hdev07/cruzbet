@@ -463,6 +463,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     fetchRound,
     fetchMyPredictions,
     fetchRoundLeaderboard,
+    queryRoundLeaderboard,
     fetchAllRoundResults,
     fetchMyLeaderboardEntry,
     refreshLeaderboardForMatch,

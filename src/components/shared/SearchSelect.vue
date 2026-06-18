@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ChevronDown } from '@lucide/vue'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 
 export interface SelectOption<T = string | number> {
   value: T
@@ -239,11 +240,11 @@ onUnmounted(() => {
         :disabled="disabled"
         @click="open"
       >
-        <img
+        <TeamFlag
           v-if="selectedOption?.image"
           :src="selectedOption.image"
           :alt="selectedOption.imageAlt ?? selectedOption.label"
-          class="h-5 w-7 shrink-0 object-cover"
+          img-class="h-5 w-7 shrink-0 object-cover"
         />
         <span class="min-w-0 flex-1 truncate" :class="selectedOption ? 'text-white' : 'text-slate-500'">
           {{ selectedOption?.label ?? placeholder }}
@@ -302,11 +303,11 @@ onUnmounted(() => {
           @mousedown.prevent="select(option)"
           @mouseenter="highlightedIndex = index"
         >
-          <img
+          <TeamFlag
             v-if="option.image"
             :src="option.image"
             :alt="option.imageAlt ?? option.label"
-            class="h-5 w-7 shrink-0 object-cover"
+            img-class="h-5 w-7 shrink-0 object-cover"
           />
           <span class="tabular-nums">{{ option.label }}{{ suffix }}</span>
         </li>

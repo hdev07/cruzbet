@@ -9,6 +9,7 @@ import {
   statusBadgeClass,
 } from '@/lib/predictionDisplay'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import { resolveFlagSrc } from '@/lib/flagCache'
 import type { PredictionWithMatch } from '@/types'
 
 const props = withDefaults(
@@ -74,7 +75,7 @@ const teamOptions = computed(() => {
     .map(([id, team]) => ({
       value: id,
       label: team.name,
-      image: team.flag_url ?? undefined,
+      image: resolveFlagSrc(team.flag_url) ?? undefined,
       imageAlt: team.name,
     }))
 })

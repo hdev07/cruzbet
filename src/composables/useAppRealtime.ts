@@ -46,9 +46,16 @@ async function startAppRealtime() {
       { event: 'UPDATE', schema: 'public', table: 'matches' },
       (payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>) => {
         const row = payload.new as Match
+        const prev = payload.old as Partial<Match> | undefined
         matchStore.applyMatchPatch(row)
         standingsStore.patchMatch(row)
         baseStore.patchRoundMatch(row)
+
+        const scoreChanged =
+          prev?.home_score !== row.home_score || prev?.away_score !== row.away_score
+        if (scoreChanged || row.status === 'live') {
+          void matchStore.fetchEvents(row.id)
+        }
 
         if (row.status === 'finished') {
           scheduleLeaderboardRefresh(() => {
@@ -74,6 +81,25 @@ async function startAppRealtime() {
       (payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>) => {
         const event = payload.new as MatchEvent
         matchStore.addEvent(event)
+
+        scheduleStandingsRefresh(() => {
+          standingsStore.refreshFromMatches(matchStore.matches)
+        })
+        scheduleRankingRefresh(() => {
+          void rankingStore.fetchGlobalRanking()
+        })
+        scheduleLeaderboardRefresh(() => {
+          void baseStore.refreshLeaderboardForMatch(event.match_id)
+        })
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'match_events' },
+      (payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>) => {
+        const event = payload.old as MatchEvent
+        if (!event?.id || !event?.match_id) return
+        matchStore.removeEvent(event.id, event.match_id)
 
         scheduleStandingsRefresh(() => {
           standingsStore.refreshFromMatches(matchStore.matches)

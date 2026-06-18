@@ -1,12 +1,18 @@
 <script setup lang="ts">
+import { computed, onMounted, watch } from 'vue'
 import { ChevronRight, Radio, Users } from '@lucide/vue'
+import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
+import MatchGoalsList from '@/components/shared/MatchGoalsList.vue'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { bracketParticipantLabel } from '@/lib/knockoutBracket'
+import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { formatLiveStatusLabel } from '@/lib/matchClock'
+import { useMatchStore } from '@/stores/matchStore'
 import type { Match } from '@/types'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     match: Match
     showPredictBadge?: boolean
@@ -15,6 +21,19 @@ withDefaults(
   }>(),
   { linkable: true },
 )
+
+const matchStore = useMatchStore()
+
+const isLive = computed(() => isEffectivelyLive(props.match))
+const matchEvents = computed(() => matchStore.getEventsForMatch(props.match.id))
+
+onMounted(() => {
+  if (isLive.value) void matchStore.fetchEvents(props.match.id)
+})
+
+watch(isLive, (live) => {
+  if (live) void matchStore.fetchEvents(props.match.id)
+})
 
 function homeLabel(match: Match) {
   if (match.home_team) return teamDisplayName(match.home_team, 'Local')
@@ -31,16 +50,16 @@ function awayLabel(match: Match) {
   <component
     :is="linkable ? 'RouterLink' : 'div'"
     :to="linkable ? `/match/${match.id}` : undefined"
-    class="block rounded-xl border border-white/10 bg-white/5 p-4 lg:p-5"
+    class="block overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4 lg:p-5"
     :class="[
       linkable ? 'transition hover:border-mundial-accent/50 hover:bg-white/10' : '',
-      { 'ring-2 ring-mundial-green animate-pulse': match.status === 'live' },
+      { 'ring-2 ring-mundial-green/60': isLive },
     ]"
   >
     <div class="mb-2 flex items-center justify-between text-xs text-slate-400">
       <span>{{ phaseLabel(match.phase) }}</span>
       <span
-        v-if="match.status === 'live'"
+        v-if="isLive"
         class="inline-flex items-center gap-1 rounded-full bg-mundial-green px-2 py-0.5 font-semibold text-white"
       >
         <Radio class="h-3 w-3" />
@@ -54,29 +73,32 @@ function awayLabel(match: Match) {
 
     <div class="flex items-center justify-between gap-2 sm:gap-4">
       <div class="flex min-w-0 flex-1 items-center gap-2">
-        <img
+        <TeamFlag
           v-if="match.home_team?.flag_url"
           :src="match.home_team.flag_url"
           :alt="teamDisplayName(match.home_team, 'Local')"
-          class="h-6 w-8 shrink-0 object-cover"
+          img-class="h-6 w-8 shrink-0 object-cover"
         />
         <span class="truncate font-medium">{{ homeLabel(match) }}</span>
       </div>
 
-      <div class="shrink-0 px-1 text-lg font-bold tabular-nums sm:text-xl">
-        <template v-if="match.status !== 'scheduled'">
-          {{ match.home_score }} - {{ match.away_score }}
-        </template>
-        <template v-else>vs</template>
+      <div class="shrink-0 px-1 text-center">
+        <p class="text-lg font-bold tabular-nums sm:text-xl">
+          <template v-if="match.status !== 'scheduled'">
+            {{ match.home_score }} - {{ match.away_score }}
+          </template>
+          <template v-else>vs</template>
+        </p>
+        <LiveMatchPulse v-if="isLive" compact class="live-pulse-under-score live-pulse-under-score--compact" />
       </div>
 
       <div class="flex min-w-0 flex-1 items-center justify-end gap-2">
         <span class="truncate font-medium">{{ awayLabel(match) }}</span>
-        <img
+        <TeamFlag
           v-if="match.away_team?.flag_url"
           :src="match.away_team.flag_url"
           :alt="teamDisplayName(match.away_team, 'Visitante')"
-          class="h-6 w-8 shrink-0 object-cover"
+          img-class="h-6 w-8 shrink-0 object-cover"
         />
       </div>
     </div>
@@ -99,5 +121,14 @@ function awayLabel(match: Match) {
         <ChevronRight class="h-3.5 w-3.5" />
       </span>
     </div>
+
+    <MatchGoalsList
+      v-if="isLive && matchEvents.length"
+      :match="match"
+      :events="matchEvents"
+      compact
+      :max-items="4"
+      class="-mx-4 mt-3 lg:-mx-5"
+    />
   </component>
 </template>

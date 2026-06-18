@@ -12,6 +12,7 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
+    "flags:download": "node scripts/download-flags.mjs",
     "seed:generate": "node scripts/generate-group-seed.mjs && node scripts/generate-knockout-seed.mjs",
     "validate:espn": "node scripts/validate-espn-matches.mjs"
   },

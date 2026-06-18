@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { CheckCircle2, Info, Lock, XCircle } from '@lucide/vue'
+import BaseQuinielaMatchContext from '@/components/predictions/BaseQuinielaMatchContext.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import {
   BASE_QUINIELA_FILL_TIP,
@@ -10,6 +11,7 @@ import {
 import { BASE_WINNER_OPTIONS, isPredictionCorrect } from '@/lib/baseQuinielaDisplay'
 import { formatKickoff, isMatchOpenForPredictions } from '@/lib/matchRules'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseQuinielaRoundMatch, PredictedWinner } from '@/types'
 
@@ -220,21 +222,21 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
           </div>
 
           <div class="flex items-center gap-2">
-            <img
+            <TeamFlag
               v-if="row.match.home_team?.flag_url"
               :src="row.match.home_team.flag_url"
               :alt="teamDisplayName(row.match.home_team, 'Local')"
-              class="h-4 w-5 shrink-0 rounded object-cover"
+              img-class="h-4 w-5 shrink-0 rounded object-cover"
             />
             <span class="truncate font-medium text-slate-200">
               {{ teamDisplayName(row.match.home_team, 'Local') }}
             </span>
             <span class="text-slate-500">vs</span>
-            <img
+            <TeamFlag
               v-if="row.match.away_team?.flag_url"
               :src="row.match.away_team.flag_url"
               :alt="teamDisplayName(row.match.away_team, 'Visitante')"
-              class="h-4 w-5 shrink-0 rounded object-cover"
+              img-class="h-4 w-5 shrink-0 rounded object-cover"
             />
             <span class="truncate font-medium text-slate-200">
               {{ teamDisplayName(row.match.away_team, 'Visitante') }}
@@ -244,6 +246,8 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
           <p v-if="formatKickoff(row.match)" class="mt-1 text-xs text-slate-500">
             {{ formatKickoff(row.match) }}
           </p>
+
+          <BaseQuinielaMatchContext :match="row.match" class="mt-2" />
         </div>
 
         <div class="grid grid-cols-3 gap-2">
@@ -326,21 +330,21 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
             <td class="border border-white/10 px-3 py-2">
               <div v-if="row.match" class="min-w-0">
                 <div class="flex items-center gap-2">
-                  <img
+                  <TeamFlag
                     v-if="row.match.home_team?.flag_url"
                     :src="row.match.home_team.flag_url"
                     :alt="teamDisplayName(row.match.home_team, 'Local')"
-                    class="h-4 w-5 shrink-0 rounded object-cover"
+                    img-class="h-4 w-5 shrink-0 rounded object-cover"
                   />
                   <span class="truncate font-medium text-slate-200">
                     {{ teamDisplayName(row.match.home_team, 'Local') }}
                   </span>
                   <span class="text-slate-500">vs</span>
-                  <img
+                  <TeamFlag
                     v-if="row.match.away_team?.flag_url"
                     :src="row.match.away_team.flag_url"
                     :alt="teamDisplayName(row.match.away_team, 'Visitante')"
-                    class="h-4 w-5 shrink-0 rounded object-cover"
+                    img-class="h-4 w-5 shrink-0 rounded object-cover"
                   />
                   <span class="truncate font-medium text-slate-200">
                     {{ teamDisplayName(row.match.away_team, 'Visitante') }}
@@ -355,6 +359,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
                 <p v-if="formatKickoff(row.match)" class="mt-0.5 text-xs text-slate-500">
                   {{ formatKickoff(row.match) }}
                 </p>
+                <BaseQuinielaMatchContext :match="row.match" compact class="mt-2" />
               </div>
             </td>
             <td

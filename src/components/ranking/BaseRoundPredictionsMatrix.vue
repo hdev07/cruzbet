@@ -5,7 +5,9 @@ import {
   isPredictionCorrect,
   winnerCode,
 } from '@/lib/baseQuinielaDisplay'
+import { firstKickoffFromRoundMatches, hasRoundStarted } from '@/lib/baseQuinielaRound'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BasePrediction, BaseQuinielaRoundMatch, BaseRoundParticipant } from '@/types'
 
@@ -22,6 +24,10 @@ const error = ref('')
 
 const sortedMatches = computed(() =>
   [...props.roundMatches].sort((a, b) => a.position - b.position),
+)
+
+const roundStarted = computed(() =>
+  hasRoundStarted(firstKickoffFromRoundMatches(props.roundMatches)),
 )
 
 const predictionMap = computed(() => {
@@ -76,6 +82,10 @@ function getPick(userId: string, matchId: string): BasePrediction | undefined {
   return predictionMap.value.get(userId)?.get(matchId)
 }
 
+function canShowPlayerPicks(userId: string): boolean {
+  return roundStarted.value || userId === props.currentUserId
+}
+
 function cellClass(userId: string, match: BaseQuinielaRoundMatch): string {
   const pick = getPick(userId, match.match_id)
   const base =
@@ -83,7 +93,11 @@ function cellClass(userId: string, match: BaseQuinielaRoundMatch): string {
 
   if (!pick) return `${base} theme-cell-idle text-slate-600`
 
-  if (!match.match || match.match.status !== 'finished') {
+  if (!canShowPlayerPicks(userId)) {
+    return `${base} theme-cell-idle text-slate-500`
+  }
+
+  if (!roundStarted.value || !match.match || match.match.status !== 'finished') {
     return `${base} theme-cell-pending text-slate-300`
   }
 
@@ -94,7 +108,12 @@ function cellClass(userId: string, match: BaseQuinielaRoundMatch): string {
 }
 
 function rivalryLabel(userId: string, correctCount: number): string | null {
-  if (!props.currentUserId || userId === props.currentUserId || myCorrectCount.value == null) {
+  if (
+    !roundStarted.value ||
+    !props.currentUserId ||
+    userId === props.currentUserId ||
+    myCorrectCount.value == null
+  ) {
     return null
   }
   const diff = correctCount - myCorrectCount.value
@@ -108,10 +127,10 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
   const home = teamDisplayName(match.match.home_team, 'Local')
   const away = teamDisplayName(match.match.away_team, 'Visita')
   const score =
-    match.match.status !== 'scheduled'
+    roundStarted.value && match.match.status !== 'scheduled'
       ? ` (${match.match.home_score}-${match.match.away_score})`
       : ''
-  const result = actualMatchWinner(match.match)
+  const result = roundStarted.value ? actualMatchWinner(match.match) : null
   const resultText = result ? ` → ${winnerCode(result)}` : ''
   return `#${match.position}: ${home} vs ${away}${score}${resultText}`
 }
@@ -134,8 +153,15 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
 
     <template v-else>
       <p class="mb-3 text-xs text-slate-500">
-        Compara tus picks L/E/V con los demás. Verde = acierto, rojo = fallo.
-        <span v-if="currentUserId"> Tu fila está resaltada.</span>
+        <template v-if="roundStarted">
+          Compara tus picks L/E/V con los demás. Verde = acierto, rojo = fallo.
+          <span v-if="currentUserId"> Tu fila está resaltada.</span>
+        </template>
+        <template v-else>
+          Los pronósticos de los demás, los marcadores y los aciertos se mostrarán cuando empiece
+          el primer partido de la jornada. Solo ves tus picks hasta entonces.
+          <span v-if="currentUserId"> Tu fila está resaltada.</span>
+        </template>
       </p>
 
       <div class="theme-table-wrap">
@@ -153,18 +179,38 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
               <th
                 v-for="match in sortedMatches"
                 :key="`head-${match.match_id}`"
-                class="border border-white/10 px-1 py-2 text-center"
+                class="min-w-[2.75rem] border border-white/10 px-1 py-2 text-center"
                 :title="matchTooltip(match)"
               >
                 <span class="block font-bold tabular-nums text-slate-300">{{ match.position }}</span>
+                <div
+                  v-if="match.match"
+                  class="mx-auto mt-1 flex items-center justify-center gap-0.5"
+                >
+                  <TeamFlag
+                    v-if="match.match.home_team?.flag_url"
+                    :src="match.match.home_team.flag_url"
+                    :alt="teamDisplayName(match.match.home_team, 'Local')"
+                    img-class="h-3 w-4 shrink-0 rounded-sm object-cover"
+                  />
+                  <span v-else class="h-3 w-4 shrink-0 rounded-sm bg-white/10" />
+                  <span class="text-[0.5rem] text-slate-600">·</span>
+                  <TeamFlag
+                    v-if="match.match.away_team?.flag_url"
+                    :src="match.match.away_team.flag_url"
+                    :alt="teamDisplayName(match.match.away_team, 'Visitante')"
+                    img-class="h-3 w-4 shrink-0 rounded-sm object-cover"
+                  />
+                  <span v-else class="h-3 w-4 shrink-0 rounded-sm bg-white/10" />
+                </div>
                 <span
-                  v-if="match.match && match.match.status !== 'scheduled'"
+                  v-if="roundStarted && match.match && match.match.status !== 'scheduled'"
                   class="mt-0.5 block text-[0.6rem] font-semibold tabular-nums text-mundial-accent"
                 >
                   {{ match.match.home_score }}-{{ match.match.away_score }}
                 </span>
                 <span
-                  v-if="match.match && actualMatchWinner(match.match)"
+                  v-if="roundStarted && match.match && actualMatchWinner(match.match)"
                   class="mt-0.5 block text-[0.65rem] font-bold text-mundial-green"
                 >
                   {{ winnerCode(actualMatchWinner(match.match)!) }}
@@ -235,24 +281,30 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                 <span
                   v-if="getPick(player.user_id, match.match_id)"
                   :class="cellClass(player.user_id, match)"
-                  :title="matchTooltip(match)"
+                  :title="canShowPlayerPicks(player.user_id) ? matchTooltip(match) : undefined"
                 >
-                  {{ winnerCode(getPick(player.user_id, match.match_id)!.predicted_winner) }}
+                  <template v-if="canShowPlayerPicks(player.user_id)">
+                    {{ winnerCode(getPick(player.user_id, match.match_id)!.predicted_winner) }}
+                  </template>
+                  <template v-else>?</template>
                 </span>
                 <span v-else class="text-xs text-slate-600">—</span>
               </td>
               <td class="border border-white/10 px-2 py-2 text-center">
-                <span class="font-bold tabular-nums text-mundial-accent">
-                  {{ player.correct_count }}
-                </span>
-                <span class="block text-[0.65rem] text-slate-500">{{ player.total_points }} pts</span>
+                <template v-if="roundStarted">
+                  <span class="font-bold tabular-nums text-mundial-accent">
+                    {{ player.correct_count }}
+                  </span>
+                  <span class="block text-[0.65rem] text-slate-500">{{ player.total_points }} pts</span>
+                </template>
+                <span v-else class="text-xs text-slate-600">—</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="mt-3 flex flex-wrap gap-3 text-[0.65rem] text-slate-500">
+      <div v-if="roundStarted" class="mt-3 flex flex-wrap gap-3 text-[0.65rem] text-slate-500">
         <span class="inline-flex items-center gap-1">
           <span class="h-3 w-3 rounded bg-mundial-green/25" />
           Acierto

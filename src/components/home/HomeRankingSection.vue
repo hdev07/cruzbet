@@ -54,7 +54,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
           Clasificación
         </p>
         <h2 class="mt-1 text-lg font-bold text-app-text">
-          Posiciones
+          Top 5
           <span v-if="baseStore.activeRound" class="font-normal text-slate-400">
             · {{ baseStore.activeRound.title }}
           </span>
@@ -80,6 +80,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
       :loading="loading"
       compact
       standings-only
+      :max-rows="5"
     />
   </section>
 </template>

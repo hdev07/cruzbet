@@ -42,6 +42,21 @@ export function resolveActiveBaseRound(
   return active
 }
 
+export function firstKickoffFromRoundMatches(
+  matches: { match?: { match_date: string | null } | null }[],
+): number | null {
+  let min: number | null = null
+
+  for (const row of matches) {
+    const date = row.match?.match_date
+    if (!date) continue
+    const ms = new Date(date).getTime()
+    if (min == null || ms < min) min = ms
+  }
+
+  return min
+}
+
 export function buildFirstKickoffByRoundId(
   rows: { round_id: string; match: { match_date: string | null } | null }[],
 ): Record<string, number | null> {

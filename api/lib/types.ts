@@ -1,5 +1,7 @@
 export type MatchStatus = 'scheduled' | 'live' | 'finished'
 
+export type ParsedGoalType = 'foot' | 'penalty' | 'own_goal' | 'header' | 'free_kick'
+
 export interface ParsedGoal {
   sync_key: string
   team_side: 'home' | 'away'
@@ -7,6 +9,7 @@ export interface ParsedGoal {
   extra_time: number
   event_second: number
   player: string | null
+  goal_type: ParsedGoalType
   source: string
 }
 

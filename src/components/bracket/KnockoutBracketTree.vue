@@ -7,6 +7,7 @@ import {
 } from '@/lib/knockoutBracket'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 import type { Match } from '@/types'
 
 defineProps<{
@@ -88,11 +89,11 @@ function formatDate(iso: string | null | undefined): string {
               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"
               :class="isWinner(match, 'home') ? 'bg-mundial-accent/15 font-semibold' : ''"
             >
-              <img
+              <TeamFlag
                 v-if="sideFlag(match, 'home')"
-                :src="sideFlag(match, 'home')!"
+                :src="sideFlag(match, 'home')"
                 :alt="sideLabel(match, 'home')"
-                class="h-4 w-5 shrink-0 object-cover"
+                img-class="h-4 w-5 shrink-0 object-cover"
               />
               <span
                 class="min-w-0 flex-1 truncate"
@@ -112,11 +113,11 @@ function formatDate(iso: string | null | undefined): string {
               class="mt-1 flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"
               :class="isWinner(match, 'away') ? 'bg-mundial-accent/15 font-semibold' : ''"
             >
-              <img
+              <TeamFlag
                 v-if="sideFlag(match, 'away')"
-                :src="sideFlag(match, 'away')!"
+                :src="sideFlag(match, 'away')"
                 :alt="sideLabel(match, 'away')"
-                class="h-4 w-5 shrink-0 object-cover"
+                img-class="h-4 w-5 shrink-0 object-cover"
               />
               <span
                 class="min-w-0 flex-1 truncate"

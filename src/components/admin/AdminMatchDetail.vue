@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { formatMatchClock } from '@/lib/matchClock'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 import AdminPaymentVerification from '@/components/admin/AdminPaymentVerification.vue'
 import QuinielaControl from '@/components/admin/QuinielaControl.vue'
 import type { Match } from '@/types'
@@ -45,11 +46,11 @@ function formatDate() {
       :class="mobile ? 'mx-0 rounded-none border-x-0' : ''"
     >
       <div class="flex flex-wrap items-center justify-center gap-2 text-center">
-        <img
+        <TeamFlag
           v-if="match.home_team?.flag_url"
           :src="match.home_team.flag_url"
-          alt=""
-          class="h-7 w-10 rounded-sm object-cover"
+          :alt="teamDisplayName(match.home_team, 'Local')"
+          img-class="h-7 w-10 rounded-sm object-cover"
         />
         <span class="text-base font-bold text-slate-100">
           {{ teamDisplayName(match.home_team, 'Local') }}
@@ -63,11 +64,11 @@ function formatDate() {
         <span class="text-base font-bold text-slate-100">
           {{ teamDisplayName(match.away_team, 'Visita') }}
         </span>
-        <img
+        <TeamFlag
           v-if="match.away_team?.flag_url"
           :src="match.away_team.flag_url"
-          alt=""
-          class="h-7 w-10 rounded-sm object-cover"
+          :alt="teamDisplayName(match.away_team, 'Visitante')"
+          img-class="h-7 w-10 rounded-sm object-cover"
         />
       </div>
       <div class="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs">

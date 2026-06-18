@@ -3,7 +3,7 @@ import {
   mergeLiveClock,
   parseClockDisplay,
 } from './clock.js'
-import type { DbMatchRow, LiveMatchSnapshot, ParsedGoal } from './types.js'
+import type { DbMatchRow, LiveMatchSnapshot, ParsedGoal, ParsedGoalType } from './types.js'
 
 const ESPN_SCOREBOARD =
   'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
@@ -44,6 +44,8 @@ interface EspnEvent {
 interface EspnKeyEvent {
   id: string
   type: { text?: string; type?: string }
+  text?: string
+  shortText?: string
   scoringPlay?: boolean
   clock?: { displayValue?: string }
   team?: { id: string }
@@ -127,6 +129,25 @@ function isGoalEvent(event: EspnKeyEvent): boolean {
   return event.scoringPlay === true || /goal/i.test(type)
 }
 
+function mapEspnGoalType(event: EspnKeyEvent): ParsedGoalType {
+  const type = (event.type?.type ?? event.type?.text ?? '').toLowerCase()
+  const text = (event.text ?? event.shortText ?? '').toLowerCase()
+
+  if (/own.?goal|autogol|own goal/i.test(type) || /own goal|autogol/i.test(text)) {
+    return 'own_goal'
+  }
+  if (/penalty/i.test(type) || /penalt/i.test(text)) {
+    return 'penalty'
+  }
+  if (/header|cabez/i.test(type) || /header|cabez/i.test(text)) {
+    return 'header'
+  }
+  if (/free.?kick|tiro libre/i.test(type) || /free kick|tiro libre/i.test(text)) {
+    return 'free_kick'
+  }
+  return 'foot'
+}
+
 function parseGoalsFromKeyEvents(
   keyEvents: EspnKeyEvent[] | undefined,
   homeTeamId: string | undefined,
@@ -142,6 +163,7 @@ function parseGoalsFromKeyEvents(
       extra_time: parsed.extra_time,
       event_second: 0,
       player,
+      goal_type: mapEspnGoalType(goal),
       source: 'espn',
     }
   })

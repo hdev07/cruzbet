@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { teamDisplayName } from '@/lib/teamDisplay'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 import type { GroupStandingRow } from '@/types'
 
 defineProps<{
@@ -60,11 +61,11 @@ function rowZone(position: number): 'qualified' | 'third' | 'out' | null {
           </td>
           <td class="px-2 py-2.5 sm:px-3">
             <div class="flex min-w-0 items-center gap-2">
-              <img
+              <TeamFlag
                 v-if="row.team.flag_url"
                 :src="row.team.flag_url"
                 :alt="teamDisplayName(row.team)"
-                class="h-5 w-7 shrink-0 object-cover"
+                img-class="h-5 w-7 shrink-0 object-cover"
               />
               <span class="truncate font-medium" :class="{ 'max-w-[5rem] sm:max-w-none': compact }">
                 {{ teamDisplayName(row.team) }}

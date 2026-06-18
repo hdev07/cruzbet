@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Grid3x3, LayoutGrid, Trophy, User } from '@lucide/vue'
 import HomeLandingRules from '@/components/home/HomeLandingRules.vue'
+import HomeMyQuinielaSection from '@/components/home/HomeMyQuinielaSection.vue'
 import HomeNextMatchSection from '@/components/home/HomeNextMatchSection.vue'
 import HomeRankingSection from '@/components/home/HomeRankingSection.vue'
 import {
@@ -56,6 +57,8 @@ const quickLinks = [
         {{ subtitle }}
       </p>
     </header>
+
+    <HomeMyQuinielaSection />
 
     <HomeNextMatchSection />
 

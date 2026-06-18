@@ -12,6 +12,7 @@ import {
   PREDICTIONS_REQUIRED_NOTICE,
 } from '@/constants/quiniela-rules'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 import {
   FIRST_HALF_EXTRA,
   FIRST_HALF_REGULAR,
@@ -594,11 +595,11 @@ function winnerCellClass(winner: PredictedWinner): string {
                   :disabled="predictionStore.saving"
                   @click="selectWinner(col.key)"
                 >
-                  <img
+                  <TeamFlag
                     v-if="col.flag"
                     :src="col.flag"
                     :alt="col.label"
-                    class="mx-auto mb-1 h-6 w-8 rounded object-cover"
+                    img-class="mx-auto mb-1 h-6 w-8 rounded object-cover"
                   />
                   <span v-else class="mb-1 block text-2xl">🤝</span>
                   <span class="block text-xs font-semibold">

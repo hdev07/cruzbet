@@ -6,6 +6,7 @@ import { createPinia } from 'pinia'
 import { registerSW } from 'virtual:pwa-register'
 
 import App from './App.vue'
+import { dismissAppSplash } from './lib/appSplash'
 import {
   clearStaleChunkReloadFlag,
   reloadForStaleChunks,
@@ -44,3 +45,4 @@ const auth = useAuthStore()
 await auth.init()
 
 app.mount('#app')
+dismissAppSplash()

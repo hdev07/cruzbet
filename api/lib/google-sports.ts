@@ -75,6 +75,7 @@ function parseGoogleSportsHtml(html: string): LiveMatchSnapshot | null {
       extra_time: parsed.extra_time,
       event_second: 0,
       player,
+      goal_type: 'foot',
       source: 'google',
     })
   }

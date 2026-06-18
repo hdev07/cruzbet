@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Clock, Radio } from '@lucide/vue'
+import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
+import MatchGoalsList from '@/components/shared/MatchGoalsList.vue'
 import { formatLiveStatusLabel } from '@/lib/matchClock'
 import { formatKickoff } from '@/lib/matchRules'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
+import { useMatchStore } from '@/stores/matchStore'
 import type { Match } from '@/types'
 
 const props = defineProps<{
@@ -12,10 +16,15 @@ const props = defineProps<{
   isLive: boolean
 }>()
 
+const matchStore = useMatchStore()
+
 const now = ref(Date.now())
 let timer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
+  if (props.isLive) {
+    void matchStore.fetchEvents(props.match.id)
+  }
   const intervalMs =
     props.match.match_date && !props.isLive ? 1_000 : 30_000
   timer = setInterval(() => {
@@ -23,9 +32,18 @@ onMounted(() => {
   }, intervalMs)
 })
 
+watch(
+  () => props.isLive,
+  (live) => {
+    if (live) void matchStore.fetchEvents(props.match.id)
+  },
+)
+
 onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
+
+const matchEvents = computed(() => matchStore.getEventsForMatch(props.match.id))
 
 const kickoffLabel = computed(() => formatKickoff(props.match))
 
@@ -48,7 +66,7 @@ const countdown = computed(() => {
 
 <template>
   <div
-    class="overflow-hidden rounded-2xl border-2"
+    class="relative overflow-hidden rounded-2xl border-2"
     :class="
       isLive
         ? 'border-mundial-green/60 bg-gradient-to-br from-mundial-green/20 via-mundial-green/5 to-transparent ring-1 ring-mundial-green/30'
@@ -61,7 +79,7 @@ const countdown = computed(() => {
           v-if="isLive"
           class="inline-flex items-center gap-1.5 rounded-full bg-mundial-green px-2.5 py-0.5 text-xs font-bold text-white"
         >
-          <Radio class="h-3 w-3 animate-pulse" />
+          <Radio class="h-3 w-3" />
           {{ formatLiveStatusLabel(match) }}
         </span>
         <span
@@ -83,11 +101,11 @@ const countdown = computed(() => {
     <div class="px-4 py-5 sm:px-6 sm:py-6">
       <div class="flex items-center justify-between gap-3 sm:gap-6">
         <div class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
-          <img
+          <TeamFlag
             v-if="match.home_team?.flag_url"
             :src="match.home_team.flag_url"
             :alt="teamDisplayName(match.home_team, 'Local')"
-            class="h-12 w-16 object-cover shadow-md sm:h-14 sm:w-20"
+            img-class="h-12 w-16 object-cover shadow-md sm:h-14 sm:w-20"
           />
           <span class="w-full truncate text-sm font-semibold sm:text-base">
             {{ teamDisplayName(match.home_team, 'Local') }}
@@ -104,17 +122,18 @@ const countdown = computed(() => {
             {{ match.away_score }}
           </p>
           <p v-else class="text-2xl font-bold text-slate-500 sm:text-3xl">VS</p>
+          <LiveMatchPulse v-if="isLive" class="live-pulse-under-score" />
           <p v-if="kickoffLabel && !isLive" class="mt-1 text-[11px] text-slate-500 sm:text-xs">
             {{ kickoffLabel }}
           </p>
         </div>
 
         <div class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
-          <img
+          <TeamFlag
             v-if="match.away_team?.flag_url"
             :src="match.away_team.flag_url"
             :alt="teamDisplayName(match.away_team, 'Visitante')"
-            class="h-12 w-16 object-cover shadow-md sm:h-14 sm:w-20"
+            img-class="h-12 w-16 object-cover shadow-md sm:h-14 sm:w-20"
           />
           <span class="w-full truncate text-sm font-semibold sm:text-base">
             {{ teamDisplayName(match.away_team, 'Visitante') }}
@@ -126,5 +145,11 @@ const countdown = computed(() => {
         {{ match.venue }}
       </p>
     </div>
+
+    <MatchGoalsList
+      v-if="isLive || match.status === 'finished'"
+      :match="match"
+      :events="matchEvents"
+    />
   </div>
 </template>

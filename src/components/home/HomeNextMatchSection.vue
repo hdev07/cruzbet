@@ -9,6 +9,12 @@ import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import { useMatchStore } from '@/stores/matchStore'
+import type { Match } from '@/types'
+
+function matchSortTime(match: Match): number {
+  const date = match.match_date ?? match.created_at
+  return date ? new Date(date).getTime() : 0
+}
 
 const matchStore = useMatchStore()
 const baseStore = useBaseQuinielaStore()
@@ -50,6 +56,17 @@ const upcomingMatches = computed(() =>
     .slice(0, 3),
 )
 
+const recentFinishedMatches = computed(() =>
+  matchStore.matches
+    .filter((m) => m.status === 'finished')
+    .sort((a, b) => matchSortTime(b) - matchSortTime(a))
+    .slice(0, 3),
+)
+
+const hasMatchContent = computed(
+  () => !!spotlightMatch.value || recentFinishedMatches.value.length > 0,
+)
+
 const activeRoundHref = computed(() =>
   baseStore.activeRound ? `/jornadas/${baseStore.activeRound.id}` : JORNADAS_PATH,
 )
@@ -64,8 +81,8 @@ const loading = computed(() => !matchStore.matches.length && matchStore.loading)
       <div class="h-44 animate-pulse rounded-2xl bg-white/5" />
     </div>
 
-    <template v-else-if="spotlightMatch">
-      <div class="p-4 sm:p-5">
+    <template v-else-if="hasMatchContent">
+      <div v-if="spotlightMatch" class="p-4 sm:p-5">
         <HomeSpotlightMatch :match="spotlightMatch" :is-live="spotlightIsLive" />
 
         <div v-if="otherLiveMatches.length" class="mt-3 flex flex-wrap gap-2">
@@ -95,6 +112,30 @@ const loading = computed(() => !matchStore.matches.length && matchStore.loading)
             :key="match.id"
             :match="match"
             :linkable="false"
+          />
+        </div>
+      </div>
+
+      <div
+        v-if="recentFinishedMatches.length"
+        class="border-t border-white/10 px-4 py-4 sm:px-5"
+      >
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            {{ recentFinishedMatches.length === 1 ? 'Último resultado' : 'Últimos resultados' }}
+          </p>
+          <RouterLink
+            :to="MUNDIAL_PATH"
+            class="text-xs font-medium text-mundial-accent transition hover:text-mundial-accent/80"
+          >
+            Ver más
+          </RouterLink>
+        </div>
+        <div class="space-y-2">
+          <MatchCard
+            v-for="match in recentFinishedMatches"
+            :key="match.id"
+            :match="match"
           />
         </div>
       </div>

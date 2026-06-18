@@ -1,4 +1,4 @@
-import type { BasePrediction } from '@/types'
+import type { BasePrediction, BaseRoundLeaderboardEntry } from '@/types'
 
 export interface BasePredictionSummary {
   picks_count: number
@@ -35,4 +35,36 @@ export function formatRoundScoreSummary(summary: BasePredictionSummary): string 
     return `${summary.correct_count} aciertos · ${summary.total_points} pts · ${summary.pending_count} pend.`
   }
   return `${summary.correct_count} aciertos · ${summary.total_points} pts`
+}
+
+export interface LeaderboardNeighbors {
+  position: number | null
+  above: BaseRoundLeaderboardEntry | null
+  me: BaseRoundLeaderboardEntry | null
+  below: BaseRoundLeaderboardEntry | null
+}
+
+export function getLeaderboardNeighbors(
+  leaderboard: BaseRoundLeaderboardEntry[],
+  userId: string,
+): LeaderboardNeighbors {
+  const idx = leaderboard.findIndex((e) => e.user_id === userId)
+  if (idx < 0) {
+    return { position: null, above: null, me: null, below: null }
+  }
+  return {
+    position: idx + 1,
+    above: idx > 0 ? leaderboard[idx - 1]! : null,
+    me: leaderboard[idx]!,
+    below: idx < leaderboard.length - 1 ? leaderboard[idx + 1]! : null,
+  }
+}
+
+export function aciertosDiffLabel(myCorrect: number, otherCorrect: number): string {
+  const diff = otherCorrect - myCorrect
+  if (diff === 0) return 'Empatado'
+  if (diff === 1) return '+1 acierto'
+  if (diff === -1) return '−1 acierto'
+  if (diff > 0) return `+${diff} aciertos`
+  return `${diff} aciertos`
 }

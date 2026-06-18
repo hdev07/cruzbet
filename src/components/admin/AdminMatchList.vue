@@ -4,6 +4,7 @@ import { Radio, Users } from '@lucide/vue'
 import { formatMatchClock } from '@/lib/matchClock'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchStatus } from '@/types'
 
@@ -145,11 +146,11 @@ function formatDate(match: Match) {
           </div>
 
           <div class="flex items-center gap-2">
-            <img
+            <TeamFlag
               v-if="match.home_team?.flag_url"
               :src="match.home_team.flag_url"
               :alt="teamDisplayName(match.home_team, 'Local')"
-              class="h-6 w-8 shrink-0 rounded-sm object-cover md:h-5 md:w-7"
+              img-class="h-6 w-8 shrink-0 rounded-sm object-cover md:h-5 md:w-7"
             />
             <span class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-200 md:text-xs">
               {{ teamDisplayName(match.home_team, 'Local') }}
@@ -163,11 +164,11 @@ function formatDate(match: Match) {
             <span class="min-w-0 flex-1 truncate text-right text-sm font-semibold text-slate-200 md:text-xs">
               {{ teamDisplayName(match.away_team, 'Visitante') }}
             </span>
-            <img
+            <TeamFlag
               v-if="match.away_team?.flag_url"
               :src="match.away_team.flag_url"
               :alt="teamDisplayName(match.away_team, 'Visitante')"
-              class="h-5 w-7 shrink-0 rounded-sm object-cover"
+              img-class="h-5 w-7 shrink-0 rounded-sm object-cover"
             />
           </div>
 
