@@ -36,7 +36,11 @@ async function startAppRealtime() {
   const baseStore = useBaseQuinielaStore()
   const auth = useAuthStore()
 
-  await Promise.all([matchStore.fetchMatches(), matchStore.fetchLiveMatches()])
+  await Promise.all([
+    matchStore.fetchMatches(),
+    matchStore.fetchLiveMatches(),
+    standingsStore.fetchStandingsData(),
+  ])
   standingsStore.refreshFromMatches(matchStore.matches)
 
   channel = supabase
@@ -81,10 +85,7 @@ async function startAppRealtime() {
       (payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>) => {
         const event = payload.new as MatchEvent
         matchStore.addEvent(event)
-
-        scheduleStandingsRefresh(() => {
-          standingsStore.refreshFromMatches(matchStore.matches)
-        })
+        // El marcador llega con el UPDATE de matches (trigger sync_match_score_from_goals).
         scheduleRankingRefresh(() => {
           void rankingStore.fetchGlobalRanking()
         })
@@ -100,10 +101,6 @@ async function startAppRealtime() {
         const event = payload.old as MatchEvent
         if (!event?.id || !event?.match_id) return
         matchStore.removeEvent(event.id, event.match_id)
-
-        scheduleStandingsRefresh(() => {
-          standingsStore.refreshFromMatches(matchStore.matches)
-        })
         scheduleRankingRefresh(() => {
           void rankingStore.fetchGlobalRanking()
         })

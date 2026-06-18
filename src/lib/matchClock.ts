@@ -1,5 +1,44 @@
 import type { Match } from '@/types'
 
+function matchPatchTimestamp(match: Pick<Match, 'live_sync_at' | 'created_at'>): number {
+  if (match.live_sync_at) return Date.parse(match.live_sync_at)
+  if (match.created_at) return Date.parse(match.created_at)
+  return 0
+}
+
+/**
+ * Fusiona un partido para tablas de posiciones sin que datos viejos pisen marcadores nuevos.
+ * Usa live_sync_at cuando existe; si no, conserva el marcador con más goles (sync en curso).
+ */
+export function mergeStandingsMatchPatch(existing: Match, patch: Match): Match {
+  const existingTs = matchPatchTimestamp(existing)
+  const patchTs = matchPatchTimestamp(patch)
+
+  if (patchTs > 0 && existingTs > 0) {
+    if (patchTs < existingTs) {
+      return mergeLiveClockPatch(existing, {
+        ...patch,
+        home_score: existing.home_score,
+        away_score: existing.away_score,
+        status: existing.status,
+      })
+    }
+    return mergeLiveClockPatch(existing, patch)
+  }
+
+  const existingGoals = existing.home_score + existing.away_score
+  const patchGoals = patch.home_score + patch.away_score
+  if (patchGoals < existingGoals && existing.status === 'live') {
+    return mergeLiveClockPatch(existing, {
+      ...patch,
+      home_score: existing.home_score,
+      away_score: existing.away_score,
+    })
+  }
+
+  return mergeLiveClockPatch(existing, patch)
+}
+
 /** Evita que un patch realtime retroceda el reloj (ej. 90+2 → 73). */
 export function mergeLiveClockPatch(existing: Match, patch: Partial<Match>): Match {
   if (patch.live_clock_display === 'HT' || patch.live_clock_display === 'FT') {

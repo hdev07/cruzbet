@@ -18,7 +18,7 @@ set search_path = public
 as $$
 declare
   m record;
-  g jsonb;
+  goal_item jsonb;
   home_id uuid;
   away_id uuid;
   team_id uuid;
@@ -95,21 +95,21 @@ begin
     where id = p_match_id;
   end if;
 
-  select coalesce(array_agg(distinct g ->> 'sync_key'), '{}'::text[])
+  select coalesce(array_agg(distinct goal_row ->> 'sync_key'), '{}'::text[])
   into incoming_sync_keys
-  from jsonb_array_elements(coalesce(p_goals, '[]'::jsonb)) g
-  where g ->> 'sync_key' is not null;
+  from jsonb_array_elements(coalesce(p_goals, '[]'::jsonb)) goal_row
+  where goal_row ->> 'sync_key' is not null;
 
-  for g in select * from jsonb_array_elements(coalesce(p_goals, '[]'::jsonb))
+  for goal_item in select * from jsonb_array_elements(coalesce(p_goals, '[]'::jsonb))
   loop
     if not exists (
       select 1 from match_events
       where match_id = p_match_id
         and event_type = 'goal'
-        and metadata ->> 'sync_key' = g ->> 'sync_key'
+        and metadata ->> 'sync_key' = goal_item ->> 'sync_key'
     ) then
       team_id := case
-        when g ->> 'team_side' = 'home' then home_id
+        when goal_item ->> 'team_side' = 'home' then home_id
         else away_id
       end;
 
@@ -125,14 +125,14 @@ begin
         p_match_id,
         team_id,
         'goal',
-        coalesce((g ->> 'minute')::integer, 1),
-        coalesce((g ->> 'extra_time')::integer, 0),
-        coalesce((g ->> 'event_second')::integer, 0),
+        coalesce((goal_item ->> 'minute')::integer, 1),
+        coalesce((goal_item ->> 'extra_time')::integer, 0),
+        coalesce((goal_item ->> 'event_second')::integer, 0),
         jsonb_build_object(
-          'type', coalesce(g ->> 'goal_type', 'foot'),
-          'sync_key', g ->> 'sync_key',
-          'player', g ->> 'player',
-          'source', coalesce(g ->> 'source', 'live_sync')
+          'type', coalesce(goal_item ->> 'goal_type', 'foot'),
+          'sync_key', goal_item ->> 'sync_key',
+          'player', goal_item ->> 'player',
+          'source', coalesce(goal_item ->> 'source', 'live_sync')
         )
       );
       inserted_goals := inserted_goals + 1;

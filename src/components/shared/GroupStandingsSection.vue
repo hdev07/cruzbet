@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ChevronRight } from '@lucide/vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
 import { GRUPOS_PATH } from '@/constants/nav'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
-import { useMatchStore } from '@/stores/matchStore'
 
 withDefaults(
   defineProps<{
@@ -23,21 +22,12 @@ withDefaults(
 )
 
 const standingsStore = useGroupStandingsStore()
-const matchStore = useMatchStore()
 
 onMounted(() => {
   if (!standingsStore.teams.length) {
     void standingsStore.fetchStandingsData()
   }
 })
-
-watch(
-  () => matchStore.matches,
-  (matches) => {
-    if (matches.length) standingsStore.refreshFromMatches(matches)
-  },
-  { deep: true },
-)
 </script>
 
 <template>

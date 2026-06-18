@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { mergeLiveClockPatch } from '@/lib/matchClock'
+import { mergeStandingsMatchPatch } from '@/lib/matchClock'
 import { allGroupLetters, computeGroupStandings } from '@/lib/groupStandings'
 import { supabase } from '@/lib/supabase'
 import type { GroupStandings, Match, Team } from '@/types'
@@ -56,16 +56,33 @@ export const useGroupStandingsStore = defineStore('groupStandings', () => {
     selectedGroup.value = group.toUpperCase()
   }
 
+  function isStandingMatch(match: Match): boolean {
+    return match.phase === 'group' && (match.status === 'finished' || match.status === 'live')
+  }
+
+  /** Fusiona partidos de grupo sin reemplazar toda la lista (evita carreras al cargar). */
   function refreshFromMatches(matches: Match[]) {
-    groupMatches.value = matches.filter(
-      (m) => m.phase === 'group' && (m.status === 'finished' || m.status === 'live'),
+    const incoming = matches.filter(isStandingMatch)
+    const removedIds = new Set(
+      matches
+        .filter((m) => m.phase === 'group' && !isStandingMatch(m))
+        .map((m) => m.id),
     )
+
+    const byId = new Map(groupMatches.value.map((m) => [m.id, m]))
+
+    for (const match of incoming) {
+      const existing = byId.get(match.id)
+      byId.set(match.id, existing ? mergeStandingsMatchPatch(existing, match) : match)
+    }
+
+    groupMatches.value = [...byId.values()].filter((m) => !removedIds.has(m.id))
   }
 
   function patchMatch(match: Match) {
     if (match.phase !== 'group') return
 
-    if (match.status !== 'finished' && match.status !== 'live') {
+    if (!isStandingMatch(match)) {
       groupMatches.value = groupMatches.value.filter((m) => m.id !== match.id)
       return
     }
@@ -73,7 +90,7 @@ export const useGroupStandingsStore = defineStore('groupStandings', () => {
     const existing = groupMatches.value.find((m) => m.id === match.id)
     if (existing) {
       const idx = groupMatches.value.findIndex((m) => m.id === match.id)
-      groupMatches.value[idx] = mergeLiveClockPatch(existing, match)
+      groupMatches.value[idx] = mergeStandingsMatchPatch(existing, match)
       return
     }
 

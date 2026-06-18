@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Calendar, ChevronRight, GitBranch, Goal, Grid3x3, LayoutGrid, Radio } from '@lucide/vue'
 import GroupStandingsMiniCard from '@/components/home/GroupStandingsMiniCard.vue'
@@ -28,14 +28,6 @@ onMounted(async () => {
     await standingsStore.fetchStandingsData()
   }
 })
-
-watch(
-  () => matchStore.matches,
-  (matches) => {
-    if (matches.length) standingsStore.refreshFromMatches(matches)
-  },
-  { deep: true },
-)
 
 const liveMatches = computed(() => matchStore.liveMatches)
 

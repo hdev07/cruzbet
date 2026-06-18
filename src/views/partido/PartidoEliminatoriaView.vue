@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ArrowLeft, GitBranch, Lock } from '@lucide/vue'
 import KnockoutBracketTree from '@/components/bracket/KnockoutBracketTree.vue'
@@ -20,14 +20,6 @@ onMounted(async () => {
   if (!matchStore.matches.length) await matchStore.fetchMatches()
   if (!standingsStore.teams.length) await standingsStore.fetchStandingsData()
 })
-
-watch(
-  () => matchStore.matches,
-  (matches) => {
-    if (matches.length) standingsStore.refreshFromMatches(matches)
-  },
-  { deep: true },
-)
 
 const progress = computed(() =>
   groupStageProgress(standingsStore.teams, matchStore.matches),
