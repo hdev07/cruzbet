@@ -494,6 +494,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     queryRoundLeaderboard,
     fetchAllRoundResults,
     fetchMyLeaderboardEntry,
+    fetchRoundParticipantCount,
     refreshLeaderboardForMatch,
     patchRoundMatch,
     fetchUserHistory,

@@ -1,19 +1,70 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight } from '@lucide/vue'
+import { ChevronRight, Crown, Target, Trophy, Users } from '@lucide/vue'
 import BaseRoundRankingPanel from '@/components/ranking/BaseRoundRankingPanel.vue'
+import {
+  BASE_ENTRY_FEE_MXN,
+  BASE_QUINIELA_LOGIC,
+  BASE_QUINIELA_MATCHES_PER_ROUND,
+  BASE_QUINIELA_POINTS_PER_HIT,
+} from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
+import type { BaseRoundLeaderboardEntry } from '@/types'
 
 const auth = useAuthStore()
 const baseStore = useBaseQuinielaStore()
 const loadError = ref<string | null>(null)
 const roundLoading = ref(false)
 const selectedRoundId = ref<string | null>(null)
+const participantCount = ref(0)
+const myLeaderboardEntry = ref<BaseRoundLeaderboardEntry | null>(null)
 let loadSeq = 0
 
 const activeRoundId = computed(() => selectedRoundId.value ?? baseStore.activeRound?.id ?? null)
+
+const selectedRound = computed(
+  () =>
+    baseStore.rounds.find((r) => r.id === activeRoundId.value) ??
+    (baseStore.currentRound?.id === activeRoundId.value ? baseStore.currentRound : null),
+)
+
+const isRoundActive = computed(() => activeRoundId.value === baseStore.activeRound?.id)
+
+const matchStats = computed(() => {
+  const matches = baseStore.roundMatches
+  const total =
+    matches.length ||
+    selectedRound.value?.match_count ||
+    BASE_QUINIELA_MATCHES_PER_ROUND
+  const finished = matches.filter((rm) => rm.match?.status === 'finished').length
+  const live = matches.filter((rm) => rm.match?.status === 'live').length
+  return { total, finished, live, pending: Math.max(0, total - finished - live) }
+})
+
+const isRoundFinished = computed(
+  () => matchStats.value.total > 0 && matchStats.value.finished === matchStats.value.total,
+)
+
+const leader = computed(() => baseStore.leaderboard[0] ?? null)
+
+const myRank = computed(() => {
+  if (!auth.user) return null
+  const index = baseStore.leaderboard.findIndex((e) => e.user_id === auth.user!.id)
+  return index >= 0 ? index + 1 : null
+})
+
+const myDisplayedEntry = computed(
+  () =>
+    myLeaderboardEntry.value ??
+    (auth.user
+      ? baseStore.leaderboard.find((e) => e.user_id === auth.user!.id) ?? null
+      : null),
+)
+
+const progress = computed(() => baseStore.myProgress())
+const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
 
 async function loadRoundData(roundId: string) {
   const seq = ++loadSeq
@@ -23,11 +74,22 @@ async function loadRoundData(roundId: string) {
     await baseStore.fetchRound(roundId)
     if (seq !== loadSeq) return
 
-    await baseStore.fetchRoundLeaderboard(roundId)
+    const [count, entry] = await Promise.all([
+      baseStore.fetchRoundParticipantCount(roundId),
+      auth.user
+        ? baseStore.fetchMyLeaderboardEntry(roundId, auth.user.id)
+        : Promise.resolve(null),
+      baseStore.fetchRoundLeaderboard(roundId),
+    ] as const)
     if (seq !== loadSeq) return
+
+    participantCount.value = count
+    myLeaderboardEntry.value = entry ?? null
 
     if (auth.user) {
       await baseStore.fetchMyPredictions(roundId, auth.user.id)
+    } else {
+      myLeaderboardEntry.value = null
     }
   } catch (err) {
     if (seq !== loadSeq) return
@@ -41,8 +103,9 @@ onMounted(async () => {
   loadError.value = null
   try {
     await baseStore.fetchRounds()
-    if (!selectedRoundId.value && baseStore.activeRound) {
-      selectedRoundId.value = baseStore.activeRound.id
+    if (!selectedRoundId.value) {
+      selectedRoundId.value =
+        baseStore.activeRound?.id ?? baseStore.rounds[0]?.id ?? null
     }
     if (activeRoundId.value) {
       await loadRoundData(activeRoundId.value)
@@ -84,29 +147,205 @@ watch(activeRoundId, (roundId, prevRoundId) => {
     </div>
 
     <template v-else>
-      <label v-if="baseStore.rounds.length > 1" class="mb-6 block max-w-sm">
-        <span class="mb-1 block text-xs text-slate-400">Jornada</span>
-        <select
-          v-model="selectedRoundId"
-          class="theme-field w-full rounded-lg px-3 py-2 text-sm"
-        >
-          <option v-for="round in baseStore.rounds" :key="round.id" :value="round.id">
-            {{ round.title }}
-          </option>
-        </select>
-      </label>
+      <div class="mb-6 flex flex-wrap items-end gap-4">
+        <label class="block min-w-[12rem] flex-1 max-w-sm">
+          <span class="mb-1 block text-xs text-slate-400">Jornada</span>
+          <select
+            v-model="selectedRoundId"
+            class="theme-field w-full rounded-lg px-3 py-2 text-sm"
+          >
+            <option v-for="round in baseStore.rounds" :key="round.id" :value="round.id">
+              {{ round.title }}
+            </option>
+          </select>
+        </label>
+
+        <div v-if="selectedRound" class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-lg font-semibold text-slate-200">{{ selectedRound.title }}</h2>
+            <span
+              v-if="isRoundActive && !isRoundFinished"
+              class="rounded-full bg-mundial-green/15 px-2 py-0.5 text-xs font-semibold text-mundial-green"
+            >
+              En curso
+            </span>
+            <span
+              v-else-if="isRoundFinished"
+              class="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-slate-400"
+            >
+              Finalizada
+            </span>
+          </div>
+          <p class="mt-1 text-xs text-slate-500 sm:text-sm">
+            {{ selectedRound.match_count }} partidos · {{ BASE_QUINIELA_POINTS_PER_HIT }} pts por acierto ·
+            ${{ BASE_ENTRY_FEE_MXN }} MXN
+          </p>
+        </div>
+      </div>
 
       <div
-        v-if="auth.isLoggedIn && baseStore.myPredictions.length"
+        v-if="activeRoundId && !roundLoading"
+        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+      >
+        <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+          <p class="flex items-center gap-1.5 text-xs text-slate-400">
+            <Users class="h-3.5 w-3.5" />
+            Participantes
+          </p>
+          <p class="mt-1 text-2xl font-bold tabular-nums text-slate-200">
+            {{ participantCount }}
+          </p>
+          <p class="mt-0.5 text-[0.65rem] text-slate-500">Quinielas completas</p>
+        </div>
+
+        <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+          <p class="flex items-center gap-1.5 text-xs text-slate-400">
+            <Target class="h-3.5 w-3.5" />
+            Partidos
+          </p>
+          <p class="mt-1 text-2xl font-bold tabular-nums text-slate-200">
+            {{ matchStats.finished }}/{{ matchStats.total }}
+          </p>
+          <p class="mt-0.5 text-[0.65rem] text-slate-500">
+            <span v-if="matchStats.live">{{ matchStats.live }} en vivo · </span>
+            {{ matchStats.pending }} pendientes
+          </p>
+        </div>
+
+        <div
+          class="rounded-xl border px-4 py-3"
+          :class="
+            leader
+              ? 'border-mundial-accent/30 bg-mundial-accent/10'
+              : 'border-white/10 bg-white/5'
+          "
+        >
+          <p class="flex items-center gap-1.5 text-xs text-slate-400">
+            <Crown class="h-3.5 w-3.5" />
+            {{ isRoundFinished ? 'Ganador' : 'Líder' }}
+          </p>
+          <p
+            v-if="leader"
+            class="mt-1 truncate text-sm font-bold text-mundial-accent sm:text-base"
+          >
+            {{ leader.username ?? 'Anónimo' }}
+          </p>
+          <p v-else class="mt-1 text-sm text-slate-500">Sin datos aún</p>
+          <p v-if="leader" class="mt-0.5 text-[0.65rem] text-slate-500">
+            {{ leader.correct_count }} aciertos · {{ leader.total_points }} pts
+          </p>
+        </div>
+
+        <div
+          v-if="auth.isLoggedIn"
+          class="rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-4 py-3"
+        >
+          <p class="text-xs text-slate-400">Tu posición</p>
+          <p v-if="myRank" class="mt-1 text-2xl font-bold tabular-nums text-mundial-accent">
+            #{{ myRank }}
+          </p>
+          <p v-else-if="myDisplayedEntry?.is_complete" class="mt-1 text-sm font-semibold text-slate-300">
+            Fuera del top {{ baseStore.leaderboard.length || 50 }}
+          </p>
+          <p v-else class="mt-1 text-sm text-slate-500">Sin quiniela completa</p>
+          <p v-if="myDisplayedEntry?.is_complete" class="mt-0.5 text-[0.65rem] text-slate-500">
+            {{ myDisplayedEntry.correct_count }} aciertos · {{ myDisplayedEntry.total_points }} pts
+          </p>
+        </div>
+      </div>
+
+      <div
+        v-else-if="activeRoundId && roundLoading"
+        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+      >
+        <div
+          v-for="n in 4"
+          :key="n"
+          class="h-[5.5rem] animate-pulse rounded-xl border border-white/10 bg-white/5"
+        />
+      </div>
+
+      <div
+        v-if="auth.isLoggedIn && activeRoundId"
         class="mb-6 flex flex-wrap gap-3"
       >
         <div class="rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-4 py-3">
           <p class="text-xs text-slate-400">Tu progreso</p>
           <p class="text-xl font-bold text-mundial-accent">
-            {{ baseStore.myProgress().filled }}/{{ baseStore.myProgress().total }}
+            {{ progress.filled }}/{{ progress.total }}
           </p>
         </div>
+
+        <div
+          v-if="myDisplayedEntry?.is_complete"
+          class="rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+        >
+          <p class="text-xs text-slate-400">Tus aciertos</p>
+          <p class="text-xl font-bold text-slate-200">
+            {{ myDisplayedEntry.correct_count }}
+            <span class="text-sm font-normal text-slate-500">
+              ({{ myDisplayedEntry.total_points }} pts)
+            </span>
+          </p>
+        </div>
+
+        <div
+          v-if="isSubmitted"
+          class="flex items-center rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-4 py-3"
+        >
+          <p class="text-sm font-semibold text-mundial-green">Quiniela guardada</p>
+        </div>
       </div>
+
+      <div
+        v-if="leader && baseStore.leaderboard.length > 1 && !roundLoading"
+        class="mb-6 rounded-xl border border-white/10 bg-white/5 p-4"
+      >
+        <p class="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <Trophy class="h-3.5 w-3.5" />
+          Podio actual
+        </p>
+        <ol class="space-y-2">
+          <li
+            v-for="(player, index) in baseStore.leaderboard.slice(0, 3)"
+            :key="player.user_id"
+            class="flex items-center gap-3 rounded-lg px-2 py-1.5"
+            :class="index === 0 ? 'border border-mundial-accent/20 bg-mundial-accent/5' : ''"
+          >
+            <span
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+              :class="index < 3 ? 'bg-mundial-accent text-white' : 'bg-white/10 text-slate-400'"
+            >
+              {{ index + 1 }}
+            </span>
+            <img
+              v-if="player.avatar"
+              :src="player.avatar"
+              :alt="player.username ?? 'Jugador'"
+              class="h-8 w-8 rounded-full border border-white/20"
+            />
+            <span
+              v-else
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold"
+            >
+              {{ player.username?.[0]?.toUpperCase() ?? '?' }}
+            </span>
+            <span class="min-w-0 flex-1 truncate text-sm text-slate-200">
+              {{ player.username ?? 'Anónimo' }}
+              <span v-if="player.user_id === auth.user?.id" class="text-xs text-mundial-accent">
+                (tú)
+              </span>
+            </span>
+            <span class="shrink-0 text-xs tabular-nums text-slate-400">
+              {{ player.correct_count }} · {{ player.total_points }} pts
+            </span>
+          </li>
+        </ol>
+      </div>
+
+      <p class="mb-4 rounded-lg border border-white/5 bg-black/20 px-3 py-2 text-xs text-slate-500">
+        {{ BASE_QUINIELA_LOGIC.summary }}
+      </p>
 
       <BaseRoundRankingPanel
         v-if="activeRoundId"
