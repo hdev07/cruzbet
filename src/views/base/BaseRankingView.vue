@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight, Crown, Target, Trophy, Users } from '@lucide/vue'
+import { ChevronRight, Crown, Target, Users } from '@lucide/vue'
 import BaseRoundRankingPanel from '@/components/ranking/BaseRoundRankingPanel.vue'
 import {
   BASE_ENTRY_FEE_MXN,
@@ -62,9 +62,6 @@ const myDisplayedEntry = computed(
       ? baseStore.leaderboard.find((e) => e.user_id === auth.user!.id) ?? null
       : null),
 )
-
-const progress = computed(() => baseStore.myProgress())
-const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
 
 async function loadRoundData(roundId: string) {
   const seq = ++loadSeq
@@ -263,84 +260,6 @@ watch(activeRoundId, (roundId, prevRoundId) => {
           :key="n"
           class="h-[5.5rem] animate-pulse rounded-xl border border-white/10 bg-white/5"
         />
-      </div>
-
-      <div
-        v-if="auth.isLoggedIn && activeRoundId"
-        class="mb-6 flex flex-wrap gap-3"
-      >
-        <div class="rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-4 py-3">
-          <p class="text-xs text-slate-400">Tu progreso</p>
-          <p class="text-xl font-bold text-mundial-accent">
-            {{ progress.filled }}/{{ progress.total }}
-          </p>
-        </div>
-
-        <div
-          v-if="myDisplayedEntry?.is_complete"
-          class="rounded-xl border border-white/10 bg-white/5 px-4 py-3"
-        >
-          <p class="text-xs text-slate-400">Tus aciertos</p>
-          <p class="text-xl font-bold text-slate-200">
-            {{ myDisplayedEntry.correct_count }}
-            <span class="text-sm font-normal text-slate-500">
-              ({{ myDisplayedEntry.total_points }} pts)
-            </span>
-          </p>
-        </div>
-
-        <div
-          v-if="isSubmitted"
-          class="flex items-center rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-4 py-3"
-        >
-          <p class="text-sm font-semibold text-mundial-green">Quiniela guardada</p>
-        </div>
-      </div>
-
-      <div
-        v-if="leader && baseStore.leaderboard.length > 1 && !roundLoading"
-        class="mb-6 rounded-xl border border-white/10 bg-white/5 p-4"
-      >
-        <p class="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          <Trophy class="h-3.5 w-3.5" />
-          Podio actual
-        </p>
-        <ol class="space-y-2">
-          <li
-            v-for="(player, index) in baseStore.leaderboard.slice(0, 3)"
-            :key="player.user_id"
-            class="flex items-center gap-3 rounded-lg px-2 py-1.5"
-            :class="index === 0 ? 'border border-mundial-accent/20 bg-mundial-accent/5' : ''"
-          >
-            <span
-              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-              :class="index < 3 ? 'bg-mundial-accent text-white' : 'bg-white/10 text-slate-400'"
-            >
-              {{ index + 1 }}
-            </span>
-            <img
-              v-if="player.avatar"
-              :src="player.avatar"
-              :alt="player.username ?? 'Jugador'"
-              class="h-8 w-8 rounded-full border border-white/20"
-            />
-            <span
-              v-else
-              class="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold"
-            >
-              {{ player.username?.[0]?.toUpperCase() ?? '?' }}
-            </span>
-            <span class="min-w-0 flex-1 truncate text-sm text-slate-200">
-              {{ player.username ?? 'Anónimo' }}
-              <span v-if="player.user_id === auth.user?.id" class="text-xs text-mundial-accent">
-                (tú)
-              </span>
-            </span>
-            <span class="shrink-0 text-xs tabular-nums text-slate-400">
-              {{ player.correct_count }} · {{ player.total_points }} pts
-            </span>
-          </li>
-        </ol>
       </div>
 
       <p class="mb-4 rounded-lg border border-white/5 bg-black/20 px-3 py-2 text-xs text-slate-500">
