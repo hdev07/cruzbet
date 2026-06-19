@@ -15,6 +15,7 @@ import {
   BASE_QUINIELA_MATCHES_PER_ROUND,
 } from '@/constants/base-quiniela-rules'
 import { QUINIELA_SUMMARY } from '@/constants/nav'
+import { resolveUpcomingBaseRounds } from '@/lib/baseQuinielaRound'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 
@@ -44,8 +45,8 @@ const activeRoundHref = computed(() =>
   activeRound.value ? `/jornadas/${activeRound.value.id}` : null,
 )
 
-const otherRounds = computed(() =>
-  baseStore.rounds.filter((r) => r.id !== activeRound.value?.id).slice(-4).reverse(),
+const upcomingRounds = computed(() =>
+  resolveUpcomingBaseRounds(baseStore.rounds, activeRound.value),
 )
 
 onMounted(async () => {
@@ -189,23 +190,14 @@ const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
       </RouterLink>
     </nav>
 
-    <section v-if="baseStore.rounds.length > 1">
-      <div class="mb-3 flex items-end justify-between gap-3">
-        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Otras jornadas
-        </p>
-        <RouterLink
-          to="/jornadas/todas"
-          class="inline-flex items-center gap-1 text-xs text-mundial-green hover:underline"
-        >
-          Ver todas ({{ baseStore.rounds.length }})
-          <ChevronRight class="h-3.5 w-3.5" />
-        </RouterLink>
-      </div>
+    <section v-if="upcomingRounds.length">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        Jornadas siguientes
+      </p>
 
       <div class="space-y-2">
         <RouterLink
-          v-for="round in otherRounds"
+          v-for="round in upcomingRounds"
           :key="round.id"
           :to="`/jornadas/${round.id}`"
           class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-mundial-green/30 hover:bg-mundial-green/5"

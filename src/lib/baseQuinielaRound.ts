@@ -75,17 +75,23 @@ export function buildFirstKickoffByRoundId(
   return map
 }
 
+export function resolveUpcomingBaseRounds(
+  rounds: BaseQuinielaRound[],
+  activeRound: BaseQuinielaRound | null,
+): BaseQuinielaRound[] {
+  if (!activeRound) return []
+
+  return [...rounds]
+    .filter((round) => round.round_number > activeRound.round_number)
+    .sort((a, b) => a.round_number - b.round_number)
+}
+
 export function resolveNextBaseRound(
   rounds: BaseQuinielaRound[],
   activeRound: BaseQuinielaRound | null,
 ): BaseQuinielaRound | null {
-  if (!activeRound) return null
-
-  const sorted = [...rounds].sort((a, b) => a.round_number - b.round_number)
-  const index = sorted.findIndex((round) => round.id === activeRound.id)
-  if (index < 0 || index >= sorted.length - 1) return null
-
-  return sorted[index + 1] ?? null
+  const upcoming = resolveUpcomingBaseRounds(rounds, activeRound)
+  return upcoming[0] ?? null
 }
 
 type RoundMatchKickoffRow = {
