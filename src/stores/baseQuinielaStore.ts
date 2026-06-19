@@ -431,6 +431,34 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     if (error) throw error
   }
 
+  async function fetchRoundParticipationStatus(
+    roundId: string,
+    userId: string,
+  ): Promise<{ predictionCount: number; isSubmitted: boolean }> {
+    const [{ count, error: countErr }, { data: payment, error: paymentErr }] =
+      await Promise.all([
+        supabase
+          .from('base_predictions')
+          .select('*', { count: 'exact', head: true })
+          .eq('round_id', roundId)
+          .eq('user_id', userId),
+        supabase
+          .from('base_round_payments')
+          .select('submitted_at')
+          .eq('round_id', roundId)
+          .eq('user_id', userId)
+          .maybeSingle(),
+      ])
+
+    if (countErr) throw countErr
+    if (paymentErr) throw paymentErr
+
+    return {
+      predictionCount: count ?? 0,
+      isSubmitted: payment?.submitted_at != null,
+    }
+  }
+
   async function fetchUserHistory(userId: string) {
     const { data, error } = await supabase
       .from('base_predictions')
@@ -469,6 +497,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     refreshLeaderboardForMatch,
     patchRoundMatch,
     fetchUserHistory,
+    fetchRoundParticipationStatus,
     fetchParticipantCountsByRound,
     fetchRoundParticipants,
     setPaymentVerified,

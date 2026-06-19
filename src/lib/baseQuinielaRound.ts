@@ -74,3 +74,54 @@ export function buildFirstKickoffByRoundId(
 
   return map
 }
+
+export function resolveNextBaseRound(
+  rounds: BaseQuinielaRound[],
+  activeRound: BaseQuinielaRound | null,
+): BaseQuinielaRound | null {
+  if (!activeRound) return null
+
+  const sorted = [...rounds].sort((a, b) => a.round_number - b.round_number)
+  const index = sorted.findIndex((round) => round.id === activeRound.id)
+  if (index < 0 || index >= sorted.length - 1) return null
+
+  return sorted[index + 1] ?? null
+}
+
+type RoundMatchKickoffRow = {
+  match?: { status?: string; match_date?: string | null } | null
+}
+
+export function countRoundMatchesStarted(
+  matches: RoundMatchKickoffRow[],
+  now = Date.now(),
+): number {
+  return matches.filter((row) => {
+    const match = row.match
+    if (!match) return false
+    if (match.status === 'live' || match.status === 'finished') return true
+    if (!match.match_date) return false
+    return new Date(match.match_date).getTime() <= now
+  }).length
+}
+
+export function isRoundPastHalfway(matchCount: number, startedCount: number): boolean {
+  if (matchCount <= 0) return false
+  return startedCount >= Math.ceil(matchCount / 2)
+}
+
+/** Mitad del intervalo entre el primer partido de la jornada activa y el de la siguiente. */
+export function isActiveRoundPastHalfwayByKickoff(
+  activeRoundId: string,
+  nextRoundId: string,
+  firstKickoffByRoundId: Record<string, number | null>,
+  now = Date.now(),
+): boolean {
+  const activeStart = firstKickoffByRoundId[activeRoundId]
+  const nextStart = firstKickoffByRoundId[nextRoundId]
+  if (activeStart == null || nextStart == null) return false
+  if (now < activeStart) return false
+
+  const midpoint = activeStart + (nextStart - activeStart) / 2
+  return now >= midpoint
+}
