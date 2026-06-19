@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight } from '@lucide/vue'
+import { ArrowLeft, ChevronRight } from '@lucide/vue'
 import {
   BASE_ENTRY_FEE_MXN,
-  BASE_QUINIELA_LOGIC,
   BASE_QUINIELA_MATCHES_PER_ROUND,
 } from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
@@ -22,23 +21,19 @@ const roundCount = computed(() => baseStore.rounds.length)
 
 <template>
   <div>
+    <RouterLink
+      to="/jornadas"
+      class="mb-4 inline-flex items-center gap-1 text-sm text-slate-400 hover:text-mundial-green"
+    >
+      <ArrowLeft class="h-4 w-4" />
+      Quiniela
+    </RouterLink>
+
     <div class="mb-6">
       <h1 class="text-2xl font-bold lg:text-3xl">Todas las jornadas</h1>
       <p class="mt-1 text-sm text-slate-400 lg:text-base">
         ${{ BASE_ENTRY_FEE_MXN }} MXN por jornada · {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos · grilla L/E/V
       </p>
-    </div>
-
-    <div class="mb-6 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
-      <p class="mb-2 font-semibold text-slate-300">Resumen</p>
-      <p>{{ BASE_QUINIELA_LOGIC.summary }}</p>
-      <RouterLink
-        to="/reglas"
-        class="mt-3 inline-flex items-center gap-1 text-mundial-green hover:underline"
-      >
-        Ver reglas y datos de pago
-        <ChevronRight class="h-4 w-4" />
-      </RouterLink>
     </div>
 
     <div

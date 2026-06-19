@@ -35,12 +35,12 @@ const router = createRouter({
     {
       path: '/jornadas',
       component: () => import('@/views/BaseQuinielaListView.vue'),
-      meta: { layout: 'mobile', title: 'Jornadas' },
+      meta: { layout: 'mobile', title: 'Quiniela' },
     },
     {
       path: '/jornadas/todas',
       component: () => import('@/views/BaseQuinielaAllRoundsView.vue'),
-      meta: { layout: 'mobile', title: 'Jornadas' },
+      meta: { layout: 'mobile', title: 'Todas las jornadas' },
     },
     {
       path: '/jornadas/:id',

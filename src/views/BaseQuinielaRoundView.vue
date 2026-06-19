@@ -50,11 +50,11 @@ async function onPredictionsUpdated() {
 <template>
   <div>
     <RouterLink
-      to="/jornadas/todas"
+      to="/jornadas"
       class="mb-4 inline-flex items-center gap-1 text-sm text-slate-400 hover:text-mundial-green"
     >
       <ArrowLeft class="h-4 w-4" />
-      Todas las jornadas
+      Quiniela
     </RouterLink>
 
     <p v-if="baseStore.loading && !baseStore.currentRound" class="text-slate-400">

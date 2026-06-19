@@ -28,10 +28,10 @@ export const MAIN_NAV: NavItem[] = [
 
 /** Sub-navegación dentro de la sección Quiniela */
 export const QUINIELA_SUB_NAV: NavItem[] = [
-  { to: JORNADAS_PATH, label: 'Jornadas', icon: Grid3x3 },
-  { to: '/historial', label: 'Historial', icon: History, requiresAuth: true },
-  { to: '/resultados', label: 'Resultados', icon: Medal },
+  { to: JORNADAS_PATH, label: 'Jugar', icon: Grid3x3 },
   { to: '/reglas', label: 'Reglas', icon: ClipboardList },
+  { to: '/resultados', label: 'Resultados', icon: Medal },
+  { to: '/historial', label: 'Mi historial', icon: History, requiresAuth: true },
 ]
 
 export const QUINIELA_SUMMARY = {
