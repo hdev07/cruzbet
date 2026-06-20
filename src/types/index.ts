@@ -151,6 +151,7 @@ export interface BasePrediction {
   id: number
   user_id: string
   round_id: string
+  entry_number: number
   match_id: string
   predicted_winner: PredictedWinner
   points: number
@@ -162,6 +163,7 @@ export interface BasePrediction {
 export interface BaseRoundLeaderboardEntry {
   round_id: string
   user_id: string
+  entry_number: number
   username: string | null
   avatar: string | null
   predictions_count: number
@@ -174,14 +176,23 @@ export interface BaseRoundLeaderboardEntry {
 export interface BaseRoundPayment {
   user_id: string
   round_id: string
+  entry_number: number
   verified: boolean
   verified_at?: string | null
   submitted_at?: string | null
   created_at?: string
 }
 
+export interface BaseQuinielaEntrySummary {
+  entry_number: number
+  prediction_count: number
+  is_submitted: boolean
+  verified: boolean
+}
+
 export interface BaseRoundParticipant {
   user_id: string
+  entry_number: number
   verified: boolean
   profiles?: Pick<Profile, 'username' | 'avatar'>
   predictions: BasePrediction[]

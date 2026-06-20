@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { CheckCircle2, Info, Lock, XCircle } from '@lucide/vue'
+import BaseQuinielaEntrySelector from '@/components/predictions/BaseQuinielaEntrySelector.vue'
 import BaseQuinielaMatchContext from '@/components/predictions/BaseQuinielaMatchContext.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import {
@@ -160,6 +161,14 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
 
 <template>
   <div>
+    <BaseQuinielaEntrySelector
+      v-if="canPredict && userId"
+      :round-id="roundId"
+      :user-id="userId"
+      v-model:error="formError"
+      @changed="emit('updated')"
+    />
+
     <div
       v-if="canPredict && isSubmitted"
       class="mb-4 flex gap-2 rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-3 py-2.5 text-sm text-mundial-green"

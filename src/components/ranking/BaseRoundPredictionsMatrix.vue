@@ -37,15 +37,20 @@ const predictionMap = computed(() => {
     for (const pred of participant.predictions) {
       byMatch.set(pred.match_id, pred)
     }
-    map.set(participant.user_id, byMatch)
+    map.set(`${participant.user_id}:${participant.entry_number}`, byMatch)
   }
   return map
 })
 
 const competitors = computed(() => {
-  const leaderboardIds = new Set(baseStore.leaderboard.map((e) => e.user_id))
+  const leaderboardKeys = new Set(
+    baseStore.leaderboard.map((e) => `${e.user_id}:${e.entry_number}`),
+  )
   const rows = participants.value.filter(
-    (p) => p.complete && (leaderboardIds.size === 0 || leaderboardIds.has(p.user_id)),
+    (p) =>
+      p.complete &&
+      (leaderboardKeys.size === 0 ||
+        leaderboardKeys.has(`${p.user_id}:${p.entry_number}`)),
   )
 
   return rows.sort((a, b) => {
@@ -56,7 +61,13 @@ const competitors = computed(() => {
 
 const myCorrectCount = computed(() => {
   if (!props.currentUserId) return null
-  return competitors.value.find((p) => p.user_id === props.currentUserId)?.correct_count ?? null
+  return (
+    competitors.value.find(
+      (p) =>
+        p.user_id === props.currentUserId &&
+        p.entry_number === baseStore.currentEntryNumber,
+    )?.correct_count ?? null
+  )
 })
 
 async function loadParticipants() {
@@ -78,22 +89,29 @@ watch(
   { immediate: true },
 )
 
-function getPick(userId: string, matchId: string): BasePrediction | undefined {
-  return predictionMap.value.get(userId)?.get(matchId)
+function participantKey(userId: string, entryNumber: number): string {
+  return `${userId}:${entryNumber}`
 }
 
-function canShowPlayerPicks(userId: string): boolean {
-  return roundStarted.value || userId === props.currentUserId
+function getPick(userId: string, entryNumber: number, matchId: string): BasePrediction | undefined {
+  return predictionMap.value.get(participantKey(userId, entryNumber))?.get(matchId)
 }
 
-function cellClass(userId: string, match: BaseQuinielaRoundMatch): string {
-  const pick = getPick(userId, match.match_id)
+function canShowPlayerPicks(userId: string, entryNumber: number): boolean {
+  return (
+    roundStarted.value ||
+    (userId === props.currentUserId && entryNumber === baseStore.currentEntryNumber)
+  )
+}
+
+function cellClass(userId: string, entryNumber: number, match: BaseQuinielaRoundMatch): string {
+  const pick = getPick(userId, entryNumber, match.match_id)
   const base =
     'flex h-8 w-8 items-center justify-center rounded text-xs font-bold tabular-nums'
 
   if (!pick) return `${base} theme-cell-idle text-slate-600`
 
-  if (!canShowPlayerPicks(userId)) {
+  if (!canShowPlayerPicks(userId, entryNumber)) {
     return `${base} theme-cell-idle text-slate-500`
   }
 
@@ -107,11 +125,15 @@ function cellClass(userId: string, match: BaseQuinielaRoundMatch): string {
   return `${base} theme-cell-pending text-slate-300`
 }
 
-function rivalryLabel(userId: string, correctCount: number): string | null {
+function rivalryLabel(
+  userId: string,
+  entryNumber: number,
+  correctCount: number,
+): string | null {
   if (
     !roundStarted.value ||
     !props.currentUserId ||
-    userId === props.currentUserId ||
+    (userId === props.currentUserId && entryNumber === baseStore.currentEntryNumber) ||
     myCorrectCount.value == null
   ) {
     return null
@@ -222,18 +244,30 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
           <tbody>
             <tr
               v-for="(player, index) in competitors"
-              :key="player.user_id"
+              :key="`${player.user_id}-${player.entry_number}`"
               class="theme-table-row"
-              :class="{ 'ring-1 ring-inset ring-mundial-accent/40': player.user_id === currentUserId }"
+              :class="{
+                'ring-1 ring-inset ring-mundial-accent/40':
+                  player.user_id === currentUserId &&
+                  player.entry_number === baseStore.currentEntryNumber,
+              }"
             >
               <td
                 class="theme-table-sticky border border-white/10 px-3 py-2 md:sticky md:left-0 md:z-10 md:min-w-[8rem]"
-                :class="{ 'md:bg-mundial-accent/10': player.user_id === currentUserId }"
+                :class="{
+                  'md:bg-mundial-accent/10':
+                    player.user_id === currentUserId &&
+                    player.entry_number === baseStore.currentEntryNumber,
+                }"
               >
                 <div class="flex min-w-0 items-start gap-2">
                   <div
                     class="theme-table-sticky sticky left-0 z-10 order-1 -ml-3 flex shrink-0 items-center py-0.5 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0"
-                    :class="{ 'bg-mundial-accent/10 md:bg-transparent': player.user_id === currentUserId }"
+                    :class="{
+                      'bg-mundial-accent/10 md:bg-transparent':
+                        player.user_id === currentUserId &&
+                        player.entry_number === baseStore.currentEntryNumber,
+                    }"
                   >
                     <img
                       v-if="player.profiles?.avatar"
@@ -257,34 +291,49 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   <div class="order-3 min-w-[5.5rem] shrink-0 md:min-w-0">
                     <p class="whitespace-nowrap font-medium leading-tight text-slate-200">
                       {{ player.profiles?.username ?? 'Anónimo' }}
+                      <span v-if="player.entry_number > 1" class="text-slate-500">
+                        Q{{ player.entry_number }}
+                      </span>
                       <span
-                        v-if="player.user_id === currentUserId"
+                        v-if="
+                          player.user_id === currentUserId &&
+                          player.entry_number === baseStore.currentEntryNumber
+                        "
                         class="text-mundial-accent"
                       >
                         (tú)
                       </span>
                     </p>
                     <p
-                      v-if="rivalryLabel(player.user_id, player.correct_count)"
+                      v-if="rivalryLabel(player.user_id, player.entry_number, player.correct_count)"
                       class="mt-0.5 whitespace-nowrap text-[0.65rem] font-medium leading-tight text-amber-400/90"
                     >
-                      {{ rivalryLabel(player.user_id, player.correct_count) }} contigo
+                      {{ rivalryLabel(player.user_id, player.entry_number, player.correct_count) }} contigo
                     </p>
                   </div>
                 </div>
               </td>
               <td
                 v-for="match in sortedMatches"
-                :key="`${player.user_id}-${match.match_id}`"
+                :key="`${player.user_id}-${player.entry_number}-${match.match_id}`"
                 class="border border-white/10 px-1 py-1 text-center"
               >
                 <span
-                  v-if="getPick(player.user_id, match.match_id)"
-                  :class="cellClass(player.user_id, match)"
-                  :title="canShowPlayerPicks(player.user_id) ? matchTooltip(match) : undefined"
+                  v-if="getPick(player.user_id, player.entry_number, match.match_id)"
+                  :class="cellClass(player.user_id, player.entry_number, match)"
+                  :title="
+                    canShowPlayerPicks(player.user_id, player.entry_number)
+                      ? matchTooltip(match)
+                      : undefined
+                  "
                 >
-                  <template v-if="canShowPlayerPicks(player.user_id)">
-                    {{ winnerCode(getPick(player.user_id, match.match_id)!.predicted_winner) }}
+                  <template v-if="canShowPlayerPicks(player.user_id, player.entry_number)">
+                    {{
+                      winnerCode(
+                        getPick(player.user_id, player.entry_number, match.match_id)!
+                          .predicted_winner,
+                      )
+                    }}
                   </template>
                   <template v-else>?</template>
                 </span>

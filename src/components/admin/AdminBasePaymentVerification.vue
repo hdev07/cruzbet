@@ -11,6 +11,7 @@ import {
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 import { winnerCode } from '@/lib/baseQuinielaDisplay'
+import { formatEntryLabel } from '@/lib/baseQuinielaStats'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BasePrediction, BaseQuinielaRound, BaseQuinielaRoundMatch, BaseRoundParticipant } from '@/types'
@@ -27,14 +28,18 @@ type SortKey = 'username' | 'points' | 'predictions' | 'status'
 const baseStore = useBaseQuinielaStore()
 const participants = ref<BaseRoundParticipant[]>([])
 const loading = ref(false)
-const togglingUserId = ref<string | null>(null)
-const resettingUserId = ref<string | null>(null)
+const togglingKey = ref<string | null>(null)
+const resettingKey = ref<string | null>(null)
 const resetTarget = ref<BaseRoundParticipant | null>(null)
 const error = ref('')
 const userSearch = ref('')
 const paymentFilter = ref<PaymentFilter>('pending')
 const sortKey = ref<SortKey>('status')
-const expandedUserId = ref<string | null>(null)
+const expandedKey = ref<string | null>(null)
+
+function participantKey(participant: BaseRoundParticipant): string {
+  return `${participant.user_id}:${participant.entry_number}`
+}
 
 const positionByMatchId = computed(() => {
   const map = new Map<string, number>()
@@ -129,24 +134,26 @@ function predictionDetail(pred: BasePrediction): string {
   return `#${pos} ${home} vs ${away}: ${code}${pts}`
 }
 
-function toggleExpanded(userId: string) {
-  expandedUserId.value = expandedUserId.value === userId ? null : userId
+function toggleExpanded(participant: BaseRoundParticipant) {
+  const key = participantKey(participant)
+  expandedKey.value = expandedKey.value === key ? null : key
 }
 
 async function toggleVerified(participant: BaseRoundParticipant) {
-  togglingUserId.value = participant.user_id
+  togglingKey.value = participantKey(participant)
   error.value = ''
   try {
     await baseStore.setPaymentVerified(
       participant.user_id,
       props.round.id,
       !participant.verified,
+      participant.entry_number,
     )
     await loadParticipants()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error al actualizar depósito'
   } finally {
-    togglingUserId.value = null
+    togglingKey.value = null
   }
 }
 
@@ -155,26 +162,30 @@ function askResetQuiniela(participant: BaseRoundParticipant) {
 }
 
 function cancelResetQuiniela() {
-  if (resettingUserId.value) return
+  if (resettingKey.value) return
   resetTarget.value = null
 }
 
 async function confirmResetQuiniela() {
   if (!resetTarget.value) return
   const participant = resetTarget.value
-  resettingUserId.value = participant.user_id
+  resettingKey.value = participantKey(participant)
   error.value = ''
   try {
-    await baseStore.resetPlayerQuiniela(participant.user_id, props.round.id)
-    if (expandedUserId.value === participant.user_id) {
-      expandedUserId.value = null
+    await baseStore.resetPlayerQuiniela(
+      participant.user_id,
+      props.round.id,
+      participant.entry_number,
+    )
+    if (expandedKey.value === participantKey(participant)) {
+      expandedKey.value = null
     }
     resetTarget.value = null
     await loadParticipants()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error al reestablecer quiniela'
   } finally {
-    resettingUserId.value = null
+    resettingKey.value = null
   }
 }
 </script>
@@ -273,7 +284,7 @@ async function confirmResetQuiniela() {
       <ul v-else class="space-y-3">
         <li
           v-for="participant in filteredParticipants"
-          :key="participant.user_id"
+          :key="participantKey(participant)"
           class="rounded-xl border border-white/10 p-4"
           :class="participant.verified ? 'bg-mundial-green/[0.04]' : 'bg-amber-500/[0.04]'"
         >
@@ -281,6 +292,9 @@ async function confirmResetQuiniela() {
             <div class="min-w-0 flex-1">
               <p class="truncate font-semibold text-slate-100">
                 {{ participant.profiles?.username ?? 'Sin nombre' }}
+                <span class="ml-1 text-xs font-normal text-slate-500">
+                  · {{ formatEntryLabel(participant.entry_number) }}
+                </span>
               </p>
               <p class="mt-0.5 text-sm tabular-nums text-slate-400">
                 {{ participant.predictions.length }}/{{ round.match_count }} picks
@@ -305,11 +319,11 @@ async function confirmResetQuiniela() {
                     ? 'border-mundial-green/40 bg-mundial-green/10 text-mundial-green'
                     : 'border-amber-500/40 bg-amber-500/10 text-amber-200'
                 "
-                :disabled="togglingUserId === participant.user_id || resettingUserId === participant.user_id"
+                :disabled="togglingKey === participantKey(participant) || resettingKey === participantKey(participant)"
                 @click="toggleVerified(participant)"
               >
                 <Loader2
-                  v-if="togglingUserId === participant.user_id"
+                  v-if="togglingKey === participantKey(participant)"
                   class="h-4 w-4 animate-spin"
                 />
                 <CheckCircle2 v-else-if="participant.verified" class="h-4 w-4 shrink-0" />
@@ -320,11 +334,11 @@ async function confirmResetQuiniela() {
               <button
                 type="button"
                 class="inline-flex min-w-[7rem] items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/15 disabled:opacity-50"
-                :disabled="resettingUserId === participant.user_id || togglingUserId === participant.user_id"
+                :disabled="resettingKey === participantKey(participant) || togglingKey === participantKey(participant)"
                 @click="askResetQuiniela(participant)"
               >
                 <Loader2
-                  v-if="resettingUserId === participant.user_id"
+                  v-if="resettingKey === participantKey(participant)"
                   class="h-3.5 w-3.5 animate-spin"
                 />
                 <RotateCcw v-else class="h-3.5 w-3.5 shrink-0" />
@@ -336,12 +350,12 @@ async function confirmResetQuiniela() {
           <button
             type="button"
             class="mb-2 text-xs font-medium text-mundial-accent hover:underline"
-            @click="toggleExpanded(participant.user_id)"
+            @click="toggleExpanded(participant)"
           >
-            {{ expandedUserId === participant.user_id ? 'Ocultar detalle' : 'Ver quiniela completa' }}
+            {{ expandedKey === participantKey(participant) ? 'Ocultar detalle' : 'Ver quiniela completa' }}
           </button>
 
-          <p v-if="expandedUserId !== participant.user_id" class="font-mono text-xs leading-relaxed text-slate-300">
+          <p v-if="expandedKey !== participantKey(participant)" class="font-mono text-xs leading-relaxed text-slate-300">
             {{ predictionLine(participant) }}
           </p>
 
@@ -385,7 +399,7 @@ async function confirmResetQuiniela() {
         <ul v-else class="divide-y divide-white/5">
           <li
             v-for="participant in filteredParticipants"
-            :key="participant.user_id"
+            :key="participantKey(participant)"
             class="grid grid-cols-[100px_1fr_2fr] items-start gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
             :class="participant.verified ? 'bg-mundial-green/[0.03]' : 'bg-amber-500/[0.02]'"
           >
@@ -398,11 +412,11 @@ async function confirmResetQuiniela() {
                     ? 'border-mundial-green/40 bg-mundial-green/10 text-mundial-green'
                     : 'border-amber-500/40 bg-amber-500/10 text-amber-200'
                 "
-                :disabled="togglingUserId === participant.user_id || resettingUserId === participant.user_id"
+                :disabled="togglingKey === participantKey(participant) || resettingKey === participantKey(participant)"
                 @click="toggleVerified(participant)"
               >
                 <Loader2
-                  v-if="togglingUserId === participant.user_id"
+                  v-if="togglingKey === participantKey(participant)"
                   class="h-3.5 w-3.5 animate-spin"
                 />
                 <CheckCircle2 v-else-if="participant.verified" class="h-3.5 w-3.5 shrink-0" />
@@ -413,12 +427,12 @@ async function confirmResetQuiniela() {
               <button
                 type="button"
                 class="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/15 disabled:opacity-50"
-                :disabled="resettingUserId === participant.user_id || togglingUserId === participant.user_id"
+                :disabled="resettingKey === participantKey(participant) || togglingKey === participantKey(participant)"
                 title="Borrar picks y permitir que vuelva a llenar la quiniela"
                 @click="askResetQuiniela(participant)"
               >
                 <Loader2
-                  v-if="resettingUserId === participant.user_id"
+                  v-if="resettingKey === participantKey(participant)"
                   class="h-3 w-3 animate-spin"
                 />
                 <RotateCcw v-else class="h-3 w-3 shrink-0" />
@@ -429,6 +443,9 @@ async function confirmResetQuiniela() {
             <div class="min-w-0">
               <p class="truncate font-medium text-slate-100">
                 {{ participant.profiles?.username ?? 'Sin nombre' }}
+                <span class="ml-1 text-xs font-normal text-slate-500">
+                  · {{ formatEntryLabel(participant.entry_number) }}
+                </span>
                 <span
                   v-if="!participant.complete"
                   class="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"
@@ -448,12 +465,12 @@ async function confirmResetQuiniela() {
               <button
                 type="button"
                 class="mb-1 text-[11px] font-medium text-mundial-accent hover:underline"
-                @click="toggleExpanded(participant.user_id)"
+                @click="toggleExpanded(participant)"
               >
-                {{ expandedUserId === participant.user_id ? 'Resumir' : 'Expandir' }}
+                {{ expandedKey === participantKey(participant) ? 'Resumir' : 'Expandir' }}
               </button>
               <p
-                v-if="expandedUserId !== participant.user_id"
+                v-if="expandedKey !== participantKey(participant)"
                 class="font-mono text-xs leading-relaxed text-slate-300"
               >
                 {{ predictionLine(participant) }}
@@ -492,18 +509,18 @@ async function confirmResetQuiniela() {
       title="¿Reestablecer quiniela?"
       :subtitle="
         resetTarget
-          ? `${resetTarget.profiles?.username ?? 'Este jugador'} perderá todos sus picks de ${round.title}.`
+          ? `${resetTarget.profiles?.username ?? 'Este jugador'} perderá todos sus picks de ${formatEntryLabel(resetTarget.entry_number)} en ${round.title}.`
           : undefined
       "
       :bullets="[
-        'Se borran todas las predicciones de la jornada.',
+        'Se borran todas las predicciones de esa quiniela.',
         'El jugador podrá volver a marcar y guardar su quiniela.',
         'El estado del depósito (pagado/pendiente) no cambia.',
         'Si ya había puntos en partidos jugados, también se eliminan.',
       ]"
       confirm-label="Sí, reestablecer"
       cancel-label="Cancelar"
-      :saving="resettingUserId != null"
+      :saving="resettingKey != null"
       @confirm="confirmResetQuiniela"
       @cancel="cancelResetQuiniela"
     />

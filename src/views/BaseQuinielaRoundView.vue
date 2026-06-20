@@ -22,7 +22,11 @@ const roundId = computed(() => route.params.id as string)
 const progress = computed(() => baseStore.myProgress())
 const myLeaderboardEntry = computed(() =>
   auth.user
-    ? baseStore.leaderboard.find((e) => e.user_id === auth.user!.id)
+    ? baseStore.leaderboard.find(
+        (e) =>
+          e.user_id === auth.user!.id &&
+          e.entry_number === baseStore.currentEntryNumber,
+      )
     : undefined,
 )
 

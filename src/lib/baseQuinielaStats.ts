@@ -47,8 +47,13 @@ export interface LeaderboardNeighbors {
 export function getLeaderboardNeighbors(
   leaderboard: BaseRoundLeaderboardEntry[],
   userId: string,
+  entryNumber?: number,
 ): LeaderboardNeighbors {
-  const idx = leaderboard.findIndex((e) => e.user_id === userId)
+  const idx = leaderboard.findIndex((e) =>
+    entryNumber != null
+      ? e.user_id === userId && e.entry_number === entryNumber
+      : e.user_id === userId,
+  )
   if (idx < 0) {
     return { position: null, above: null, me: null, below: null }
   }
@@ -58,6 +63,10 @@ export function getLeaderboardNeighbors(
     me: leaderboard[idx]!,
     below: idx < leaderboard.length - 1 ? leaderboard[idx + 1]! : null,
   }
+}
+
+export function formatEntryLabel(entryNumber: number): string {
+  return entryNumber === 1 ? 'Quiniela 1' : `Quiniela ${entryNumber}`
 }
 
 export function aciertosDiffLabel(myCorrect: number, otherCorrect: number): string {

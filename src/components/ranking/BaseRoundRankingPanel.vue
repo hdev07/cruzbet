@@ -87,9 +87,13 @@ const visibleLeaderboard = computed(() => {
       <ol v-else class="space-y-2">
         <li
           v-for="(player, index) in visibleLeaderboard"
-          :key="player.user_id"
+          :key="`${player.user_id}-${player.entry_number}`"
           class="theme-card flex items-center gap-3 rounded-xl px-4 py-3"
-          :class="{ 'ring-1 ring-mundial-accent/50': player.user_id === auth.user?.id }"
+          :class="{
+            'ring-1 ring-mundial-accent/50':
+              player.user_id === auth.user?.id &&
+              player.entry_number === baseStore.currentEntryNumber,
+          }"
         >
           <span
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
@@ -113,7 +117,19 @@ const visibleLeaderboard = computed(() => {
 
           <span class="min-w-0 flex-1 truncate font-medium text-app-text">
             {{ player.username ?? 'Anónimo' }}
-            <span v-if="player.user_id === auth.user?.id" class="ml-1 text-xs text-mundial-accent">
+            <span
+              v-if="player.entry_number > 1"
+              class="ml-1 text-xs text-slate-500"
+            >
+              Q{{ player.entry_number }}
+            </span>
+            <span
+              v-if="
+                player.user_id === auth.user?.id &&
+                player.entry_number === baseStore.currentEntryNumber
+              "
+              class="ml-1 text-xs text-mundial-accent"
+            >
               (tú)
             </span>
           </span>

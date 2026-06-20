@@ -8,6 +8,7 @@ import {
 } from '@/constants/base-quiniela-rules'
 import { winnerCode } from '@/lib/baseQuinielaDisplay'
 import {
+  formatEntryLabel,
   formatRoundScoreSummary,
   summarizeBasePredictions,
 } from '@/lib/baseQuinielaStats'
@@ -24,6 +25,8 @@ type HistoryRow = BasePrediction & {
 type RoundHistoryGroup = {
   round: BaseQuinielaRound | undefined
   roundId: string
+  entryNumber: number
+  groupKey: string
   picks: HistoryRow[]
   summary: ReturnType<typeof summarizeBasePredictions>
   expanded: boolean
@@ -40,8 +43,8 @@ onMounted(async () => {
   loading.value = true
   try {
     history.value = await baseStore.fetchUserHistory(auth.user.id)
-    const firstRoundId = groupedByRound.value[0]?.roundId
-    if (firstRoundId) expandedRounds.value.add(firstRoundId)
+    const firstGroupKey = groupedByRound.value[0]?.groupKey
+    if (firstGroupKey) expandedRounds.value.add(firstGroupKey)
   } finally {
     loading.value = false
   }
@@ -50,11 +53,13 @@ onMounted(async () => {
 const groupedByRound = computed<RoundHistoryGroup[]>(() => {
   const map = new Map<string, RoundHistoryGroup>()
   for (const row of history.value) {
-    const key = row.round_id
+    const key = `${row.round_id}:${row.entry_number ?? 1}`
     if (!map.has(key)) {
       map.set(key, {
         round: row.round,
-        roundId: key,
+        roundId: row.round_id,
+        entryNumber: row.entry_number ?? 1,
+        groupKey: key,
         picks: [],
         summary: summarizeBasePredictions([], row.round?.match_count),
         expanded: false,
@@ -70,9 +75,13 @@ const groupedByRound = computed<RoundHistoryGroup[]>(() => {
         group.picks,
         group.round?.match_count ?? BASE_QUINIELA_MATCHES_PER_ROUND,
       ),
-      expanded: expandedRounds.value.has(group.roundId),
+      expanded: expandedRounds.value.has(group.groupKey),
     }))
-    .sort((a, b) => (b.round?.round_number ?? 0) - (a.round?.round_number ?? 0))
+    .sort((a, b) => {
+      const roundDiff = (b.round?.round_number ?? 0) - (a.round?.round_number ?? 0)
+      if (roundDiff !== 0) return roundDiff
+      return a.entryNumber - b.entryNumber
+    })
 })
 
 const totals = computed(() => {
@@ -80,10 +89,10 @@ const totals = computed(() => {
   return summarizeBasePredictions(all)
 })
 
-function toggleRound(roundId: string) {
+function toggleRound(groupKey: string) {
   const next = new Set(expandedRounds.value)
-  if (next.has(roundId)) next.delete(roundId)
-  else next.add(roundId)
+  if (next.has(groupKey)) next.delete(groupKey)
+  else next.add(groupKey)
   expandedRounds.value = next
 }
 
@@ -125,7 +134,7 @@ function roundStatusLabel(group: RoundHistoryGroup): string {
       <template v-else>
         <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:max-w-lg">
           <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-            <p class="text-xs text-slate-400">Jornadas</p>
+            <p class="text-xs text-slate-400">Quinielas</p>
             <p class="text-2xl font-bold text-slate-200">{{ groupedByRound.length }}</p>
           </div>
           <div class="rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-4 py-3">
@@ -150,18 +159,21 @@ function roundStatusLabel(group: RoundHistoryGroup): string {
         <div class="space-y-4">
           <section
             v-for="group in groupedByRound"
-            :key="group.roundId"
+            :key="group.groupKey"
             class="rounded-xl border border-white/10 bg-white/5 p-4"
           >
             <button
               type="button"
               class="flex w-full items-start justify-between gap-3 text-left"
-              @click="toggleRound(group.roundId)"
+              @click="toggleRound(group.groupKey)"
             >
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
                   <h2 class="font-semibold text-slate-200">
                     {{ group.round?.title ?? 'Jornada' }}
+                    <span class="font-normal text-slate-400">
+                      · {{ formatEntryLabel(group.entryNumber) }}
+                    </span>
                   </h2>
                   <span
                     class="rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide"

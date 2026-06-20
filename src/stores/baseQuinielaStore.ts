@@ -9,6 +9,7 @@ import { isMatchOpenForPredictions } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
 import type {
   BasePrediction,
+  BaseQuinielaEntrySummary,
   BaseQuinielaRound,
   BaseQuinielaRoundMatch,
   BaseRoundLeaderboardEntry,
@@ -21,6 +22,41 @@ import type {
 
 const MATCH_SELECT = '*, home_team:teams!home_team_id(*), away_team:teams!away_team_id(*)'
 
+function buildEntrySummaries(
+  predictions: BasePrediction[],
+  payments: BaseRoundPayment[],
+  matchCount: number,
+): BaseQuinielaEntrySummary[] {
+  const paymentByEntry = new Map(payments.map((p) => [p.entry_number, p]))
+  const countByEntry = new Map<number, number>()
+
+  for (const pred of predictions) {
+    countByEntry.set(pred.entry_number, (countByEntry.get(pred.entry_number) ?? 0) + 1)
+  }
+
+  const entryNumbers = new Set<number>([
+    ...paymentByEntry.keys(),
+    ...countByEntry.keys(),
+  ])
+
+  if (!entryNumbers.size) {
+    return [{ entry_number: 1, prediction_count: 0, is_submitted: false, verified: false }]
+  }
+
+  return [...entryNumbers]
+    .sort((a, b) => a - b)
+    .map((entry_number) => {
+      const payment = paymentByEntry.get(entry_number)
+      const prediction_count = countByEntry.get(entry_number) ?? 0
+      return {
+        entry_number,
+        prediction_count,
+        is_submitted: payment?.submitted_at != null,
+        verified: payment?.verified ?? false,
+      }
+    })
+}
+
 export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   const rounds = ref<BaseQuinielaRound[]>([])
   const roundFirstKickoff = ref<Record<string, number | null>>({})
@@ -32,10 +68,17 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   const roundMatches = ref<BaseQuinielaRoundMatch[]>([])
   const myPredictions = ref<BasePrediction[]>([])
   const mySubmission = ref<BaseRoundPayment | null>(null)
+  const myEntries = ref<BaseQuinielaEntrySummary[]>([{ entry_number: 1, prediction_count: 0, is_submitted: false, verified: false }])
+  const currentEntryNumber = ref(1)
   const leaderboard = ref<BaseRoundLeaderboardEntry[]>([])
   const leaderboardRoundId = ref<string | null>(null)
   const loading = ref(false)
   const saving = ref(false)
+
+  const canCreateNewEntry = computed(() => {
+    const current = myEntries.value.find((e) => e.entry_number === currentEntryNumber.value)
+    return current?.is_submitted === true
+  })
 
   async function fetchRounds() {
     loading.value = true
@@ -101,25 +144,69 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     loading.value = false
   }
 
-  async function fetchMyPredictions(roundId: string, userId: string) {
-    const [{ data, error }, { data: payment, error: paymentErr }] = await Promise.all([
+  async function fetchMyPredictions(roundId: string, userId: string, entryNumber = currentEntryNumber.value) {
+    const matchCount =
+      currentRound.value?.id === roundId
+        ? (currentRound.value.match_count ?? BASE_QUINIELA_MATCHES_PER_ROUND)
+        : BASE_QUINIELA_MATCHES_PER_ROUND
+
+    const [{ data: allPreds, error }, { data: payments, error: paymentErr }] = await Promise.all([
       supabase
         .from('base_predictions')
         .select('*')
         .eq('round_id', roundId)
-        .eq('user_id', userId),
+        .eq('user_id', userId)
+        .order('entry_number', { ascending: true }),
       supabase
         .from('base_round_payments')
         .select('*')
         .eq('round_id', roundId)
         .eq('user_id', userId)
-        .maybeSingle(),
+        .order('entry_number', { ascending: true }),
     ])
 
     if (error) throw error
     if (paymentErr) throw paymentErr
-    myPredictions.value = (data ?? []) as BasePrediction[]
-    mySubmission.value = (payment ?? null) as BaseRoundPayment | null
+
+    const typedPreds = (allPreds ?? []) as BasePrediction[]
+    const typedPayments = (payments ?? []) as BaseRoundPayment[]
+
+    myEntries.value = buildEntrySummaries(typedPreds, typedPayments, matchCount)
+    currentEntryNumber.value = entryNumber
+
+    myPredictions.value = typedPreds.filter((p) => p.entry_number === entryNumber)
+    mySubmission.value =
+      typedPayments.find((p) => p.entry_number === entryNumber) ?? null
+  }
+
+  function selectEntry(entryNumber: number) {
+    currentEntryNumber.value = entryNumber
+  }
+
+  async function switchEntry(roundId: string, userId: string, entryNumber: number) {
+    await fetchMyPredictions(roundId, userId, entryNumber)
+  }
+
+  function startNewEntry() {
+    if (!canCreateNewEntry.value) {
+      throw new Error('Guarda tu quiniela actual antes de crear otra')
+    }
+
+    const nextEntry =
+      myEntries.value.reduce((max, entry) => Math.max(max, entry.entry_number), 0) + 1
+
+    currentEntryNumber.value = nextEntry
+    myPredictions.value = []
+    mySubmission.value = null
+    myEntries.value = [
+      ...myEntries.value,
+      {
+        entry_number: nextEntry,
+        prediction_count: 0,
+        is_submitted: false,
+        verified: false,
+      },
+    ]
   }
 
   function isQuinielaSubmitted(): boolean {
@@ -137,6 +224,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
       .eq('is_complete', true)
       .order('correct_count', { ascending: false })
       .order('total_points', { ascending: false })
+      .order('entry_number', { ascending: true })
       .limit(limit)
 
     if (error) throw error
@@ -154,12 +242,14 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   async function fetchMyLeaderboardEntry(
     roundId: string,
     userId: string,
+    entryNumber = currentEntryNumber.value,
   ): Promise<BaseRoundLeaderboardEntry | null> {
     const { data, error } = await supabase
       .from('base_round_leaderboard')
       .select('*')
       .eq('round_id', roundId)
       .eq('user_id', userId)
+      .eq('entry_number', entryNumber)
       .maybeSingle()
 
     if (error) throw error
@@ -250,6 +340,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     match: Match,
     userId: string,
     winner: PredictedWinner,
+    entryNumber = currentEntryNumber.value,
   ): Promise<BasePrediction> {
     if (isQuinielaSubmitted()) {
       throw new Error('Tu quiniela ya está guardada. No puedes cambiar tus picks.')
@@ -287,6 +378,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
         .insert({
           user_id: userId,
           round_id: roundId,
+          entry_number: entryNumber,
           match_id: match.id,
           predicted_winner: winner,
         })
@@ -296,13 +388,26 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
       if (error) throw error
       const created = data as BasePrediction
       myPredictions.value.push(created)
+
+      const entryIdx = myEntries.value.findIndex((e) => e.entry_number === entryNumber)
+      if (entryIdx >= 0) {
+        myEntries.value[entryIdx] = {
+          ...myEntries.value[entryIdx]!,
+          prediction_count: myPredictions.value.length,
+        }
+      }
+
       return created
     } finally {
       saving.value = false
     }
   }
 
-  async function submitQuiniela(roundId: string, userId: string): Promise<void> {
+  async function submitQuiniela(
+    roundId: string,
+    userId: string,
+    entryNumber = currentEntryNumber.value,
+  ): Promise<void> {
     if (isQuinielaSubmitted()) {
       throw new Error('Tu quiniela ya está guardada')
     }
@@ -316,6 +421,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     try {
       const { error } = await supabase.rpc('submit_base_quiniela', {
         p_round_id: roundId,
+        p_entry_number: entryNumber,
       })
       if (error) throw error
 
@@ -324,10 +430,20 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
         .select('*')
         .eq('round_id', roundId)
         .eq('user_id', userId)
+        .eq('entry_number', entryNumber)
         .maybeSingle()
 
       if (paymentErr) throw paymentErr
       mySubmission.value = (payment ?? null) as BaseRoundPayment | null
+
+      const entryIdx = myEntries.value.findIndex((e) => e.entry_number === entryNumber)
+      if (entryIdx >= 0) {
+        myEntries.value[entryIdx] = {
+          ...myEntries.value[entryIdx]!,
+          is_submitted: true,
+          prediction_count: filled,
+        }
+      }
     } finally {
       saving.value = false
     }
@@ -336,16 +452,16 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   async function fetchParticipantCountsByRound(): Promise<Record<string, number>> {
     const { data, error } = await supabase
       .from('base_predictions')
-      .select('round_id, user_id')
+      .select('round_id, user_id, entry_number')
 
     if (error) throw error
 
     const byRound = new Map<string, Set<string>>()
     for (const row of data ?? []) {
       const roundId = row.round_id as string
-      const userId = row.user_id as string
+      const key = `${row.user_id}:${row.entry_number}`
       if (!byRound.has(roundId)) byRound.set(roundId, new Set())
-      byRound.get(roundId)!.add(userId)
+      byRound.get(roundId)!.add(key)
     }
 
     return Object.fromEntries(
@@ -361,7 +477,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
 
     const [{ data: preds, error: predsErr }, { data: payments }] = await Promise.all([
       supabase.from('base_predictions').select('*').eq('round_id', roundId).order('created_at'),
-      supabase.from('base_round_payments').select('user_id, verified').eq('round_id', roundId),
+      supabase.from('base_round_payments').select('user_id, entry_number, verified').eq('round_id', roundId),
     ])
 
     if (predsErr) throw predsErr
@@ -369,7 +485,10 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
 
     const typedPreds = preds as BasePrediction[]
     const verifiedMap = new Map(
-      (payments ?? []).map((p: { user_id: string; verified: boolean }) => [p.user_id, p.verified]),
+      (payments ?? []).map((p: { user_id: string; entry_number: number; verified: boolean }) => [
+        `${p.user_id}:${p.entry_number}`,
+        p.verified,
+      ]),
     )
     const userIds = [...new Set(typedPreds.map((p) => p.user_id))]
     const { data: profiles } = await supabase
@@ -384,20 +503,24 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     const grouped = new Map<string, BasePrediction[]>()
 
     for (const pred of typedPreds) {
-      const list = grouped.get(pred.user_id) ?? []
+      const key = `${pred.user_id}:${pred.entry_number}`
+      const list = grouped.get(key) ?? []
       list.push(pred)
-      grouped.set(pred.user_id, list)
+      grouped.set(key, list)
     }
 
     return [...grouped.entries()]
-      .map(([user_id, predictions]) => {
-        const profile = profileMap.get(user_id)
+      .map(([key, predictions]) => {
+        const [user_id, entryNumberRaw] = key.split(':')
+        const entry_number = Number(entryNumberRaw)
+        const profile = profileMap.get(user_id!)
         const complete = predictions.length >= matchCount
         const total_points = predictions.reduce((sum, p) => sum + (p.points ?? 0), 0)
         const correct_count = predictions.filter((p) => p.points > 0).length
         return {
-          user_id,
-          verified: verifiedMap.get(user_id) ?? false,
+          user_id: user_id!,
+          entry_number,
+          verified: verifiedMap.get(key) ?? false,
           profiles: profile
             ? { username: profile.username, avatar: profile.avatar }
             : undefined,
@@ -414,19 +537,26 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     userId: string,
     roundId: string,
     verified: boolean,
+    entryNumber: number,
   ): Promise<void> {
     const { error } = await supabase.rpc('admin_set_base_payment_verified', {
       p_user_id: userId,
       p_round_id: roundId,
       p_verified: verified,
+      p_entry_number: entryNumber,
     })
     if (error) throw error
   }
 
-  async function resetPlayerQuiniela(userId: string, roundId: string): Promise<void> {
+  async function resetPlayerQuiniela(
+    userId: string,
+    roundId: string,
+    entryNumber: number,
+  ): Promise<void> {
     const { error } = await supabase.rpc('admin_reset_base_quiniela', {
       p_user_id: userId,
       p_round_id: roundId,
+      p_entry_number: entryNumber,
     })
     if (error) throw error
   }
@@ -434,6 +564,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   async function fetchRoundParticipationStatus(
     roundId: string,
     userId: string,
+    entryNumber = currentEntryNumber.value,
   ): Promise<{ predictionCount: number; isSubmitted: boolean }> {
     const [{ count, error: countErr }, { data: payment, error: paymentErr }] =
       await Promise.all([
@@ -441,12 +572,14 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
           .from('base_predictions')
           .select('*', { count: 'exact', head: true })
           .eq('round_id', roundId)
-          .eq('user_id', userId),
+          .eq('user_id', userId)
+          .eq('entry_number', entryNumber),
         supabase
           .from('base_round_payments')
           .select('submitted_at')
           .eq('round_id', roundId)
           .eq('user_id', userId)
+          .eq('entry_number', entryNumber)
           .maybeSingle(),
       ])
 
@@ -483,6 +616,9 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     roundMatches,
     myPredictions,
     mySubmission,
+    myEntries,
+    currentEntryNumber,
+    canCreateNewEntry,
     leaderboard,
     leaderboardRoundId,
     loading,
@@ -490,6 +626,9 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     fetchRounds,
     fetchRound,
     fetchMyPredictions,
+    selectEntry,
+    switchEntry,
+    startNewEntry,
     fetchRoundLeaderboard,
     queryRoundLeaderboard,
     fetchAllRoundResults,

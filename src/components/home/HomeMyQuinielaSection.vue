@@ -42,7 +42,11 @@ const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
 const neighbors = computed(() => {
   const userId = auth.user?.id
   if (!userId) return getLeaderboardNeighbors([], '')
-  return getLeaderboardNeighbors(roundLeaderboard.value, userId)
+  return getLeaderboardNeighbors(
+    roundLeaderboard.value,
+    userId,
+    baseStore.currentEntryNumber,
+  )
 })
 
 const myCorrect = computed(

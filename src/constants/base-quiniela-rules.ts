@@ -3,6 +3,9 @@ import { PAYMENT_INFO } from '@/constants/quiniela-rules'
 export const BASE_ENTRY_FEE_MXN = 50
 export const BASE_QUINIELA_MATCHES_PER_ROUND = 16
 export const BASE_QUINIELA_POINTS_PER_HIT = 50
+/** Cuotas adicionales por jornada (cada quiniela extra cuesta lo mismo). Sin tope duro en app. */
+export const BASE_QUINIELA_ENTRIES_PER_ROUND_HINT =
+  'Puedes jugar más de una quiniela en la misma jornada. Cada quiniela extra requiere otro depósito.'
 /** Jornada activa por defecto al entrar a la quiniela (mínimo). */
 export const BASE_QUINIELA_MIN_ACTIVE_ROUND = 2
 export const BASE_QUINIELA_MAX_POINTS =
@@ -41,9 +44,10 @@ export const BASE_QUINIELA_SAVE_ALERT = {
 
 export const BASE_QUINIELA_LOGIC = {
   title: 'Quiniela',
-  summary: `Deposita $${BASE_ENTRY_FEE_MXN} MXN por jornada. Marca L, E o V en ${BASE_QUINIELA_MATCHES_PER_ROUND} partidos. Cada acierto suma ${BASE_QUINIELA_POINTS_PER_HIT} puntos. Ranking independiente por jornada.`,
+  summary: `Deposita $${BASE_ENTRY_FEE_MXN} MXN por cada quiniela que juegues en una jornada. Marca L, E o V en ${BASE_QUINIELA_MATCHES_PER_ROUND} partidos. Cada acierto suma ${BASE_QUINIELA_POINTS_PER_HIT} puntos. Ranking independiente por quiniela.`,
   howItWorks: [
-    `Transfiere $${BASE_ENTRY_FEE_MXN} MXN por cada jornada en la que participes.`,
+    `Transfiere $${BASE_ENTRY_FEE_MXN} MXN por cada quiniela que quieras jugar en una jornada.`,
+    BASE_QUINIELA_ENTRIES_PER_ROUND_HINT,
     `Los partidos se agrupan en jornadas de ${BASE_QUINIELA_MATCHES_PER_ROUND}, del más temprano al más tarde.`,
     'Marca L, E o V para cada partido antes de que empiece.',
     'Puedes cambiar tus picks mientras no hayas guardado la quiniela.',

@@ -51,7 +51,11 @@ const leader = computed(() => baseStore.leaderboard[0] ?? null)
 
 const myRank = computed(() => {
   if (!auth.user) return null
-  const index = baseStore.leaderboard.findIndex((e) => e.user_id === auth.user!.id)
+  const index = baseStore.leaderboard.findIndex(
+    (e) =>
+      e.user_id === auth.user!.id &&
+      e.entry_number === baseStore.currentEntryNumber,
+  )
   return index >= 0 ? index + 1 : null
 })
 
@@ -59,7 +63,11 @@ const myDisplayedEntry = computed(
   () =>
     myLeaderboardEntry.value ??
     (auth.user
-      ? baseStore.leaderboard.find((e) => e.user_id === auth.user!.id) ?? null
+      ? baseStore.leaderboard.find(
+          (e) =>
+            e.user_id === auth.user!.id &&
+            e.entry_number === baseStore.currentEntryNumber,
+        ) ?? null
       : null),
 )
 
