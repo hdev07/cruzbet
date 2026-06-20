@@ -2,10 +2,11 @@
 import { computed, onMounted, watch } from 'vue'
 import { ChevronRight, Radio, Users } from '@lucide/vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
+import MatchCardsList from '@/components/shared/MatchCardsList.vue'
 import MatchGoalsList from '@/components/shared/MatchGoalsList.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { bracketParticipantLabel } from '@/lib/knockoutBracket'
-import { isEffectivelyLive } from '@/lib/matchLifecycle'
+import { isEffectivelyLive, isRecentlyFinished } from '@/lib/matchLifecycle'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { formatLiveStatusLabel } from '@/lib/matchClock'
@@ -25,14 +26,17 @@ const props = withDefaults(
 const matchStore = useMatchStore()
 
 const isLive = computed(() => isEffectivelyLive(props.match))
+const showEventDetails = computed(
+  () => isLive.value || isRecentlyFinished(props.match),
+)
 const matchEvents = computed(() => matchStore.getEventsForMatch(props.match.id))
 
 onMounted(() => {
-  if (isLive.value) void matchStore.fetchEvents(props.match.id)
+  if (showEventDetails.value) void matchStore.fetchEvents(props.match.id)
 })
 
-watch(isLive, (live) => {
-  if (live) void matchStore.fetchEvents(props.match.id)
+watch(showEventDetails, (show) => {
+  if (show) void matchStore.fetchEvents(props.match.id)
 })
 
 function homeLabel(match: Match) {
@@ -123,12 +127,20 @@ function awayLabel(match: Match) {
     </div>
 
     <MatchGoalsList
-      v-if="isLive && matchEvents.length"
+      v-if="showEventDetails"
       :match="match"
       :events="matchEvents"
       compact
       :max-items="4"
       class="-mx-4 mt-3 lg:-mx-5"
+    />
+    <MatchCardsList
+      v-if="showEventDetails"
+      :match="match"
+      :events="matchEvents"
+      compact
+      :max-items="4"
+      class="-mx-4 lg:-mx-5"
     />
   </component>
 </template>

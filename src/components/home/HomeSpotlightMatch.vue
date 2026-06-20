@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { Clock, Radio } from '@lucide/vue'
+import { Clock, Radio, Trophy } from '@lucide/vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
+import MatchCardsList from '@/components/shared/MatchCardsList.vue'
 import MatchGoalsList from '@/components/shared/MatchGoalsList.vue'
 import { formatLiveStatusLabel } from '@/lib/matchClock'
 import { formatKickoff } from '@/lib/matchRules'
@@ -14,6 +15,7 @@ import type { Match } from '@/types'
 const props = defineProps<{
   match: Match
   isLive: boolean
+  isRecentlyFinished?: boolean
 }>()
 
 const matchStore = useMatchStore()
@@ -21,8 +23,15 @@ const matchStore = useMatchStore()
 const now = ref(Date.now())
 let timer: ReturnType<typeof setInterval> | null = null
 
+const shouldLoadEvents = computed(
+  () =>
+    props.isLive ||
+    props.isRecentlyFinished ||
+    props.match.status === 'finished',
+)
+
 onMounted(() => {
-  if (props.isLive) {
+  if (shouldLoadEvents.value) {
     void matchStore.fetchEvents(props.match.id)
   }
   const intervalMs =
@@ -32,18 +41,19 @@ onMounted(() => {
   }, intervalMs)
 })
 
-watch(
-  () => props.isLive,
-  (live) => {
-    if (live) void matchStore.fetchEvents(props.match.id)
-  },
-)
+watch(shouldLoadEvents, (load) => {
+  if (load) void matchStore.fetchEvents(props.match.id)
+})
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
 
 const matchEvents = computed(() => matchStore.getEventsForMatch(props.match.id))
+
+const showEventDetails = computed(
+  () => props.isLive || !!props.isRecentlyFinished,
+)
 
 const kickoffLabel = computed(() => formatKickoff(props.match))
 
@@ -83,6 +93,13 @@ const countdown = computed(() => {
           {{ formatLiveStatusLabel(match) }}
         </span>
         <span
+          v-else-if="isRecentlyFinished"
+          class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-xs font-semibold text-slate-300"
+        >
+          <Trophy class="h-3 w-3" />
+          Finalizado
+        </span>
+        <span
           v-else
           class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-xs font-semibold text-slate-300"
         >
@@ -114,7 +131,7 @@ const countdown = computed(() => {
 
         <div class="shrink-0 text-center">
           <p
-            v-if="isLive || match.status === 'finished'"
+            v-if="isLive || isRecentlyFinished || match.status === 'finished'"
             class="text-3xl font-black tabular-nums tracking-tight sm:text-4xl"
           >
             {{ match.home_score }}
@@ -147,7 +164,12 @@ const countdown = computed(() => {
     </div>
 
     <MatchGoalsList
-      v-if="isLive || match.status === 'finished'"
+      v-if="showEventDetails"
+      :match="match"
+      :events="matchEvents"
+    />
+    <MatchCardsList
+      v-if="showEventDetails"
       :match="match"
       :events="matchEvents"
     />

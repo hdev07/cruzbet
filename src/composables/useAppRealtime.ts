@@ -57,7 +57,7 @@ async function startAppRealtime() {
 
         const scoreChanged =
           prev?.home_score !== row.home_score || prev?.away_score !== row.away_score
-        if (scoreChanged || row.status === 'live') {
+        if (scoreChanged || row.status === 'live' || row.status === 'finished') {
           void matchStore.fetchEvents(row.id)
         }
 

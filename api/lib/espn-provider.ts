@@ -3,7 +3,7 @@ import {
   mergeLiveClock,
   parseClockDisplay,
 } from './clock.js'
-import type { DbMatchRow, LiveMatchSnapshot, ParsedGoal, ParsedGoalType } from './types.js'
+import type { DbMatchRow, LiveMatchSnapshot, ParsedCard, ParsedGoal, ParsedGoalType } from './types.js'
 
 const ESPN_SCOREBOARD =
   'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
@@ -129,6 +129,21 @@ function isGoalEvent(event: EspnKeyEvent): boolean {
   return event.scoringPlay === true || /goal/i.test(type)
 }
 
+function isCardEvent(event: EspnKeyEvent): boolean {
+  const type = (event.type?.type ?? event.type?.text ?? '').toLowerCase()
+  const text = (event.text ?? event.shortText ?? '').toLowerCase()
+  return /yellow.?card|red.?card|tarjeta/i.test(type) || /yellow card|red card|tarjeta/i.test(text)
+}
+
+function mapEspnCardType(event: EspnKeyEvent): ParsedCard['card_type'] {
+  const type = (event.type?.type ?? event.type?.text ?? '').toLowerCase()
+  const text = (event.text ?? event.shortText ?? '').toLowerCase()
+  if (/red.?card|tarjeta roja/i.test(type) || /red card|tarjeta roja/i.test(text)) {
+    return 'red'
+  }
+  return 'yellow'
+}
+
 function mapEspnGoalType(event: EspnKeyEvent): ParsedGoalType {
   const type = (event.type?.type ?? event.type?.text ?? '').toLowerCase()
   const text = (event.text ?? event.shortText ?? '').toLowerCase()
@@ -164,6 +179,27 @@ function parseGoalsFromKeyEvents(
       event_second: 0,
       player,
       goal_type: mapEspnGoalType(goal),
+      source: 'espn',
+    }
+  })
+}
+
+function parseCardsFromKeyEvents(
+  keyEvents: EspnKeyEvent[] | undefined,
+  homeTeamId: string | undefined,
+): ParsedCard[] {
+  return (keyEvents ?? []).filter(isCardEvent).map((card) => {
+    const parsed = parseClockDisplay(card.clock?.displayValue ?? "0'")
+    const isHome = card.team?.id === homeTeamId
+    const player = card.participants?.[0]?.athlete?.displayName ?? null
+    return {
+      sync_key: `espn:card:${card.id}`,
+      team_side: isHome ? 'home' : 'away',
+      minute: parsed.minute,
+      extra_time: parsed.extra_time,
+      event_second: 0,
+      player,
+      card_type: mapEspnCardType(card),
       source: 'espn',
     }
   })
@@ -239,12 +275,14 @@ async function buildEspnSnapshotFromCompetition(
   )
 
   let goals: ParsedGoal[] = []
-  if (summary) {
-    goals = parseGoalsFromKeyEvents(summary.keyEvents, homeTeamId)
-  } else {
+  let cards: ParsedCard[] = []
+  let keyEvents = summary?.keyEvents
+  if (!keyEvents) {
     const fetchedSummary = await fetchEspnSummary(eventId)
-    goals = parseGoalsFromKeyEvents(fetchedSummary?.keyEvents, homeTeamId)
+    keyEvents = fetchedSummary?.keyEvents
   }
+  goals = parseGoalsFromKeyEvents(keyEvents, homeTeamId)
+  cards = parseCardsFromKeyEvents(keyEvents, homeTeamId)
 
   const clock = mergeLiveClock(
     extractClockFromEspnStatus(status, matchStatus),
@@ -258,6 +296,7 @@ async function buildEspnSnapshotFromCompetition(
     home_score: Number.parseInt(homeComp?.score ?? '0', 10),
     away_score: Number.parseInt(awayComp?.score ?? '0', 10),
     goals,
+    cards,
     external_event_id: eventId,
     source: 'espn',
   }

@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { isEffectivelyLive, withEffectiveMatchState } from '@/lib/matchLifecycle'
+import { isEffectivelyLive, isRecentlyFinished, withEffectiveMatchState } from '@/lib/matchLifecycle'
 import { mergeLiveClockPatch } from '@/lib/matchClock'
-import { sortGoalEvents } from '@/lib/goalDisplay'
+import { sortMatchEvents } from '@/lib/cardDisplay'
 import { warmFlagCache } from '@/lib/flagCache'
 import { supabase } from '@/lib/supabase'
 import type { Match, MatchEvent } from '@/types'
@@ -30,7 +30,7 @@ export const useMatchStore = defineStore('match', () => {
   const loading = ref(false)
 
   function setEventsForMatch(matchId: string, matchEvents: MatchEvent[]) {
-    const sorted = sortGoalEvents(matchEvents)
+    const sorted = sortMatchEvents(matchEvents)
     eventsByMatchId.value = { ...eventsByMatchId.value, [matchId]: sorted }
     if (currentMatch.value?.id === matchId) {
       events.value = sorted
@@ -49,7 +49,7 @@ export const useMatchStore = defineStore('match', () => {
       .from('match_events')
       .select(EVENT_SELECT)
       .in('match_id', missing)
-      .eq('event_type', 'goal')
+      .in('event_type', ['goal', 'card'])
       .order('minute', { ascending: true })
       .order('extra_time', { ascending: true })
 
@@ -68,7 +68,7 @@ export const useMatchStore = defineStore('match', () => {
 
     const next = { ...eventsByMatchId.value }
     for (const matchId of missing) {
-      next[matchId] = sortGoalEvents(grouped[matchId] ?? [])
+      next[matchId] = sortMatchEvents(grouped[matchId] ?? [])
       eventsFetchedFor.value.add(matchId)
     }
     eventsByMatchId.value = next
@@ -84,6 +84,8 @@ export const useMatchStore = defineStore('match', () => {
     if (!error && data) {
       matches.value = (data as Match[]).map((m) => withEffectiveMatchState(m))
       void warmFlagCache(collectFlagUrls(matches.value))
+      const recentIds = matches.value.filter((m) => isRecentlyFinished(m)).map((m) => m.id)
+      if (recentIds.length) void fetchEventsForMatches(recentIds)
     }
     loading.value = false
   }
@@ -120,6 +122,7 @@ export const useMatchStore = defineStore('match', () => {
       .from('match_events')
       .select(EVENT_SELECT)
       .eq('match_id', matchId)
+      .in('event_type', ['goal', 'card'])
       .order('minute', { ascending: true })
       .order('extra_time', { ascending: true })
 
@@ -137,7 +140,7 @@ export const useMatchStore = defineStore('match', () => {
 
     if (!events.value.find((e) => e.id === event.id)) {
       events.value.push(event)
-      events.value = sortGoalEvents(events.value)
+      events.value = sortMatchEvents(events.value)
     }
   }
 

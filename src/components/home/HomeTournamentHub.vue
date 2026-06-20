@@ -7,6 +7,7 @@ import HomeSpotlightMatch from '@/components/home/HomeSpotlightMatch.vue'
 import BaseQuinielaMatchContext from '@/components/predictions/BaseQuinielaMatchContext.vue'
 import GroupStandingsTable from '@/components/shared/GroupStandingsTable.vue'
 import MatchCard from '@/components/shared/MatchCard.vue'
+import { useMatchLifecycleClock } from '@/composables/useMatchLifecycleClock'
 import { ELIMINATORIA_PATH, GRUPOS_PATH, JORNADAS_PATH } from '@/constants/nav'
 import { totalGoalsInMatches } from '@/lib/groupStandings'
 import {
@@ -14,7 +15,7 @@ import {
   isGroupStageComplete,
   isKnockoutFilled,
 } from '@/lib/knockoutBracket'
-import { isEffectivelyLive } from '@/lib/matchLifecycle'
+import { isEffectivelyLive, isRecentlyFinished, pickSpotlightMatch } from '@/lib/matchLifecycle'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 import { useMatchStore } from '@/stores/matchStore'
@@ -22,6 +23,7 @@ import type { Match } from '@/types'
 
 const matchStore = useMatchStore()
 const standingsStore = useGroupStandingsStore()
+const lifecycleNow = useMatchLifecycleClock()
 
 onMounted(async () => {
   if (!standingsStore.teams.length) {
@@ -31,16 +33,19 @@ onMounted(async () => {
 
 const liveMatches = computed(() => matchStore.liveMatches)
 
-const nextScheduledMatch = computed(() =>
-  matchStore.matches
-    .filter((m) => m.status !== 'finished' && !isEffectivelyLive(m) && m.match_date)
-    .sort((a, b) => new Date(a.match_date!).getTime() - new Date(b.match_date!).getTime())[0] ?? null,
+const spotlightMatch = computed(() =>
+  pickSpotlightMatch(matchStore.matches, liveMatches.value, lifecycleNow.value),
 )
 
-const spotlightMatch = computed(() => liveMatches.value[0] ?? nextScheduledMatch.value)
-
 const spotlightIsLive = computed(
-  () => !!spotlightMatch.value && isEffectivelyLive(spotlightMatch.value),
+  () => !!spotlightMatch.value && isEffectivelyLive(spotlightMatch.value, lifecycleNow.value),
+)
+
+const spotlightIsRecentlyFinished = computed(
+  () =>
+    !!spotlightMatch.value &&
+    !spotlightIsLive.value &&
+    isRecentlyFinished(spotlightMatch.value, lifecycleNow.value),
 )
 
 const otherLiveMatches = computed(() =>
@@ -75,7 +80,9 @@ const daySheet = computed(() => {
     .filter((m) => m.match_date)
     .sort((a, b) => new Date(a.match_date!).getTime() - new Date(b.match_date!).getTime())
 
-  const today = sorted.filter((m) => matchDayKey(m) === todayKey)
+  const today = sorted.filter(
+    (m) => matchDayKey(m) === todayKey && (m.status !== 'finished' || isRecentlyFinished(m, lifecycleNow.value)),
+  )
   if (today.length) {
     return { label: 'Hoy', matches: today }
   }
@@ -178,7 +185,11 @@ const stats = computed(() => [
       </RouterLink>
 
       <div v-if="spotlightMatch">
-        <HomeSpotlightMatch :match="spotlightMatch" :is-live="spotlightIsLive" />
+        <HomeSpotlightMatch
+          :match="spotlightMatch"
+          :is-live="spotlightIsLive"
+          :is-recently-finished="spotlightIsRecentlyFinished"
+        />
 
         <BaseQuinielaMatchContext
           v-if="showSpotlightContext"

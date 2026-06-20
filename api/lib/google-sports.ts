@@ -87,6 +87,7 @@ function parseGoogleSportsHtml(html: string): LiveMatchSnapshot | null {
     home_score: Number.parseInt(scoreMatch[1]!, 10),
     away_score: Number.parseInt(scoreMatch[2]!, 10),
     goals,
+    cards: [],
     external_event_id: null,
     source: 'google',
   }

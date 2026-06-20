@@ -54,3 +54,46 @@ export function withEffectiveMatchState(match: Match, now = Date.now()): Match {
 export function isEffectivelyLive(match: Match, now = Date.now()): boolean {
   return getEffectiveMatchStatus(match, now) === 'live'
 }
+
+/** Tiempo que un partido finalizado permanece destacado en el home */
+export const RECENTLY_FINISHED_GRACE_MS = 2 * 60 * 60 * 1000
+
+export function getEstimatedMatchEndTime(match: Pick<Match, 'match_date'>): number | null {
+  const kickoff = getKickoffTime(match)
+  if (kickoff === null) return null
+  return kickoff + MATCH_TOTAL_DURATION_MIN * 60_000
+}
+
+/** Partido terminado hace menos de 2 horas (sigue visible en el home) */
+export function isRecentlyFinished(match: Match, now = Date.now()): boolean {
+  if (match.status !== 'finished') return false
+  const end = getEstimatedMatchEndTime(match)
+  if (end === null) return true
+  return now < end + RECENTLY_FINISHED_GRACE_MS
+}
+
+export function matchSortTime(match: Pick<Match, 'match_date' | 'created_at'>): number {
+  const date = match.match_date ?? match.created_at
+  return date ? new Date(date).getTime() : 0
+}
+
+/** Prioridad: en vivo → recién finalizado → próximo programado */
+export function pickSpotlightMatch(
+  matches: Match[],
+  liveMatches: Match[],
+  now = Date.now(),
+): Match | null {
+  if (liveMatches.length) return liveMatches[0] ?? null
+
+  const recentFinished = matches
+    .filter((m) => isRecentlyFinished(m, now))
+    .sort((a, b) => matchSortTime(b) - matchSortTime(a))
+  if (recentFinished.length) return recentFinished[0] ?? null
+
+  return (
+    matches
+      .filter((m) => m.status !== 'finished' && !isEffectivelyLive(m, now) && m.match_date)
+      .sort((a, b) => new Date(a.match_date!).getTime() - new Date(b.match_date!).getTime())[0] ??
+    null
+  )
+}

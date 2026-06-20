@@ -4,20 +4,16 @@ import { RouterLink } from 'vue-router'
 import { ChevronRight, Grid3x3, LayoutGrid, Radio, Trophy } from '@lucide/vue'
 import HomeSpotlightMatch from '@/components/home/HomeSpotlightMatch.vue'
 import MatchCard from '@/components/shared/MatchCard.vue'
+import { useMatchLifecycleClock } from '@/composables/useMatchLifecycleClock'
 import { JORNADAS_PATH, MUNDIAL_PATH, RANKING_PATH } from '@/constants/nav'
-import { isEffectivelyLive } from '@/lib/matchLifecycle'
+import { isEffectivelyLive, isRecentlyFinished, matchSortTime, pickSpotlightMatch } from '@/lib/matchLifecycle'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import { useMatchStore } from '@/stores/matchStore'
-import type { Match } from '@/types'
-
-function matchSortTime(match: Match): number {
-  const date = match.match_date ?? match.created_at
-  return date ? new Date(date).getTime() : 0
-}
 
 const matchStore = useMatchStore()
 const baseStore = useBaseQuinielaStore()
+const lifecycleNow = useMatchLifecycleClock()
 
 onMounted(() => {
   void baseStore.fetchRounds()
@@ -25,18 +21,19 @@ onMounted(() => {
 
 const liveMatches = computed(() => matchStore.liveMatches)
 
-const nextScheduledMatch = computed(
-  () =>
-    matchStore.matches
-      .filter((m) => m.status !== 'finished' && !isEffectivelyLive(m) && m.match_date)
-      .sort((a, b) => new Date(a.match_date!).getTime() - new Date(b.match_date!).getTime())[0] ??
-    null,
+const spotlightMatch = computed(() =>
+  pickSpotlightMatch(matchStore.matches, liveMatches.value, lifecycleNow.value),
 )
 
-const spotlightMatch = computed(() => liveMatches.value[0] ?? nextScheduledMatch.value)
-
 const spotlightIsLive = computed(
-  () => !!spotlightMatch.value && isEffectivelyLive(spotlightMatch.value),
+  () => !!spotlightMatch.value && isEffectivelyLive(spotlightMatch.value, lifecycleNow.value),
+)
+
+const spotlightIsRecentlyFinished = computed(
+  () =>
+    !!spotlightMatch.value &&
+    !spotlightIsLive.value &&
+    isRecentlyFinished(spotlightMatch.value, lifecycleNow.value),
 )
 
 const otherLiveMatches = computed(() =>
@@ -49,6 +46,7 @@ const upcomingMatches = computed(() =>
       (m) =>
         m.id !== spotlightMatch.value?.id &&
         m.status !== 'finished' &&
+        !isRecentlyFinished(m, lifecycleNow.value) &&
         !isEffectivelyLive(m) &&
         m.match_date,
     )
@@ -58,7 +56,7 @@ const upcomingMatches = computed(() =>
 
 const recentFinishedMatches = computed(() =>
   matchStore.matches
-    .filter((m) => m.status === 'finished')
+    .filter((m) => isRecentlyFinished(m, lifecycleNow.value) && m.id !== spotlightMatch.value?.id)
     .sort((a, b) => matchSortTime(b) - matchSortTime(a))
     .slice(0, 3),
 )
@@ -83,7 +81,11 @@ const loading = computed(() => !matchStore.matches.length && matchStore.loading)
 
     <template v-else-if="hasMatchContent">
       <div v-if="spotlightMatch" class="p-4 sm:p-5">
-        <HomeSpotlightMatch :match="spotlightMatch" :is-live="spotlightIsLive" />
+        <HomeSpotlightMatch
+          :match="spotlightMatch"
+          :is-live="spotlightIsLive"
+          :is-recently-finished="spotlightIsRecentlyFinished"
+        />
 
         <div v-if="otherLiveMatches.length" class="mt-3 flex flex-wrap gap-2">
           <span

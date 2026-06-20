@@ -2,6 +2,8 @@ export type MatchStatus = 'scheduled' | 'live' | 'finished'
 
 export type ParsedGoalType = 'foot' | 'penalty' | 'own_goal' | 'header' | 'free_kick'
 
+export type ParsedCardType = 'yellow' | 'red'
+
 export interface ParsedGoal {
   sync_key: string
   team_side: 'home' | 'away'
@@ -13,6 +15,17 @@ export interface ParsedGoal {
   source: string
 }
 
+export interface ParsedCard {
+  sync_key: string
+  team_side: 'home' | 'away'
+  minute: number
+  extra_time: number
+  event_second: number
+  player: string | null
+  card_type: ParsedCardType
+  source: string
+}
+
 export interface LiveMatchSnapshot {
   status: MatchStatus
   current_minute: number
@@ -20,6 +33,7 @@ export interface LiveMatchSnapshot {
   home_score: number
   away_score: number
   goals: ParsedGoal[]
+  cards: ParsedCard[]
   external_event_id: string | null
   source: 'google' | 'espn'
 }
