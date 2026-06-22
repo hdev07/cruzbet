@@ -106,6 +106,7 @@ export async function syncAllLiveMatches(): Promise<{
         p_cards: snapshot.cards ?? [],
         p_external_event_id: snapshot.external_event_id,
         p_live_clock_display: snapshot.live_clock_display,
+        p_live_status_detail: snapshot.live_status_detail,
       })
 
       if (rpcError) {

@@ -5,6 +5,7 @@ import {
   matchBracketLabel,
   type BracketRound,
 } from '@/lib/knockoutBracket'
+import { formatLiveStatusLabel } from '@/lib/matchClock'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
@@ -76,10 +77,11 @@ function formatDate(iso: string | null | undefined): string {
               <span>{{ match.bracket_key ?? phaseLabel(match.phase) }}</span>
               <span
                 v-if="match.status === 'live'"
-                class="inline-flex items-center gap-0.5 font-semibold text-mundial-green"
+                class="inline-flex items-center gap-0.5 font-semibold"
+                :class="match.live_status_detail === 'delayed' ? 'text-amber-400' : 'text-mundial-green'"
               >
                 <Radio class="h-3 w-3" />
-                EN VIVO
+                {{ formatLiveStatusLabel(match) }}
               </span>
               <span v-else-if="match.status === 'finished'" class="text-slate-400">Final</span>
               <span v-else>{{ formatDate(match.match_date) }}</span>

@@ -26,10 +26,13 @@ export interface ParsedCard {
   source: string
 }
 
+export type LiveStatusDetail = 'delayed' | 'postponed' | 'suspended' | 'canceled'
+
 export interface LiveMatchSnapshot {
   status: MatchStatus
   current_minute: number
   live_clock_display: string | null
+  live_status_detail: LiveStatusDetail | null
   home_score: number
   away_score: number
   goals: ParsedGoal[]

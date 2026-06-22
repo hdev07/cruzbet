@@ -9,7 +9,7 @@ import { bracketParticipantLabel } from '@/lib/knockoutBracket'
 import { isEffectivelyLive, isRecentlyFinished } from '@/lib/matchLifecycle'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
-import { formatLiveStatusLabel } from '@/lib/matchClock'
+import { formatLiveStatusLabel, formatScheduledStatusLabel, isMatchDelayed } from '@/lib/matchClock'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match } from '@/types'
 
@@ -26,6 +26,7 @@ const props = withDefaults(
 const matchStore = useMatchStore()
 
 const isLive = computed(() => isEffectivelyLive(props.match))
+const isDelayed = computed(() => isMatchDelayed(props.match))
 const showEventDetails = computed(
   () => isLive.value || isRecentlyFinished(props.match),
 )
@@ -57,19 +58,29 @@ function awayLabel(match: Match) {
     class="block overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4 lg:p-5"
     :class="[
       linkable ? 'transition hover:border-mundial-accent/50 hover:bg-white/10' : '',
-      { 'ring-2 ring-mundial-green/60': isLive },
+      {
+        'ring-2 ring-mundial-green/60': isLive && !isDelayed,
+        'ring-2 ring-amber-400/60': isLive && isDelayed,
+      },
     ]"
   >
     <div class="mb-2 flex items-center justify-between text-xs text-slate-400">
       <span>{{ phaseLabel(match.phase) }}</span>
       <span
         v-if="isLive"
-        class="inline-flex items-center gap-1 rounded-full bg-mundial-green px-2 py-0.5 font-semibold text-white"
+        class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-white"
+        :class="isDelayed ? 'bg-amber-500' : 'bg-mundial-green'"
       >
         <Radio class="h-3 w-3" />
         {{ formatLiveStatusLabel(match) }}
       </span>
       <span v-else-if="match.status === 'finished'">Finalizado</span>
+      <span
+        v-else-if="formatScheduledStatusLabel(match)"
+        class="font-semibold text-amber-400"
+      >
+        {{ formatScheduledStatusLabel(match) }}
+      </span>
       <span v-else class="text-slate-500">
         {{ match.match_date ? new Date(match.match_date).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Por definir' }}
       </span>

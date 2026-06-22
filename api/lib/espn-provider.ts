@@ -25,6 +25,7 @@ interface EspnCompetition {
     type: {
       state: string
       completed: boolean
+      name?: string
       description?: string
       detail?: string
       shortDetail?: string
@@ -122,6 +123,21 @@ function mapEspnState(state: string, completed: boolean): LiveMatchSnapshot['sta
   if (completed || state === 'post') return 'finished'
   if (state === 'in') return 'live'
   return 'scheduled'
+}
+
+function mapEspnStatusDetail(
+  statusType: EspnCompetition['status']['type'],
+): LiveMatchSnapshot['live_status_detail'] {
+  const name = statusType.name ?? ''
+  const detail = [statusType.detail, statusType.description, statusType.shortDetail]
+    .filter(Boolean)
+    .join(' ')
+
+  if (name === 'STATUS_DELAYED' || /delayed|retras/i.test(detail)) return 'delayed'
+  if (name === 'STATUS_POSTPONED' || /postponed|pospuest/i.test(detail)) return 'postponed'
+  if (name === 'STATUS_SUSPENDED' || /suspend/i.test(detail)) return 'suspended'
+  if (name === 'STATUS_CANCELED' || /cancel/i.test(detail)) return 'canceled'
+  return null
 }
 
 function isGoalEvent(event: EspnKeyEvent): boolean {
@@ -293,6 +309,7 @@ async function buildEspnSnapshotFromCompetition(
     status: matchStatus,
     current_minute: clock.current_minute,
     live_clock_display: clock.live_clock_display,
+    live_status_detail: mapEspnStatusDetail(status.type),
     home_score: Number.parseInt(homeComp?.score ?? '0', 10),
     away_score: Number.parseInt(awayComp?.score ?? '0', 10),
     goals,

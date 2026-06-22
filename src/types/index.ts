@@ -1,5 +1,7 @@
 export type MatchStatus = 'scheduled' | 'live' | 'finished'
 
+export type LiveStatusDetail = 'delayed' | 'postponed' | 'suspended' | 'canceled'
+
 export type BracketSlot =
   | { type: 'group_pos'; group: string; pos: number }
   | { type: 'best_third'; groups: string[] }
@@ -49,6 +51,7 @@ export interface Match {
   away_score: number
   current_minute: number | null
   live_clock_display?: string | null
+  live_status_detail?: LiveStatusDetail | null
   status: MatchStatus
   phase: string | null
   match_date: string | null

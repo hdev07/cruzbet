@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { formatMatchClock } from '@/lib/matchClock'
+import { formatMatchClock, LIVE_STATUS_DETAIL_LABELS } from '@/lib/matchClock'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import AdminPaymentVerification from '@/components/admin/AdminPaymentVerification.vue'
@@ -16,13 +16,23 @@ type DetailTab = 'control' | 'payments'
 const tab = ref<DetailTab>('control')
 
 const statusLabel = computed(() => {
-  if (match.status === 'live') return 'En vivo'
+  if (match.status === 'live') {
+    if (match.live_status_detail) {
+      const detail = LIVE_STATUS_DETAIL_LABELS[match.live_status_detail]
+      return detail ? detail.charAt(0) + detail.slice(1).toLowerCase() : 'En vivo'
+    }
+    return 'En vivo'
+  }
   if (match.status === 'finished') return 'Finalizado'
   return 'Programado'
 })
 
 const statusClass = computed(() => {
-  if (match.status === 'live') return 'bg-mundial-green/20 text-mundial-green'
+  if (match.status === 'live') {
+    return match.live_status_detail === 'delayed'
+      ? 'bg-amber-500/20 text-amber-300'
+      : 'bg-mundial-green/20 text-mundial-green'
+  }
   if (match.status === 'finished') return 'bg-slate-500/20 text-slate-400'
   return 'bg-amber-500/15 text-amber-200'
 })

@@ -4,7 +4,7 @@ import { Clock, Radio, Trophy } from '@lucide/vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
 import MatchCardsList from '@/components/shared/MatchCardsList.vue'
 import MatchGoalsList from '@/components/shared/MatchGoalsList.vue'
-import { formatLiveStatusLabel } from '@/lib/matchClock'
+import { formatLiveStatusLabel, isMatchDelayed } from '@/lib/matchClock'
 import { formatKickoff } from '@/lib/matchRules'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
@@ -57,6 +57,8 @@ const showEventDetails = computed(
 
 const kickoffLabel = computed(() => formatKickoff(props.match))
 
+const isDelayed = computed(() => isMatchDelayed(props.match))
+
 const countdown = computed(() => {
   if (!props.match.match_date || props.isLive) return null
   const diff = new Date(props.match.match_date).getTime() - now.value
@@ -79,7 +81,9 @@ const countdown = computed(() => {
     class="relative overflow-hidden rounded-2xl border-2"
     :class="
       isLive
-        ? 'border-mundial-green/60 bg-gradient-to-br from-mundial-green/20 via-mundial-green/5 to-transparent ring-1 ring-mundial-green/30'
+        ? isDelayed
+          ? 'border-amber-400/60 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent ring-1 ring-amber-400/30'
+          : 'border-mundial-green/60 bg-gradient-to-br from-mundial-green/20 via-mundial-green/5 to-transparent ring-1 ring-mundial-green/30'
         : 'border-white/15 theme-spotlight-idle'
     "
   >
@@ -87,7 +91,8 @@ const countdown = computed(() => {
       <div class="flex items-center gap-2">
         <span
           v-if="isLive"
-          class="inline-flex items-center gap-1.5 rounded-full bg-mundial-green px-2.5 py-0.5 text-xs font-bold text-white"
+          class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold text-white"
+          :class="isDelayed ? 'bg-amber-500' : 'bg-mundial-green'"
         >
           <Radio class="h-3 w-3" />
           {{ formatLiveStatusLabel(match) }}

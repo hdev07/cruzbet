@@ -1,4 +1,24 @@
-import type { Match } from '@/types'
+import type { LiveStatusDetail, Match } from '@/types'
+
+export const LIVE_STATUS_DETAIL_LABELS: Record<LiveStatusDetail, string> = {
+  delayed: 'RETRASADO',
+  postponed: 'POSPUESTO',
+  suspended: 'SUSPENDIDO',
+  canceled: 'CANCELADO',
+}
+
+export function isMatchDelayed(
+  match: Pick<Match, 'live_status_detail'>,
+): boolean {
+  return match.live_status_detail === 'delayed'
+}
+
+export function formatScheduledStatusLabel(
+  match: Pick<Match, 'match_date' | 'live_status_detail'>,
+): string | null {
+  if (!match.live_status_detail) return null
+  return LIVE_STATUS_DETAIL_LABELS[match.live_status_detail] ?? null
+}
 
 function matchPatchTimestamp(match: Pick<Match, 'live_sync_at' | 'created_at'>): number {
   if (match.live_sync_at) return Date.parse(match.live_sync_at)
@@ -84,9 +104,18 @@ export function formatMatchClock(
 }
 
 export function formatLiveStatusLabel(
-  match: Pick<Match, 'current_minute' | 'live_clock_display' | 'status'>,
+  match: Pick<Match, 'current_minute' | 'live_clock_display' | 'status' | 'live_status_detail'>,
 ): string {
   if (match.live_clock_display === 'HT') return 'ENTRETIEMPO'
+
+  const detailLabel = match.live_status_detail
+    ? LIVE_STATUS_DETAIL_LABELS[match.live_status_detail]
+    : null
   const clock = formatMatchClock(match)
+
+  if (detailLabel) {
+    return clock ? `${detailLabel} · ${clock}` : detailLabel
+  }
+
   return clock ? `EN VIVO · ${clock}` : 'EN VIVO'
 }
