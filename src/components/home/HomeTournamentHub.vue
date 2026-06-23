@@ -16,7 +16,6 @@ import {
   isKnockoutFilled,
 } from '@/lib/knockoutBracket'
 import { isEffectivelyLive, isRecentlyFinished, pickSpotlightMatch } from '@/lib/matchLifecycle'
-import { teamDisplayName } from '@/lib/teamDisplay'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match } from '@/types'
@@ -46,10 +45,6 @@ const spotlightIsRecentlyFinished = computed(
     !!spotlightMatch.value &&
     !spotlightIsLive.value &&
     isRecentlyFinished(spotlightMatch.value, lifecycleNow.value),
-)
-
-const otherLiveMatches = computed(() =>
-  liveMatches.value.filter((m) => m.id !== spotlightMatch.value?.id),
 )
 
 function localDayKey(date: Date): string {
@@ -184,7 +179,16 @@ const stats = computed(() => [
         <ChevronRight class="h-4 w-4 shrink-0 text-slate-500" />
       </RouterLink>
 
-      <div v-if="spotlightMatch">
+      <div v-if="liveMatches.length" class="space-y-3">
+        <HomeSpotlightMatch
+          v-for="match in liveMatches"
+          :key="match.id"
+          :match="match"
+          :is-live="true"
+        />
+      </div>
+
+      <div v-else-if="spotlightMatch">
         <HomeSpotlightMatch
           :match="spotlightMatch"
           :is-live="spotlightIsLive"
@@ -197,22 +201,6 @@ const stats = computed(() => [
           compact
           class="mt-3"
         />
-
-        <div
-          v-if="otherLiveMatches.length"
-          class="mt-2 flex flex-wrap gap-2"
-        >
-          <span
-            v-for="match in otherLiveMatches"
-            :key="match.id"
-            class="inline-flex items-center gap-2 rounded-lg border border-mundial-green/30 bg-mundial-green/10 px-3 py-1.5 text-xs font-medium text-mundial-green"
-          >
-            <Radio class="h-3 w-3" />
-            {{ teamDisplayName(match.home_team, 'Local') }}
-            {{ match.home_score }}-{{ match.away_score }}
-            {{ teamDisplayName(match.away_team, 'Visit.') }}
-          </span>
-        </div>
       </div>
 
       <div

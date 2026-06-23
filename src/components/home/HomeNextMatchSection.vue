@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight, Grid3x3, LayoutGrid, Radio, Trophy } from '@lucide/vue'
+import { ChevronRight, Grid3x3, LayoutGrid, Trophy } from '@lucide/vue'
 import HomeSpotlightMatch from '@/components/home/HomeSpotlightMatch.vue'
 import MatchCard from '@/components/shared/MatchCard.vue'
 import { useMatchLifecycleClock } from '@/composables/useMatchLifecycleClock'
 import { JORNADAS_PATH, MUNDIAL_PATH, RANKING_PATH } from '@/constants/nav'
 import { isEffectivelyLive, isRecentlyFinished, matchSortTime, pickSpotlightMatch } from '@/lib/matchLifecycle'
-import { teamDisplayName } from '@/lib/teamDisplay'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import { useMatchStore } from '@/stores/matchStore'
 
@@ -34,10 +33,6 @@ const spotlightIsRecentlyFinished = computed(
     !!spotlightMatch.value &&
     !spotlightIsLive.value &&
     isRecentlyFinished(spotlightMatch.value, lifecycleNow.value),
-)
-
-const otherLiveMatches = computed(() =>
-  liveMatches.value.filter((m) => m.id !== spotlightMatch.value?.id),
 )
 
 const upcomingMatches = computed(() =>
@@ -80,25 +75,19 @@ const loading = computed(() => !matchStore.matches.length && matchStore.loading)
     </div>
 
     <template v-else-if="hasMatchContent">
-      <div v-if="spotlightMatch" class="p-4 sm:p-5">
+      <div v-if="liveMatches.length || spotlightMatch" class="space-y-3 p-4 sm:p-5">
         <HomeSpotlightMatch
+          v-for="match in liveMatches"
+          :key="match.id"
+          :match="match"
+          :is-live="true"
+        />
+        <HomeSpotlightMatch
+          v-if="!liveMatches.length && spotlightMatch"
           :match="spotlightMatch"
           :is-live="spotlightIsLive"
           :is-recently-finished="spotlightIsRecentlyFinished"
         />
-
-        <div v-if="otherLiveMatches.length" class="mt-3 flex flex-wrap gap-2">
-          <span
-            v-for="match in otherLiveMatches"
-            :key="match.id"
-            class="inline-flex items-center gap-2 rounded-lg border border-mundial-green/30 bg-mundial-green/10 px-3 py-1.5 text-xs font-medium text-mundial-green"
-          >
-            <Radio class="h-3 w-3" />
-            {{ teamDisplayName(match.home_team, 'Local') }}
-            {{ match.home_score }}-{{ match.away_score }}
-            {{ teamDisplayName(match.away_team, 'Visit.') }}
-          </span>
-        </div>
       </div>
 
       <div
