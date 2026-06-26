@@ -1,4 +1,5 @@
 -- Parche: diagnóstico de fase de grupos + fill con mensaje detallado
+-- OBSOLETO para asignación de terceros: usar fifa_annex_c_migration.sql (Anexo C FIFA).
 -- Ejecutar en SQL Editor si fill_knockout_r32_from_groups() devuelve group_stage_incomplete
 
 -- Reemplazar versión anterior sin parámetros

@@ -91,11 +91,11 @@ const knockoutCount = computed(
     >
       <Lock class="mt-0.5 h-4 w-4 shrink-0" />
       <div>
-        <p class="font-medium">El cuadro se llena automáticamente</p>
+        <p class="font-medium">El cuadro se actualiza en tiempo real</p>
         <p class="mt-1 text-amber-100/70">
-          Cuando los 72 partidos de fase de grupos estén finalizados, los 32 clasificados
-          (24 directos + 8 mejores terceros) se asignarán a los dieciseisavos.
-          Avance de ganadores en cada ronda también es automático.
+          Con cada gol en partidos de grupo en vivo y al finalizar cada encuentro, los dieciseisavos
+          se recalculan de forma provisional (Anexo C FIFA). Cuando cierren los 72 partidos de grupo,
+          el cuadro quedará definitivo. Los ganadores avanzan solos en eliminatoria.
         </p>
         <RouterLink
           :to="GRUPOS_PATH"

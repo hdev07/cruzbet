@@ -14,6 +14,7 @@
     "lint:eslint": "eslint . --fix --cache",
     "flags:download": "node scripts/download-flags.mjs",
     "seed:generate": "node scripts/generate-group-seed.mjs && node scripts/generate-knockout-seed.mjs",
+    "seed:annex-c": "node scripts/generate-annex-c-sql.mjs",
     "validate:espn": "node scripts/validate-espn-matches.mjs"
   },
   "dependencies": {

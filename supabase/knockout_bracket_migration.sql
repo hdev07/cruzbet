@@ -55,7 +55,7 @@ as $$
       ), 0)::int as goals_for
     from group_teams gt
     left join matches m on m.phase = 'group'
-      and m.status = 'finished'
+      and m.status in ('finished', 'live')
       and gt.id in (m.home_team_id, m.away_team_id)
       and m.home_team_id in (select id from group_teams)
       and m.away_team_id in (select id from group_teams)

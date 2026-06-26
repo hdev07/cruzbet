@@ -52,7 +52,7 @@ function slotLabel(slot: BracketSlot | undefined): string {
     return `${ord} Grupo ${slot.group}`
   }
   if (slot.type === 'best_third') {
-    return `Mejor 3º (${slot.groups?.join(', ') ?? '?'})`
+    return 'Mejor 3º (Anexo C FIFA)'
   }
   if (slot.type === 'winner') return `Ganador M${slot.match}`
   if (slot.type === 'loser') return `Perdedor M${slot.match}`
