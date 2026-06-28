@@ -1,36 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import InstallPrompt from '@/components/shared/InstallPrompt.vue'
 import ThemeToggle from '@/components/shared/ThemeToggle.vue'
-import QuinielaSubNav from '@/components/navigation/QuinielaSubNav.vue'
 import { APP_NAME } from '@/constants/branding'
-import {
-  isQuinielaSectionRoute,
-  MAIN_NAV,
-  navItemHref,
-  type NavItem,
-} from '@/constants/nav'
-import { useLiveSync } from '@/composables/useLiveSync'
-import { useAppRealtime } from '@/composables/useAppRealtime'
+import { MAIN_NAV, navItemHref, type NavItem } from '@/constants/nav'
 import { useAuthStore } from '@/stores/authStore'
-
-useLiveSync()
-useAppRealtime()
 
 const route = useRoute()
 const auth = useAuthStore()
 
-const showQuinielaSubNav = computed(() => isQuinielaSectionRoute(route.path))
-
 function isNavActive(item: NavItem): boolean {
-  if (item.to === '/') return route.path === '/'
   if (item.to === '/perfil') return route.path === '/perfil'
-  if (item.to === '/mundial') {
-    return route.path === '/mundial' || route.path === '/grupos' || route.path.startsWith('/grupos/')
-  }
   if (item.to === '/jornadas') {
-    return isQuinielaSectionRoute(route.path)
+    return route.path === '/jornadas' || route.path.startsWith('/jornadas/')
   }
   return route.path === item.to || route.path.startsWith(`${item.to}/`)
 }
@@ -38,12 +20,11 @@ function isNavActive(item: NavItem): boolean {
 
 <template>
   <div
-    class="flex min-h-screen flex-col"
-    :class="route.meta.hideBottomNav ? 'pb-0' : 'pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-0'"
+    class="flex min-h-screen flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-0"
   >
     <header class="sticky top-0 z-40 border-b border-white/10 bg-mundial-dark/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
       <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6 lg:max-w-7xl lg:px-8">
-        <RouterLink to="/" class="shrink-0 text-lg font-bold text-mundial-accent lg:text-xl">
+        <RouterLink to="/jornadas" class="shrink-0 text-lg font-bold text-mundial-accent lg:text-xl">
           {{ APP_NAME }}
         </RouterLink>
 
@@ -70,13 +51,6 @@ function isNavActive(item: NavItem): boolean {
         <div v-if="auth.isLoggedIn" class="flex shrink-0 items-center gap-2 lg:gap-3">
           <ThemeToggle size="sm" />
           <RouterLink
-            v-if="auth.isAdmin"
-            to="/admin"
-            class="rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold text-slate-300 lg:px-3 lg:py-1.5 lg:text-sm"
-          >
-            Admin
-          </RouterLink>
-          <RouterLink
             to="/perfil"
             class="flex items-center gap-2 text-sm text-slate-300"
             title="Mi perfil"
@@ -102,13 +76,6 @@ function isNavActive(item: NavItem): boolean {
         <div v-else-if="route.path !== '/login'" class="flex shrink-0 items-center gap-2">
           <ThemeToggle size="sm" />
           <RouterLink
-            v-if="auth.isAdmin"
-            to="/admin"
-            class="rounded-lg bg-white/10 px-2 py-1.5 text-xs font-semibold lg:px-3 lg:text-sm"
-          >
-            Admin
-          </RouterLink>
-          <RouterLink
             to="/login"
             class="rounded-lg bg-mundial-accent px-3 py-1.5 text-sm font-semibold lg:px-4 lg:py-2"
           >
@@ -118,16 +85,14 @@ function isNavActive(item: NavItem): boolean {
       </div>
     </header>
 
-    <QuinielaSubNav v-if="showQuinielaSubNav" />
-
     <main
-      class="mx-auto w-full max-w-xl flex-1 px-4 py-6 sm:max-w-2xl md:max-w-3xl lg:max-w-5xl lg:px-8 lg:py-8 xl:max-w-6xl"
+      class="mx-auto w-full max-w-xl flex-1 px-4 py-6 sm:max-w-2xl md:max-w-3xl lg:max-w-4xl lg:px-8 lg:py-8"
     >
       <slot />
     </main>
 
     <nav
-      v-if="route.path !== '/login' && !route.meta.hideBottomNav"
+      v-if="route.path !== '/login'"
       class="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-mundial-dark/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur md:hidden"
     >
       <div class="mx-auto flex w-full max-w-xl">
@@ -143,7 +108,5 @@ function isNavActive(item: NavItem): boolean {
         </RouterLink>
       </div>
     </nav>
-
-    <InstallPrompt />
   </div>
 </template>

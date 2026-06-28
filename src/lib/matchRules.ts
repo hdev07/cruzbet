@@ -20,20 +20,9 @@ export function hasMatchStarted(match: Match): boolean {
   return hasKickoffPassed(match)
 }
 
-/** Motivo por el que aún no se puede marcar L/E/V (equipos TBD en cuadro) */
+/** Motivo por el que aún no se puede marcar L/E/V */
 export function teamsPendingReason(match: Match): string | null {
   if (hasBothTeamsAssigned(match)) return null
-
-  const meta = match.bracket_meta
-  if (meta?.home?.type === 'best_third' || meta?.away?.type === 'best_third') {
-    return 'Rival por definir (Anexo C — mejores terceros)'
-  }
-  if (meta?.home?.type === 'loser' || meta?.away?.type === 'loser') {
-    return 'Espera a que se dispute el partido por el tercer lugar'
-  }
-  if (meta?.home?.type === 'winner' || meta?.away?.type === 'winner') {
-    return 'Espera a que termine el cruce anterior'
-  }
   return 'Equipos por definir'
 }
 

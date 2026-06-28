@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { Target } from '@lucide/vue'
-import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
 import { APP_NAME, APP_TAGLINE } from '@/constants/branding'
 import ThemeToggle from '@/components/shared/ThemeToggle.vue'
 import { useAuthStore } from '@/stores/authStore'
@@ -22,7 +21,7 @@ async function loginWithUsername() {
   error.value = ''
   try {
     await auth.loginWithUsername(username.value, pin.value)
-    await router.push('/')
+    await router.push('/jornadas')
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error al iniciar sesión'
   } finally {
@@ -45,18 +44,13 @@ async function loginWithGoogle() {
 <template>
   <div class="relative flex min-h-screen flex-col items-center justify-center bg-app-bg px-6 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] lg:px-8">
     <div class="absolute right-4 top-[calc(1rem+env(safe-area-inset-top,0px))] lg:right-8 lg:top-8">
-      <ThemeToggle />
+      <ThemeToggle size="sm" />
     </div>
     <div class="w-full max-w-sm text-center lg:max-w-md lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/5 lg:p-10 lg:shadow-xl">
       <Target class="mx-auto mb-2 h-14 w-14 text-mundial-accent" :stroke-width="1.5" />
       <h1 class="mb-2 text-3xl font-bold text-mundial-accent">{{ APP_NAME }}</h1>
       <p class="mb-8 text-slate-400">
-        {{ APP_TAGLINE }} — marca L, E o V en cada jornada
-      </p>
-
-      <p class="mb-6 text-sm text-slate-500">
-        Cuota: <strong class="text-slate-300">${{ BASE_ENTRY_FEE_MXN }} MXN</strong> por jornada.
-        <RouterLink to="/" class="text-mundial-accent hover:underline">Ver reglas</RouterLink>
+        {{ APP_TAGLINE }} — marca L, E o V en cada jornada de Liga MX
       </p>
 
       <form class="text-left" @submit.prevent="loginWithUsername">
@@ -141,19 +135,9 @@ async function loginWithGoogle() {
 
       <p v-if="error" class="mt-4 text-sm text-red-400">{{ error }}</p>
 
-      <RouterLink to="/" class="mt-6 inline-block text-sm text-slate-500 hover:text-slate-300">
-        Volver al inicio
+      <RouterLink to="/jornadas" class="mt-6 inline-block text-sm text-slate-500 hover:text-slate-300">
+        Volver a la quiniela
       </RouterLink>
-
-      <nav class="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs" aria-label="Enlaces legales">
-        <RouterLink to="/privacidad" class="text-slate-500 hover:text-slate-300">
-          Política de privacidad
-        </RouterLink>
-        <span class="text-slate-700" aria-hidden="true">·</span>
-        <RouterLink to="/terminos" class="text-slate-500 hover:text-slate-300">
-          Términos del servicio
-        </RouterLink>
-      </nav>
     </div>
   </div>
 </template>

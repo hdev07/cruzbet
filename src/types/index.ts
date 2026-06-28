@@ -90,48 +90,7 @@ export interface Profile {
   created_at?: string
 }
 
-export type PredictionType = 'goal' | 'score'
-
 export type PredictedWinner = 'home' | 'draw' | 'away'
-
-export interface Prediction {
-  id: number
-  user_id: string
-  match_id: string
-  prediction_type: PredictionType
-  predicted_minute: number | null
-  predicted_team?: 'home' | 'away' | null
-  predicted_winner?: PredictedWinner | null
-  predicted_home_score?: number | null
-  predicted_away_score?: number | null
-  created_at?: string
-  points: number
-  score_points?: number
-  scored_at?: string | null
-  profiles?: Pick<Profile, 'username' | 'avatar'>
-  profile?: Pick<Profile, 'username' | 'avatar'>
-}
-
-export interface PredictionWithMatch extends Prediction {
-  match?: Match
-}
-
-export interface MatchPayment {
-  user_id: string
-  match_id: string
-  verified: boolean
-  verified_at?: string | null
-  created_at?: string
-}
-
-export interface MatchParticipant {
-  user_id: string
-  verified: boolean
-  profiles?: Pick<Profile, 'username' | 'avatar'>
-  predictions: Prediction[]
-  total_points: number
-  complete?: boolean
-}
 
 export interface BaseQuinielaRound {
   id: string
@@ -211,22 +170,4 @@ export interface BaseRoundResultSummary {
   myEntry: BaseRoundLeaderboardEntry | null
   isActive: boolean
   participantCount: number
-}
-
-export interface GroupStandingRow {
-  team: Team
-  position: number
-  played: number
-  won: number
-  drawn: number
-  lost: number
-  goalsFor: number
-  goalsAgainst: number
-  goalDiff: number
-  points: number
-}
-
-export interface GroupStandings {
-  groupName: string
-  rows: GroupStandingRow[]
 }

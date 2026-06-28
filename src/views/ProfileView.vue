@@ -1,18 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import {
-  Check,
-  ChevronRight,
-  ClipboardList,
-  Grid3x3,
-  History,
-  LogOut,
-  Pencil,
-  Shield,
-  Trophy,
-  X,
-} from '@lucide/vue'
+import { Check, ChevronRight, Grid3x3, LogOut, Pencil, X } from '@lucide/vue'
 import { JORNADAS_PATH } from '@/constants/nav'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -154,79 +143,19 @@ async function handleLogout() {
     </div>
 
     <section class="mb-8">
-      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        Mi quiniela
-      </h2>
-      <div class="grid gap-2 sm:grid-cols-2">
-        <RouterLink
-          :to="JORNADAS_PATH"
-          class="flex items-center justify-between rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-4 py-3 transition hover:bg-mundial-green/15"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-medium text-mundial-green">
-            <Grid3x3 class="h-4 w-4" />
-            Ir a jornadas
-          </span>
-          <ChevronRight class="h-4 w-4 text-mundial-green/60" />
-        </RouterLink>
-
-        <RouterLink
-          to="/historial"
-          class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-            <History class="h-4 w-4 text-slate-400" />
-            Mi historial
-          </span>
-          <ChevronRight class="h-4 w-4 text-slate-500" />
-        </RouterLink>
-
-        <RouterLink
-          to="/ranking"
-          class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10 sm:col-span-2"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-            <Trophy class="h-4 w-4 text-slate-400" />
-            Ver ranking
-          </span>
-          <ChevronRight class="h-4 w-4 text-slate-500" />
-        </RouterLink>
-      </div>
-    </section>
-
-    <section class="mb-8">
-      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        Información
-      </h2>
-      <div class="space-y-2">
-        <RouterLink
-          to="/reglas"
-          class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-            <ClipboardList class="h-4 w-4 text-slate-400" />
-            Reglas y pagos
-          </span>
-          <ChevronRight class="h-4 w-4 text-slate-500" />
-        </RouterLink>
-
-        <RouterLink
-          v-if="auth.isAdmin"
-          to="/admin"
-          class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-            <Shield class="h-4 w-4 text-slate-400" />
-            Panel de admin
-          </span>
-          <ChevronRight class="h-4 w-4 text-slate-500" />
-        </RouterLink>
-      </div>
+      <RouterLink
+        :to="JORNADAS_PATH"
+        class="flex items-center justify-between rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-4 py-3 transition hover:bg-mundial-green/15"
+      >
+        <span class="inline-flex items-center gap-2 text-sm font-medium text-mundial-green">
+          <Grid3x3 class="h-4 w-4" />
+          Ir a la quiniela
+        </span>
+        <ChevronRight class="h-4 w-4 text-mundial-green/60" />
+      </RouterLink>
     </section>
 
     <section>
-      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        Sesión
-      </h2>
       <button
         type="button"
         class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"

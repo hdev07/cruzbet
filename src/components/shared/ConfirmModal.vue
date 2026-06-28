@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { AlertCircle, X } from '@lucide/vue'
-import type { RuleAlertSection, SimpleRuleExample } from '@/constants/quiniela-rules'
-import SimpleRuleExampleCard from '@/components/shared/SimpleRuleExampleCard.vue'
+import type { RuleAlertSection } from '@/constants/base-quiniela-rules'
 
 defineProps<{
   open: boolean
@@ -9,8 +8,6 @@ defineProps<{
   subtitle?: string
   sections?: readonly RuleAlertSection[]
   bullets?: readonly string[]
-  examples?: readonly SimpleRuleExample[]
-  examplesTitle?: string
   confirmLabel: string
   cancelLabel?: string
   saving?: boolean
@@ -89,18 +86,6 @@ const emit = defineEmits<{
               <span>{{ bullet }}</span>
             </li>
           </ul>
-
-          <section v-if="examples?.length" class="space-y-3">
-            <h4 class="text-sm font-bold text-slate-200">
-              {{ examplesTitle ?? 'Ejemplos para que quede claro' }}
-            </h4>
-            <SimpleRuleExampleCard
-              v-for="example in examples"
-              :key="example.id"
-              :example="example"
-              compact
-            />
-          </section>
         </div>
 
         <div
