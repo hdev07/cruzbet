@@ -3,7 +3,6 @@ import { ChevronRight } from '@lucide/vue'
 import { RouterLink } from 'vue-router'
 import {
   BASE_ENTRY_FEE_MXN,
-  BASE_QUINIELA_MATCHES_PER_ROUND,
   BASE_QUINIELA_POINTS_PER_HIT,
 } from '@/constants/base-quiniela-rules'
 </script>
@@ -52,7 +51,8 @@ import {
             2
           </span>
           <span>
-            Hay <strong class="text-slate-100">{{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos</strong>.
+            En grupos hay <strong class="text-slate-100">16 partidos</strong> por jornada; en
+            eliminatoria varía (dieciseisavos, octavos, cuartos, semifinal y tercer lugar).
             Antes de que empiece cada uno marcas quién crees que gane:
             <strong class="text-slate-100">L</strong> (local),
             <strong class="text-slate-100">E</strong> (empate) o

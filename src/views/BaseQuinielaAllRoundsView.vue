@@ -4,7 +4,6 @@ import { RouterLink } from 'vue-router'
 import { ArrowLeft, ChevronRight } from '@lucide/vue'
 import {
   BASE_ENTRY_FEE_MXN,
-  BASE_QUINIELA_MATCHES_PER_ROUND,
 } from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -32,7 +31,7 @@ const roundCount = computed(() => baseStore.rounds.length)
     <div class="mb-6">
       <h1 class="text-2xl font-bold lg:text-3xl">Todas las jornadas</h1>
       <p class="mt-1 text-sm text-slate-400 lg:text-base">
-        ${{ BASE_ENTRY_FEE_MXN }} MXN por jornada · {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos · grilla L/E/V
+        ${{ BASE_ENTRY_FEE_MXN }} MXN por jornada · grilla L/E/V · grupos y eliminatoria
       </p>
     </div>
 
@@ -57,8 +56,8 @@ const roundCount = computed(() => baseStore.rounds.length)
     >
       <p class="mb-1 font-semibold text-slate-300">Sin jornadas aún</p>
       <p class="text-sm">
-        Las jornadas se generan agrupando los partidos de {{ BASE_QUINIELA_MATCHES_PER_ROUND }} en
-        {{ BASE_QUINIELA_MATCHES_PER_ROUND }}, del más temprano al más tarde.
+        Fase de grupos en jornadas de 16 partidos; eliminatoria en jornadas por ronda
+        (dieciseisavos, octavos, cuartos, semifinal y tercer lugar).
       </p>
     </div>
 

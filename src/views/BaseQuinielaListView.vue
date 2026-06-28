@@ -12,7 +12,6 @@ import {
 import {
   BASE_ENTRY_FEE_MXN,
   BASE_QUINIELA_LOGIC,
-  BASE_QUINIELA_MATCHES_PER_ROUND,
 } from '@/constants/base-quiniela-rules'
 import { QUINIELA_SUMMARY } from '@/constants/nav'
 import { resolveUpcomingBaseRounds } from '@/lib/baseQuinielaRound'
@@ -24,7 +23,7 @@ const baseStore = useBaseQuinielaStore()
 
 const quickStartSteps = [
   'Marca L, E o V en cada partido antes de que empiece.',
-  `Completa los ${BASE_QUINIELA_MATCHES_PER_ROUND} partidos y guarda tu quiniela.`,
+  'Completa todos los partidos de la jornada y guarda tu quiniela.',
   'Gana quien más acierte en la jornada.',
 ] as const
 

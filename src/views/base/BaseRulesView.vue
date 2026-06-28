@@ -30,7 +30,7 @@ async function copyValue(value: string, field: string) {
   <div>
     <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Reglas y pagos</h1>
     <p class="mb-6 text-sm text-slate-400">
-      {{ QUINIELA_SUMMARY.entryLabel }} · {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos por jornada
+      {{ QUINIELA_SUMMARY.entryLabel }} · grupos (16) y eliminatoria por ronda
     </p>
 
     <section class="mb-8">
@@ -63,10 +63,11 @@ async function copyValue(value: string, field: string) {
           <strong class="text-mundial-green">{{ rule.points }} pts</strong>
         </li>
         <li class="text-sm text-slate-500">
-          Máximo por jornada:
+          Máximo en grupos (16 partidos):
           <strong class="text-slate-300">
             {{ BASE_QUINIELA_MATCHES_PER_ROUND * BASE_QUINIELA_POINTS_PER_HIT }} pts
           </strong>
+          · en eliminatoria depende de la jornada
         </li>
       </ul>
     </section>

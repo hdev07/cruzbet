@@ -19,6 +19,10 @@ const loadError = ref<string | null>(null)
 
 const roundId = computed(() => route.params.id as string)
 
+const matchCount = computed(
+  () => baseStore.currentRound?.match_count ?? BASE_QUINIELA_MATCHES_PER_ROUND,
+)
+
 const progress = computed(() => baseStore.myProgress())
 const myLeaderboardEntry = computed(() =>
   auth.user
@@ -73,7 +77,7 @@ async function onPredictionsUpdated() {
       <div class="mb-6">
         <h1 class="text-2xl font-bold lg:text-3xl">{{ baseStore.currentRound.title }}</h1>
         <p class="mt-1 text-sm text-slate-400">
-          ${{ BASE_ENTRY_FEE_MXN }} MXN · {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos ·
+          ${{ BASE_ENTRY_FEE_MXN }} MXN · {{ matchCount }} partidos ·
           {{ BASE_QUINIELA_POINTS_PER_HIT }} pts por acierto
         </p>
       </div>
@@ -125,6 +129,7 @@ async function onPredictionsUpdated() {
           :user-id="auth.user?.id"
           :can-predict="auth.isLoggedIn"
           :round-matches="baseStore.roundMatches"
+          :match-count="matchCount"
           @updated="onPredictionsUpdated"
         />
       </section>
@@ -133,6 +138,7 @@ async function onPredictionsUpdated() {
         <BaseRoundRankingPanel
           :round-id="roundId"
           :round-matches="baseStore.roundMatches"
+          :match-count="matchCount"
           compact
         />
       </section>

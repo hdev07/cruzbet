@@ -7,7 +7,7 @@ import {
 } from '@/constants/quiniela-rules'
 import { isValidGoalMinutePrediction } from '@/lib/predictionMinutes'
 import { hasCompletePredictions, totalPredictionPoints } from '@/lib/predictionDisplay'
-import { isMatchOpenForPredictions } from '@/lib/matchRules'
+import { isMatchOpenForPredictions, teamsPendingReason } from '@/lib/matchRules'
 import type {
   Match,
   MatchParticipant,
@@ -50,6 +50,8 @@ export const usePredictionStore = defineStore('prediction', () => {
   }
 
   function assertMatchOpen(match: Match): string | null {
+    const pending = teamsPendingReason(match)
+    if (pending) return pending
     if (!isMatchOpenForPredictions(match)) {
       return 'Las predicciones cerraron: el partido ya inició o terminó'
     }

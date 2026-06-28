@@ -10,6 +10,7 @@ import type { BaseQuinielaRoundMatch } from '@/types'
 const props = defineProps<{
   roundId: string
   roundMatches: BaseQuinielaRoundMatch[]
+  matchCount?: number
   compact?: boolean
   loading?: boolean
   /** Solo muestra la tabla de posiciones (sin pestaña de pronósticos). */
@@ -21,6 +22,10 @@ const props = defineProps<{
 const auth = useAuthStore()
 const baseStore = useBaseQuinielaStore()
 const activeTab = ref<'standings' | 'predictions'>('standings')
+
+const requiredMatches = computed(
+  () => props.matchCount ?? (props.roundMatches.length || BASE_QUINIELA_MATCHES_PER_ROUND),
+)
 
 const isLeaderboardReady = computed(
   () =>
@@ -69,7 +74,7 @@ const visibleLeaderboard = computed(() => {
 
     <template v-if="activeTab === 'standings'">
       <p class="mb-4 text-xs text-slate-500">
-        Solo participantes con los {{ BASE_QUINIELA_MATCHES_PER_ROUND }} partidos marcados.
+        Solo participantes con {{ requiredMatches === 1 ? 'el partido marcado' : `los ${requiredMatches} partidos marcados` }}.
         Orden: más aciertos, luego más puntos.
       </p>
 

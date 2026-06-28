@@ -1,5 +1,5 @@
 import { formatEncodedMinute, isNoGoalsMinute } from '@/lib/predictionMinutes'
-import { isMatchOpenForPredictions } from '@/lib/matchRules'
+import { isMatchOpenForPredictions, teamsPendingReason } from '@/lib/matchRules'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import type { Match, PredictedWinner, Prediction } from '@/types'
 
@@ -130,6 +130,14 @@ export function getPredictionStatus(
       kind: 'closed',
       label: 'Finalizado',
       detail: 'Puntos pendientes de cálculo',
+    }
+  }
+
+  if (teamsPendingReason(match)) {
+    return {
+      kind: 'closed',
+      label: 'Por definir',
+      detail: teamsPendingReason(match)!,
     }
   }
 

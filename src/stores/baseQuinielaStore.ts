@@ -5,7 +5,7 @@ import {
   buildFirstKickoffByRoundId,
   resolveActiveBaseRound,
 } from '@/lib/baseQuinielaRound'
-import { isMatchOpenForPredictions } from '@/lib/matchRules'
+import { isMatchOpenForPredictions, teamsPendingReason } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
 import type {
   BasePrediction,
@@ -347,7 +347,10 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     }
 
     if (!isMatchOpenForPredictions(match)) {
-      throw new Error('Las predicciones cerraron: el partido ya inició o terminó')
+      const pending = teamsPendingReason(match)
+      throw new Error(
+        pending ?? 'Las predicciones cerraron: el partido ya inició o terminó',
+      )
     }
 
     if (!['home', 'draw', 'away'].includes(winner)) {

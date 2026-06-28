@@ -9,7 +9,7 @@ import {
   Search,
 } from '@lucide/vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
-import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
+import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
 import { winnerCode } from '@/lib/baseQuinielaDisplay'
 import { formatEntryLabel } from '@/lib/baseQuinielaStats'
 import { teamDisplayName } from '@/lib/teamDisplay'
@@ -306,7 +306,7 @@ async function confirmResetQuiniela() {
                 v-if="!participant.complete"
                 class="mt-1 inline-block rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300"
               >
-                Incompleta ({{ participant.predictions.length }}/{{ BASE_QUINIELA_MATCHES_PER_ROUND }})
+                Incompleta ({{ participant.predictions.length }}/{{ round.match_count }})
               </span>
             </div>
 

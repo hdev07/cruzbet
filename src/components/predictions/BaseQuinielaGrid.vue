@@ -5,12 +5,17 @@ import BaseQuinielaEntrySelector from '@/components/predictions/BaseQuinielaEntr
 import BaseQuinielaMatchContext from '@/components/predictions/BaseQuinielaMatchContext.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import {
-  BASE_QUINIELA_FILL_TIP,
+  baseQuinielaFillTip,
+  baseQuinielaSaveAlert,
+  BASE_QUINIELA_MATCHES_PER_ROUND,
   BASE_QUINIELA_POINTS_PER_HIT,
-  BASE_QUINIELA_SAVE_ALERT,
 } from '@/constants/base-quiniela-rules'
 import { BASE_WINNER_OPTIONS, isPredictionCorrect } from '@/lib/baseQuinielaDisplay'
-import { formatKickoff, isMatchOpenForPredictions } from '@/lib/matchRules'
+import {
+  formatKickoff,
+  isMatchOpenForPredictions,
+  teamsPendingReason,
+} from '@/lib/matchRules'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -21,6 +26,7 @@ const props = defineProps<{
   userId?: string
   canPredict?: boolean
   roundMatches: BaseQuinielaRoundMatch[]
+  matchCount?: number
 }>()
 
 const emit = defineEmits<{
@@ -35,6 +41,13 @@ const showSubmitModal = ref(false)
 const sortedMatches = computed(() =>
   [...props.roundMatches].sort((a, b) => a.position - b.position),
 )
+
+const totalMatches = computed(
+  () => props.matchCount ?? (sortedMatches.value.length || BASE_QUINIELA_MATCHES_PER_ROUND),
+)
+
+const fillTip = computed(() => baseQuinielaFillTip(totalMatches.value))
+const saveAlert = computed(() => baseQuinielaSaveAlert(totalMatches.value))
 
 const isComplete = computed(() => {
   const total = sortedMatches.value.length
@@ -174,7 +187,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
       class="mb-4 flex gap-2 rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-3 py-2.5 text-sm text-mundial-green"
     >
       <Lock class="mt-0.5 h-4 w-4 shrink-0" />
-      <p>{{ BASE_QUINIELA_FILL_TIP.submitted }}</p>
+      <p>{{ fillTip.submitted }}</p>
     </div>
 
     <div
@@ -183,7 +196,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
     >
       <div class="flex gap-2 text-sm text-mundial-accent">
         <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0" />
-        <p>{{ BASE_QUINIELA_FILL_TIP.readyToSubmit }}</p>
+        <p>{{ fillTip.readyToSubmit }}</p>
       </div>
       <button
         type="button"
@@ -200,7 +213,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
       class="mb-4 flex gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-slate-300"
     >
       <Info class="mt-0.5 h-4 w-4 shrink-0 text-mundial-accent" />
-      <p>{{ BASE_QUINIELA_FILL_TIP.draft }}</p>
+      <p>{{ fillTip.draft }}</p>
     </div>
 
     <p v-if="formError" class="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -254,6 +267,14 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
 
           <p v-if="formatKickoff(row.match)" class="mt-1 text-xs text-slate-500">
             {{ formatKickoff(row.match) }}
+          </p>
+
+          <p
+            v-if="teamsPendingReason(row.match)"
+            class="mt-1 flex items-center gap-1 text-xs text-amber-300/90"
+          >
+            <Lock class="h-3 w-3 shrink-0" />
+            {{ teamsPendingReason(row.match) }}
           </p>
 
           <BaseQuinielaMatchContext :match="row.match" class="mt-2" />
@@ -368,6 +389,13 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
                 <p v-if="formatKickoff(row.match)" class="mt-0.5 text-xs text-slate-500">
                   {{ formatKickoff(row.match) }}
                 </p>
+                <p
+                  v-if="teamsPendingReason(row.match)"
+                  class="mt-1 flex items-center gap-1 text-xs text-amber-300/90"
+                >
+                  <Lock class="h-3 w-3 shrink-0" />
+                  {{ teamsPendingReason(row.match) }}
+                </p>
                 <BaseQuinielaMatchContext :match="row.match" compact class="mt-2" />
               </div>
             </td>
@@ -419,10 +447,10 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
 
     <ConfirmModal
       :open="showSubmitModal"
-      :title="BASE_QUINIELA_SAVE_ALERT.title"
-      :subtitle="BASE_QUINIELA_SAVE_ALERT.subtitle"
-      :sections="BASE_QUINIELA_SAVE_ALERT.sections"
-      :confirm-label="BASE_QUINIELA_SAVE_ALERT.confirm"
+      :title="saveAlert.title"
+      :subtitle="saveAlert.subtitle"
+      :sections="saveAlert.sections"
+      :confirm-label="saveAlert.confirm"
       :saving="baseStore.saving"
       @confirm="confirmSubmitQuiniela"
       @cancel="cancelSubmitModal"

@@ -1,6 +1,6 @@
 import type { Component } from 'vue'
 import { ClipboardList, Grid3x3, History, Home, LayoutGrid, Medal, Trophy, User } from '@lucide/vue'
-import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
+import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
 
 export const MUNDIAL_PATH = '/mundial'
 export const GRUPOS_PATH = '/grupos'
@@ -36,9 +36,9 @@ export const QUINIELA_SUB_NAV: NavItem[] = [
 
 export const QUINIELA_SUMMARY = {
   entryLabel: `$${BASE_ENTRY_FEE_MXN} MXN por jornada`,
-  tagline: `Marca L, E o V en ${BASE_QUINIELA_MATCHES_PER_ROUND} partidos de la jornada`,
+  tagline: 'Marca L, E o V en cada partido de la jornada',
   features: [
-    `$${BASE_ENTRY_FEE_MXN} pesos por jornada (${BASE_QUINIELA_MATCHES_PER_ROUND} partidos)`,
+    `$${BASE_ENTRY_FEE_MXN} pesos por jornada`,
     'L = gana el de casa · E = empate · V = gana el de fuera',
     'Gana quien más acierte en la jornada',
   ],
