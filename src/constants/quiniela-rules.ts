@@ -113,17 +113,32 @@ export const GOAL_SECOND_SCORING_LOGIC = {
   ],
 } as const
 
+/** Resultado L/E/V: 90 min reglamentarios + tiempo agregado; sin prórroga ni penales */
+export const REGULATION_TIME_WINNER_RULE =
+  'L, E y V se califican con el marcador al final de los 90 minutos reglamentarios más el tiempo agregado (45+ y 90+). El empate (E) solo aplica si siguen igualados en ese momento: no cuenta prórroga ni penales.'
+
+/** Aviso visible en la tabla de predicción L / E / V */
+export const WINNER_PREDICTION_NOTICE = {
+  title: '¿Qué cuenta para L / E / V?',
+  bullets: [
+    'Se mira el marcador al pitido final del segundo tiempo, incluido el tiempo agregado (90+1 … 90+10).',
+    'Empate (E): solo si quedan igualados tras esos 90 minutos más lo agregado. Si hay prórroga, ya no es empate.',
+    'Local (L) o Visita (V): gana quien lleve ventaja en ese mismo momento, antes de tiempos extras.',
+  ],
+} as const
+
 /** Cómo marcar el ganador L / E / V */
 export const WINNER_PREDICTION_LOGIC = {
   title: 'Ganador del partido (L / E / V)',
   summary:
     'No adivinas el marcador exacto. Solo marcas quién gana o si hay empate en una tabla de 3 opciones.',
   options: [
-    { code: 'L', label: 'Local', description: 'Gana el equipo de casa.' },
-    { code: 'E', label: 'Empate', description: 'El partido termina empatado.' },
-    { code: 'V', label: 'Visita', description: 'Gana el equipo visitante.' },
+    { code: 'L', label: 'Local', description: 'Gana el equipo de casa al final del tiempo reglamentario + agregado.' },
+    { code: 'E', label: 'Empate', description: 'Empate al final de los 90 minutos reglamentarios más el tiempo agregado.' },
+    { code: 'V', label: 'Visita', description: 'Gana el visitante al final del tiempo reglamentario + agregado.' },
   ],
   notes: [
+    REGULATION_TIME_WINNER_RULE,
     'Solo 1 elección por partido.',
     'Si aciertas L, E o V = 30 puntos. Si fallas = 0 puntos.',
     'Puedes cambiar tu elección hasta que empiece el partido.',
@@ -217,8 +232,9 @@ export const SCORE_PREDICTION_EXAMPLES: readonly SimpleRuleExample[] = [
     emoji: '🤝',
     title: 'Aciertas el empate',
     youSaid: 'Marcaste E (empate).',
-    whatHappened: 'Al final quedó 1-1.',
+    whatHappened: 'Al final del tiempo reglamentario + agregado quedó 1-1 (aunque luego hubiera prórroga).',
     youGet: '30 puntos.',
+    extra: 'El empate cuenta solo en 90 min + agregado, no en tiempos extras.',
   },
   {
     id: 'ganador-mal',
@@ -258,7 +274,7 @@ export const PREDICTIONS_LOGIC = {
     {
       title: 'Tabla L / E / V',
       description:
-        'L = gana el local. E = empate. V = gana el visitante. No necesitas adivinar el marcador exacto.',
+        'L = gana el local. E = empate. V = gana el visitante. Cuenta el marcador al final de 90 min + agregado; el empate no incluye prórroga.',
     },
     {
       title: 'Ambas son obligatorias',
@@ -329,6 +345,8 @@ export const PREDICTION_SAVE_ALERT = {
         title: 'Lo básico',
         bullets: [
           'Marcaste L (local), E (empate) o V (visita).',
+          'Cuenta el marcador al final de 90 min + tiempo agregado (45+ y 90+).',
+          'Empate (E): solo si quedan igualados en ese momento, sin prórroga ni penales.',
           'Si aciertas quién gana = 30 pts.',
           'Solo tienes 1 oportunidad por partido.',
         ],

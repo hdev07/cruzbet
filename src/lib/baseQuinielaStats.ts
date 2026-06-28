@@ -65,7 +65,19 @@ export function getLeaderboardNeighbors(
   }
 }
 
-export function formatEntryLabel(entryNumber: number): string {
+export function validateEntryName(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return 'El nombre no puede estar vacío'
+  if (trimmed.length > 30) return 'Máximo 30 caracteres'
+  return null
+}
+
+export function formatEntryLabel(
+  entryNumber: number,
+  customName?: string | null,
+): string {
+  const trimmed = customName?.trim()
+  if (trimmed) return trimmed
   return entryNumber === 1 ? 'Quiniela 1' : `Quiniela ${entryNumber}`
 }
 

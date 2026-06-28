@@ -6,6 +6,7 @@ import {
   winnerCode,
 } from '@/lib/baseQuinielaDisplay'
 import { firstKickoffFromRoundMatches, hasRoundStarted } from '@/lib/baseQuinielaRound'
+import { formatEntryLabel } from '@/lib/baseQuinielaStats'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -291,8 +292,8 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   <div class="order-3 min-w-[5.5rem] shrink-0 md:min-w-0">
                     <p class="whitespace-nowrap font-medium leading-tight text-slate-200">
                       {{ player.profiles?.username ?? 'Anónimo' }}
-                      <span v-if="player.entry_number > 1" class="text-slate-500">
-                        Q{{ player.entry_number }}
+                      <span v-if="player.entry_number > 1 || player.entry_name" class="text-slate-500">
+                        {{ formatEntryLabel(player.entry_number, player.entry_name) }}
                       </span>
                       <span
                         v-if="

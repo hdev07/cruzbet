@@ -50,6 +50,7 @@ function buildEntrySummaries(
       const prediction_count = countByEntry.get(entry_number) ?? 0
       return {
         entry_number,
+        entry_name: payment?.entry_name ?? null,
         prediction_count,
         is_submitted: payment?.submitted_at != null,
         verified: payment?.verified ?? false,
@@ -202,6 +203,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
       ...myEntries.value,
       {
         entry_number: nextEntry,
+        entry_name: null,
         prediction_count: 0,
         is_submitted: false,
         verified: false,
@@ -406,6 +408,39 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     }
   }
 
+  async function updateEntryName(
+    roundId: string,
+    entryNumber: number,
+    name: string,
+  ): Promise<void> {
+    saving.value = true
+    try {
+      const { error } = await supabase.rpc('update_base_entry_name', {
+        p_round_id: roundId,
+        p_entry_number: entryNumber,
+        p_entry_name: name,
+      })
+      if (error) throw error
+
+      const trimmed = name.trim()
+      const entryIdx = myEntries.value.findIndex((e) => e.entry_number === entryNumber)
+      if (entryIdx >= 0) {
+        myEntries.value[entryIdx] = {
+          ...myEntries.value[entryIdx]!,
+          entry_name: trimmed || null,
+        }
+      }
+      if (mySubmission.value?.entry_number === entryNumber) {
+        mySubmission.value = {
+          ...mySubmission.value,
+          entry_name: trimmed || null,
+        }
+      }
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function submitQuiniela(
     roundId: string,
     userId: string,
@@ -480,18 +515,28 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
 
     const [{ data: preds, error: predsErr }, { data: payments }] = await Promise.all([
       supabase.from('base_predictions').select('*').eq('round_id', roundId).order('created_at'),
-      supabase.from('base_round_payments').select('user_id, entry_number, verified').eq('round_id', roundId),
+      supabase.from('base_round_payments').select('user_id, entry_number, verified, entry_name').eq('round_id', roundId),
     ])
 
     if (predsErr) throw predsErr
     if (!preds?.length) return []
 
     const typedPreds = preds as BasePrediction[]
-    const verifiedMap = new Map(
-      (payments ?? []).map((p: { user_id: string; entry_number: number; verified: boolean }) => [
-        `${p.user_id}:${p.entry_number}`,
-        p.verified,
-      ]),
+    const verifiedMap = new Map<
+      string,
+      { verified: boolean; entry_name: string | null }
+    >(
+      (payments ?? []).map(
+        (p: {
+          user_id: string
+          entry_number: number
+          verified: boolean
+          entry_name?: string | null
+        }) => [
+          `${p.user_id}:${p.entry_number}`,
+          { verified: p.verified, entry_name: p.entry_name ?? null },
+        ],
+      ),
     )
     const userIds = [...new Set(typedPreds.map((p) => p.user_id))]
     const { data: profiles } = await supabase
@@ -520,10 +565,12 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
         const complete = predictions.length >= matchCount
         const total_points = predictions.reduce((sum, p) => sum + (p.points ?? 0), 0)
         const correct_count = predictions.filter((p) => p.points > 0).length
+        const paymentMeta = verifiedMap.get(key)
         return {
           user_id: user_id!,
           entry_number,
-          verified: verifiedMap.get(key) ?? false,
+          entry_name: paymentMeta?.entry_name ?? null,
+          verified: paymentMeta?.verified ?? false,
           profiles: profile
             ? { username: profile.username, avatar: profile.avatar }
             : undefined,
@@ -632,6 +679,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     selectEntry,
     switchEntry,
     startNewEntry,
+    updateEntryName,
     fetchRoundLeaderboard,
     queryRoundLeaderboard,
     fetchAllRoundResults,

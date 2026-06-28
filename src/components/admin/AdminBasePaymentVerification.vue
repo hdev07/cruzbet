@@ -293,7 +293,7 @@ async function confirmResetQuiniela() {
               <p class="truncate font-semibold text-slate-100">
                 {{ participant.profiles?.username ?? 'Sin nombre' }}
                 <span class="ml-1 text-xs font-normal text-slate-500">
-                  · {{ formatEntryLabel(participant.entry_number) }}
+                  · {{ formatEntryLabel(participant.entry_number, participant.entry_name) }}
                 </span>
               </p>
               <p class="mt-0.5 text-sm tabular-nums text-slate-400">
@@ -444,7 +444,7 @@ async function confirmResetQuiniela() {
               <p class="truncate font-medium text-slate-100">
                 {{ participant.profiles?.username ?? 'Sin nombre' }}
                 <span class="ml-1 text-xs font-normal text-slate-500">
-                  · {{ formatEntryLabel(participant.entry_number) }}
+                  · {{ formatEntryLabel(participant.entry_number, participant.entry_name) }}
                 </span>
                 <span
                   v-if="!participant.complete"
@@ -509,7 +509,7 @@ async function confirmResetQuiniela() {
       title="¿Reestablecer quiniela?"
       :subtitle="
         resetTarget
-          ? `${resetTarget.profiles?.username ?? 'Este jugador'} perderá todos sus picks de ${formatEntryLabel(resetTarget.entry_number)} en ${round.title}.`
+          ? `${resetTarget.profiles?.username ?? 'Este jugador'} perderá todos sus picks de ${formatEntryLabel(resetTarget.entry_number, resetTarget.entry_name)} en ${round.title}.`
           : undefined
       "
       :bullets="[

@@ -57,6 +57,9 @@ import {
             <strong class="text-slate-100">L</strong> (local),
             <strong class="text-slate-100">E</strong> (empate) o
             <strong class="text-slate-100">V</strong> (visitante).
+            Cuenta el marcador al final de los
+            <strong class="text-slate-100">90 minutos reglamentarios + tiempo agregado</strong>;
+            el empate no incluye prórroga ni penales.
           </span>
         </li>
         <li class="flex gap-3">

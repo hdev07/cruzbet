@@ -39,7 +39,7 @@ export const QUINIELA_SUMMARY = {
   tagline: 'Marca L, E o V en cada partido de la jornada',
   features: [
     `$${BASE_ENTRY_FEE_MXN} pesos por jornada`,
-    'L = gana el de casa · E = empate · V = gana el de fuera',
+    'L / E / V al final de 90 min + agregado (empate sin prórroga)',
     'Gana quien más acierte en la jornada',
   ],
 } as const

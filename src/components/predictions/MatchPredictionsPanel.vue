@@ -5,6 +5,7 @@ import { CheckCircle2, Info, Lightbulb, Pencil, Trash2 } from '@lucide/vue'
 import {
   ENTRY_FEE_MXN,
   GOAL_MINUTE_PREDICTION_NOTICE,
+  WINNER_PREDICTION_NOTICE,
   MAX_GOAL_PREDICTIONS_PER_MATCH,
   MAX_SCORE_PREDICTIONS_PER_MATCH,
   PREDICTION_FILL_TIP,
@@ -535,6 +536,20 @@ function winnerCellClass(winner: PredictedWinner): string {
           >
             <Trash2 class="h-4 w-4" />
           </button>
+        </div>
+      </div>
+
+      <div
+        class="mb-3 flex gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2.5 text-xs text-violet-100"
+      >
+        <Info class="mt-0.5 h-4 w-4 shrink-0 text-violet-400" />
+        <div>
+          <p class="font-semibold text-violet-200">{{ WINNER_PREDICTION_NOTICE.title }}</p>
+          <ul class="mt-1.5 list-disc space-y-1 pl-4 text-violet-100/90">
+            <li v-for="bullet in WINNER_PREDICTION_NOTICE.bullets" :key="bullet">
+              {{ bullet }}
+            </li>
+          </ul>
         </div>
       </div>
 

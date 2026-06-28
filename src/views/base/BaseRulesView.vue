@@ -9,7 +9,7 @@ import {
   BASE_QUINIELA_POINTS_PER_HIT,
 } from '@/constants/base-quiniela-rules'
 import { QUINIELA_SUMMARY } from '@/constants/nav'
-import { PAYMENT_NOTES } from '@/constants/quiniela-rules'
+import { PAYMENT_NOTES, WINNER_PREDICTION_NOTICE } from '@/constants/quiniela-rules'
 
 const copiedField = ref<string | null>(null)
 
@@ -51,6 +51,21 @@ async function copyValue(value: string, field: string) {
           <p class="text-sm text-slate-300">{{ step }}</p>
         </li>
       </ol>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-green">
+        {{ WINNER_PREDICTION_NOTICE.title }}
+      </h2>
+      <ul class="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 space-y-2">
+        <li
+          v-for="bullet in WINNER_PREDICTION_NOTICE.bullets"
+          :key="bullet"
+          class="text-sm text-slate-300"
+        >
+          {{ bullet }}
+        </li>
+      </ul>
     </section>
 
     <section class="mb-8">

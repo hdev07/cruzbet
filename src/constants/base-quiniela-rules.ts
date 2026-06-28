@@ -1,4 +1,4 @@
-import { PAYMENT_INFO } from '@/constants/quiniela-rules'
+import { PAYMENT_INFO, REGULATION_TIME_WINNER_RULE } from '@/constants/quiniela-rules'
 
 export const BASE_ENTRY_FEE_MXN = 50
 /** Tamaño típico en fase de grupos; la eliminatoria usa menos partidos por jornada. */
@@ -48,7 +48,7 @@ export function baseQuinielaSaveAlert(matchCount: number) {
         title: 'Lo importante',
         bullets: [
           'Una vez guardada, no podrás cambiar ningún partido.',
-          'Revisa bien tus picks de L, E o V antes de confirmar.',
+          'Revisa bien tus picks de L, E o V antes de confirmar (90 min + agregado; empate sin prórroga).',
           `Solo puedes guardar cuando hayas marcado ${partidos}.`,
         ],
       },
@@ -69,6 +69,7 @@ export const BASE_QUINIELA_LOGIC = {
     'Fase de grupos: jornadas de 16 partidos (del más temprano al más tarde).',
     'Eliminatoria: una jornada por ronda — dieciseisavos (16), octavos (8), cuartos (4), semifinal (2) y tercer lugar (1).',
     'Marca L, E o V para cada partido antes de que empiece y cuando los equipos estén confirmados.',
+    REGULATION_TIME_WINNER_RULE,
     'Puedes cambiar tus picks mientras no hayas guardado la quiniela.',
     'Al guardar la quiniela completa, tus picks quedan bloqueados definitivamente.',
     'Al terminar cada partido se revisa tu pick automáticamente.',
