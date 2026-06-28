@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { Radio } from '@lucide/vue'
+import BracketMatchCertainty from '@/components/predictions/BracketMatchCertainty.vue'
+import {
+  analyzeMatchBracket,
+  isKnockoutBracketMatch,
+} from '@/lib/bracketSlotCertainty'
 import {
   bracketParticipantLabel,
   matchBracketLabel,
@@ -9,16 +14,31 @@ import { formatLiveStatusLabel } from '@/lib/matchClock'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
-import type { Match } from '@/types'
+import type { Match, Team } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   rounds: BracketRound[]
+  teams: Team[]
+  allMatches: Match[]
 }>()
 
 function sideLabel(match: Match, side: 'home' | 'away'): string {
   const team = side === 'home' ? match.home_team : match.away_team
   if (team) return teamDisplayName(team)
+  if (isKnockoutBracketMatch(match) && props.teams.length) {
+    const analysis = analyzeMatchBracket(match, props.teams, props.allMatches)
+    return side === 'home' ? analysis.home.displayName : analysis.away.displayName
+  }
   return bracketParticipantLabel(match, side)
+}
+
+function sideItalic(match: Match, side: 'home' | 'away'): boolean {
+  const team = side === 'home' ? match.home_team : match.away_team
+  if (team) return false
+  if (!isKnockoutBracketMatch(match) || !props.teams.length) return true
+  const analysis = analyzeMatchBracket(match, props.teams, props.allMatches)
+  const slot = side === 'home' ? analysis.home : analysis.away
+  return slot.status !== 'confirmed'
 }
 
 function sideFlag(match: Match, side: 'home' | 'away'): string | null {
@@ -99,7 +119,7 @@ function formatDate(iso: string | null | undefined): string {
               />
               <span
                 class="min-w-0 flex-1 truncate"
-                :class="!match.home_team ? 'italic text-slate-400' : ''"
+                :class="sideItalic(match, 'home') ? 'italic text-slate-400' : ''"
               >
                 {{ sideLabel(match, 'home') }}
               </span>
@@ -123,7 +143,7 @@ function formatDate(iso: string | null | undefined): string {
               />
               <span
                 class="min-w-0 flex-1 truncate"
-                :class="!match.away_team ? 'italic text-slate-400' : ''"
+                :class="sideItalic(match, 'away') ? 'italic text-slate-400' : ''"
               >
                 {{ sideLabel(match, 'away') }}
               </span>
@@ -134,6 +154,15 @@ function formatDate(iso: string | null | undefined): string {
                 {{ match.away_score }}
               </span>
             </div>
+
+            <BracketMatchCertainty
+              v-if="isKnockoutBracketMatch(match)"
+              :match="match"
+              :teams="teams"
+              :all-matches="allMatches"
+              compact
+              class="mt-2"
+            />
 
             <p
               v-if="match.venue"

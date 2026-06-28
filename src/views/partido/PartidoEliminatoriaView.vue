@@ -116,6 +116,11 @@ const knockoutCount = computed(
       </p>
     </div>
 
-    <KnockoutBracketTree v-else :rounds="rounds" />
+    <KnockoutBracketTree
+      v-else
+      :rounds="rounds"
+      :teams="standingsStore.teams"
+      :all-matches="matchStore.matches"
+    />
   </div>
 </template>

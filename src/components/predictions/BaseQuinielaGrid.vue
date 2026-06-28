@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { CheckCircle2, Info, Lock, XCircle } from '@lucide/vue'
 import BaseQuinielaEntrySelector from '@/components/predictions/BaseQuinielaEntrySelector.vue'
 import BaseQuinielaMatchContext from '@/components/predictions/BaseQuinielaMatchContext.vue'
+import BracketMatchCertainty from '@/components/predictions/BracketMatchCertainty.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import {
   baseQuinielaFillTip,
@@ -17,7 +18,10 @@ import {
   teamsPendingReason,
 } from '@/lib/matchRules'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import { analyzeMatchBracket, isKnockoutBracketMatch } from '@/lib/bracketSlotCertainty'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
+import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
+import { useMatchStore } from '@/stores/matchStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseQuinielaRoundMatch, PredictedWinner } from '@/types'
 
@@ -34,6 +38,8 @@ const emit = defineEmits<{
 }>()
 
 const baseStore = useBaseQuinielaStore()
+const matchStore = useMatchStore()
+const standingsStore = useGroupStandingsStore()
 const formError = ref<string | null>(null)
 const savingMatchId = ref<string | null>(null)
 const showSubmitModal = ref(false)
@@ -48,6 +54,21 @@ const totalMatches = computed(
 
 const fillTip = computed(() => baseQuinielaFillTip(totalMatches.value))
 const saveAlert = computed(() => baseQuinielaSaveAlert(totalMatches.value))
+
+function bracketSideLabel(match: NonNullable<BaseQuinielaRoundMatch['match']>, side: 'home' | 'away'): string {
+  const team = side === 'home' ? match.home_team : match.away_team
+  if (team) return teamDisplayName(team, side === 'home' ? 'Local' : 'Visitante')
+  if (!isKnockoutBracketMatch(match) || !standingsStore.teams.length) {
+    return side === 'home' ? 'Local' : 'Visitante'
+  }
+  const analysis = analyzeMatchBracket(match, standingsStore.teams, matchStore.matches)
+  return side === 'home' ? analysis.home.displayName : analysis.away.displayName
+}
+
+onMounted(async () => {
+  if (!matchStore.matches.length) await matchStore.fetchMatches()
+  if (!standingsStore.teams.length) await standingsStore.fetchStandingsData()
+})
 
 const isComplete = computed(() => {
   const total = sortedMatches.value.length
@@ -251,7 +272,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
               img-class="h-4 w-5 shrink-0 rounded object-cover"
             />
             <span class="truncate font-medium text-slate-200">
-              {{ teamDisplayName(row.match.home_team, 'Local') }}
+              {{ bracketSideLabel(row.match, 'home') }}
             </span>
             <span class="text-slate-500">vs</span>
             <TeamFlag
@@ -261,7 +282,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
               img-class="h-4 w-5 shrink-0 rounded object-cover"
             />
             <span class="truncate font-medium text-slate-200">
-              {{ teamDisplayName(row.match.away_team, 'Visitante') }}
+              {{ bracketSideLabel(row.match, 'away') }}
             </span>
           </div>
 
@@ -276,6 +297,15 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
             <Lock class="h-3 w-3 shrink-0" />
             {{ teamsPendingReason(row.match) }}
           </p>
+
+          <BracketMatchCertainty
+            v-if="row.match && isKnockoutBracketMatch(row.match)"
+            :match="row.match"
+            :teams="standingsStore.teams"
+            :all-matches="matchStore.matches"
+            compact
+            class="mt-2"
+          />
 
           <BaseQuinielaMatchContext :match="row.match" class="mt-2" />
         </div>
@@ -367,7 +397,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
                     img-class="h-4 w-5 shrink-0 rounded object-cover"
                   />
                   <span class="truncate font-medium text-slate-200">
-                    {{ teamDisplayName(row.match.home_team, 'Local') }}
+                    {{ bracketSideLabel(row.match, 'home') }}
                   </span>
                   <span class="text-slate-500">vs</span>
                   <TeamFlag
@@ -377,7 +407,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
                     img-class="h-4 w-5 shrink-0 rounded object-cover"
                   />
                   <span class="truncate font-medium text-slate-200">
-                    {{ teamDisplayName(row.match.away_team, 'Visitante') }}
+                    {{ bracketSideLabel(row.match, 'away') }}
                   </span>
                   <span
                     v-if="row.match.status !== 'scheduled'"
@@ -396,6 +426,14 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
                   <Lock class="h-3 w-3 shrink-0" />
                   {{ teamsPendingReason(row.match) }}
                 </p>
+                <BracketMatchCertainty
+                  v-if="isKnockoutBracketMatch(row.match)"
+                  :match="row.match"
+                  :teams="standingsStore.teams"
+                  :all-matches="matchStore.matches"
+                  compact
+                  class="mt-2"
+                />
                 <BaseQuinielaMatchContext :match="row.match" compact class="mt-2" />
               </div>
             </td>

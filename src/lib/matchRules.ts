@@ -26,7 +26,7 @@ export function teamsPendingReason(match: Match): string | null {
 
   const meta = match.bracket_meta
   if (meta?.home?.type === 'best_third' || meta?.away?.type === 'best_third') {
-    return 'Espera a que se definan los mejores terceros de grupo'
+    return 'Rival por definir (Anexo C — mejores terceros)'
   }
   if (meta?.home?.type === 'loser' || meta?.away?.type === 'loser') {
     return 'Espera a que se dispute el partido por el tercer lugar'
