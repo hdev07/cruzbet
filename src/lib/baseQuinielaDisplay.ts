@@ -1,10 +1,16 @@
-import type { Match, PredictedWinner } from '@/types'
+import {
+  regulationScoresForMatch,
+  winnerFromRegulationScores,
+} from '@/lib/regulationScore'
+import type { Match, MatchEvent, PredictedWinner } from '@/types'
 
-export function actualMatchWinner(match: Match): PredictedWinner | null {
+export function actualMatchWinner(
+  match: Match,
+  events?: readonly MatchEvent[],
+): PredictedWinner | null {
   if (match.status !== 'finished') return null
-  if (match.home_score > match.away_score) return 'home'
-  if (match.home_score < match.away_score) return 'away'
-  return 'draw'
+  const { home, away } = regulationScoresForMatch(match, events)
+  return winnerFromRegulationScores(home, away)
 }
 
 export const BASE_WINNER_OPTIONS: {
@@ -28,8 +34,9 @@ export function winnerLabel(winner: PredictedWinner): string {
 export function isPredictionCorrect(
   predicted: PredictedWinner,
   match: Match,
+  events?: readonly MatchEvent[],
 ): boolean | null {
-  const actual = actualMatchWinner(match)
+  const actual = actualMatchWinner(match, events)
   if (actual == null) return null
   return predicted === actual
 }

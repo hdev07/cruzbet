@@ -49,6 +49,9 @@ export interface Match {
   away_team_id: string | null
   home_score: number
   away_score: number
+  /** Marcador al final de 90 min + agregado (sin prórroga). */
+  regulation_home_score?: number | null
+  regulation_away_score?: number | null
   current_minute: number | null
   live_clock_display?: string | null
   live_status_detail?: LiveStatusDetail | null

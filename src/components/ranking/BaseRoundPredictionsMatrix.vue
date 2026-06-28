@@ -10,7 +10,8 @@ import { formatEntryLabel } from '@/lib/baseQuinielaStats'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
-import type { BasePrediction, BaseQuinielaRoundMatch, BaseRoundParticipant } from '@/types'
+import { useMatchStore } from '@/stores/matchStore'
+import type { BasePrediction, BaseQuinielaRoundMatch, BaseRoundParticipant, Match, PredictedWinner } from '@/types'
 
 const props = defineProps<{
   roundId: string
@@ -19,6 +20,7 @@ const props = defineProps<{
 }>()
 
 const baseStore = useBaseQuinielaStore()
+const matchStore = useMatchStore()
 const participants = ref<BaseRoundParticipant[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -76,12 +78,25 @@ async function loadParticipants() {
   error.value = ''
   try {
     participants.value = await baseStore.fetchRoundParticipants(props.roundId)
+    const finishedIds = props.roundMatches
+      .filter((row) => row.match?.status === 'finished')
+      .map((row) => row.match_id)
+    if (finishedIds.length) await matchStore.fetchEventsForMatches(finishedIds)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudieron cargar los pronósticos'
     participants.value = []
   } finally {
     loading.value = false
   }
+}
+
+function matchEvents(match: Match) {
+  return matchStore.getEventsForMatch(match.id)
+}
+
+function roundMatchWinner(match: Match | undefined): PredictedWinner | null {
+  if (!match) return null
+  return actualMatchWinner(match, matchEvents(match))
 }
 
 watch(
@@ -120,7 +135,11 @@ function cellClass(userId: string, entryNumber: number, match: BaseQuinielaRound
     return `${base} theme-cell-pending text-slate-300`
   }
 
-  const correct = isPredictionCorrect(pick.predicted_winner, match.match)
+  const correct = isPredictionCorrect(
+    pick.predicted_winner,
+    match.match,
+    matchEvents(match.match),
+  )
   if (correct === true) return `${base} bg-mundial-green/25 text-mundial-green`
   if (correct === false) return `${base} bg-red-500/15 text-red-400`
   return `${base} theme-cell-pending text-slate-300`
@@ -153,7 +172,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
     roundStarted.value && match.match.status !== 'scheduled'
       ? ` (${match.match.home_score}-${match.match.away_score})`
       : ''
-  const result = roundStarted.value ? actualMatchWinner(match.match) : null
+  const result = roundStarted.value ? roundMatchWinner(match.match) : null
   const resultText = result ? ` → ${winnerCode(result)}` : ''
   return `#${match.position}: ${home} vs ${away}${score}${resultText}`
 }
@@ -233,10 +252,10 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   {{ match.match.home_score }}-{{ match.match.away_score }}
                 </span>
                 <span
-                  v-if="roundStarted && match.match && actualMatchWinner(match.match)"
+                  v-if="roundStarted && match.match && roundMatchWinner(match.match)"
                   class="mt-0.5 block text-[0.65rem] font-bold text-mundial-green"
                 >
-                  {{ winnerCode(actualMatchWinner(match.match)!) }}
+                  {{ winnerCode(roundMatchWinner(match.match)!) }}
                 </span>
               </th>
               <th class="border border-white/10 px-2 py-2 text-center">Aciertos</th>

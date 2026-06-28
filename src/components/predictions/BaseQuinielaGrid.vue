@@ -23,7 +23,7 @@ import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 import { useMatchStore } from '@/stores/matchStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
-import type { BaseQuinielaRoundMatch, PredictedWinner } from '@/types'
+import type { BaseQuinielaRoundMatch, Match, PredictedWinner } from '@/types'
 
 const props = defineProps<{
   roundId: string
@@ -87,7 +87,15 @@ function bracketSideLabel(match: NonNullable<BaseQuinielaRoundMatch['match']>, s
 onMounted(async () => {
   if (!matchStore.matches.length) await matchStore.fetchMatches()
   if (!standingsStore.teams.length) await standingsStore.fetchStandingsData()
+  const finishedIds = props.roundMatches
+    .filter((row) => row.match?.status === 'finished')
+    .map((row) => row.match_id)
+  if (finishedIds.length) await matchStore.fetchEventsForMatches(finishedIds)
 })
+
+function matchEvents(match: Match) {
+  return matchStore.getEventsForMatch(match.id)
+}
 
 const isComplete = computed(() => {
   const total = sortedMatches.value.length
@@ -204,7 +212,11 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
   const prediction = baseStore.getPredictionForMatch(row.match_id)
   if (!match || !prediction || match.status !== 'finished') return ''
 
-  const correct = isPredictionCorrect(prediction.predicted_winner, match)
+  const correct = isPredictionCorrect(
+    prediction.predicted_winner,
+    match,
+    matchEvents(match),
+  )
   if (correct === true) return 'ring-1 ring-mundial-green/40'
   if (correct === false) return 'ring-1 ring-red-500/30'
   return ''
