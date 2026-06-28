@@ -18,7 +18,7 @@ import {
   teamsPendingReason,
 } from '@/lib/matchRules'
 import { teamDisplayName } from '@/lib/teamDisplay'
-import { analyzeMatchBracket, isKnockoutBracketMatch } from '@/lib/bracketSlotCertainty'
+import { analyzeMatchBracket, bracketSideFlagUrl, isKnockoutBracketMatch, publicBracketSideLabel } from '@/lib/bracketSlotCertainty'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 import { useMatchStore } from '@/stores/matchStore'
@@ -55,14 +55,33 @@ const totalMatches = computed(
 const fillTip = computed(() => baseQuinielaFillTip(totalMatches.value))
 const saveAlert = computed(() => baseQuinielaSaveAlert(totalMatches.value))
 
+function bracketSideFlag(
+  match: NonNullable<BaseQuinielaRoundMatch['match']>,
+  side: 'home' | 'away',
+): string | null {
+  if (isKnockoutBracketMatch(match) && standingsStore.teams.length) {
+    return bracketSideFlagUrl(match, side, standingsStore.teams, matchStore.matches)
+  }
+  const team = side === 'home' ? match.home_team : match.away_team
+  return team?.flag_url ?? null
+}
+
 function bracketSideLabel(match: NonNullable<BaseQuinielaRoundMatch['match']>, side: 'home' | 'away'): string {
   const team = side === 'home' ? match.home_team : match.away_team
-  if (team) return teamDisplayName(team, side === 'home' ? 'Local' : 'Visitante')
+  if (team && !isKnockoutBracketMatch(match)) {
+    return teamDisplayName(team, side === 'home' ? 'Local' : 'Visitante')
+  }
   if (!isKnockoutBracketMatch(match) || !standingsStore.teams.length) {
-    return side === 'home' ? 'Local' : 'Visitante'
+    return team
+      ? teamDisplayName(team, side === 'home' ? 'Local' : 'Visitante')
+      : side === 'home'
+        ? 'Local'
+        : 'Visitante'
   }
   const analysis = analyzeMatchBracket(match, standingsStore.teams, matchStore.matches)
-  return side === 'home' ? analysis.home.displayName : analysis.away.displayName
+  const slot = side === 'home' ? match.bracket_meta?.home : match.bracket_meta?.away
+  const slotAnalysis = side === 'home' ? analysis.home : analysis.away
+  return publicBracketSideLabel(slotAnalysis, slot)
 }
 
 onMounted(async () => {
@@ -266,8 +285,8 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
 
           <div class="flex items-center gap-2">
             <TeamFlag
-              v-if="row.match.home_team?.flag_url"
-              :src="row.match.home_team.flag_url"
+              v-if="bracketSideFlag(row.match, 'home')"
+              :src="bracketSideFlag(row.match, 'home')"
               :alt="teamDisplayName(row.match.home_team, 'Local')"
               img-class="h-4 w-5 shrink-0 rounded object-cover"
             />
@@ -276,8 +295,8 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
             </span>
             <span class="text-slate-500">vs</span>
             <TeamFlag
-              v-if="row.match.away_team?.flag_url"
-              :src="row.match.away_team.flag_url"
+              v-if="bracketSideFlag(row.match, 'away')"
+              :src="bracketSideFlag(row.match, 'away')"
               :alt="teamDisplayName(row.match.away_team, 'Visitante')"
               img-class="h-4 w-5 shrink-0 rounded object-cover"
             />
@@ -391,8 +410,8 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
               <div v-if="row.match" class="min-w-0">
                 <div class="flex items-center gap-2">
                   <TeamFlag
-                    v-if="row.match.home_team?.flag_url"
-                    :src="row.match.home_team.flag_url"
+                    v-if="bracketSideFlag(row.match, 'home')"
+                    :src="bracketSideFlag(row.match, 'home')"
                     :alt="teamDisplayName(row.match.home_team, 'Local')"
                     img-class="h-4 w-5 shrink-0 rounded object-cover"
                   />
@@ -401,8 +420,8 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
                   </span>
                   <span class="text-slate-500">vs</span>
                   <TeamFlag
-                    v-if="row.match.away_team?.flag_url"
-                    :src="row.match.away_team.flag_url"
+                    v-if="bracketSideFlag(row.match, 'away')"
+                    :src="bracketSideFlag(row.match, 'away')"
                     :alt="teamDisplayName(row.match.away_team, 'Visitante')"
                     img-class="h-4 w-5 shrink-0 rounded object-cover"
                   />

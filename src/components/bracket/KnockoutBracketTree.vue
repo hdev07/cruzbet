@@ -3,7 +3,10 @@ import { Radio } from '@lucide/vue'
 import BracketMatchCertainty from '@/components/predictions/BracketMatchCertainty.vue'
 import {
   analyzeMatchBracket,
+  bracketSideFlagUrl,
+  isBracketSideProvisional,
   isKnockoutBracketMatch,
+  publicBracketSideLabel,
 } from '@/lib/bracketSlotCertainty'
 import {
   bracketParticipantLabel,
@@ -23,25 +26,28 @@ const props = defineProps<{
 }>()
 
 function sideLabel(match: Match, side: 'home' | 'away'): string {
-  const team = side === 'home' ? match.home_team : match.away_team
-  if (team) return teamDisplayName(team)
   if (isKnockoutBracketMatch(match) && props.teams.length) {
     const analysis = analyzeMatchBracket(match, props.teams, props.allMatches)
-    return side === 'home' ? analysis.home.displayName : analysis.away.displayName
+    const slot = side === 'home' ? match.bracket_meta?.home : match.bracket_meta?.away
+    const slotAnalysis = side === 'home' ? analysis.home : analysis.away
+    return publicBracketSideLabel(slotAnalysis, slot)
   }
+  const team = side === 'home' ? match.home_team : match.away_team
+  if (team) return teamDisplayName(team)
   return bracketParticipantLabel(match, side)
 }
 
 function sideItalic(match: Match, side: 'home' | 'away'): boolean {
-  const team = side === 'home' ? match.home_team : match.away_team
-  if (team) return false
-  if (!isKnockoutBracketMatch(match) || !props.teams.length) return true
-  const analysis = analyzeMatchBracket(match, props.teams, props.allMatches)
-  const slot = side === 'home' ? analysis.home : analysis.away
-  return slot.status !== 'confirmed'
+  if (!isKnockoutBracketMatch(match) || !props.teams.length) {
+    return !(side === 'home' ? match.home_team : match.away_team)
+  }
+  return isBracketSideProvisional(match, side, props.teams, props.allMatches)
 }
 
 function sideFlag(match: Match, side: 'home' | 'away'): string | null {
+  if (isKnockoutBracketMatch(match) && props.teams.length) {
+    return bracketSideFlagUrl(match, side, props.teams, props.allMatches)
+  }
   const team = side === 'home' ? match.home_team : match.away_team
   return team?.flag_url ?? null
 }

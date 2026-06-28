@@ -1,8 +1,9 @@
-import { getAnnexCAssignments, thirdPlaceCombinationKey } from '@/lib/fifaAnnexC'
+import { getAnnexCAssignments } from '@/lib/fifaAnnexC'
 import {
   computeGroupStandings,
   countFinishedMatchesInGroup,
   MATCHES_PER_GROUP,
+  allGroupLetters,
 } from '@/lib/groupStandings'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import type { BracketSlot, GroupStandingRow, GroupStandings, Match, Team } from '@/types'
@@ -191,11 +192,101 @@ function analyzeGroupPosSlot(
   }
 }
 
+function isQualifyingThirdSetLocked(standings: GroupStandings[], matches: Match[]): boolean {
+  const thirds = rankedThirdPlaces(standings)
+  const eighth = thirds[7]
+  if (!eighth) return false
+
+  for (const groupName of allGroupLetters()) {
+    if (isGroupFinished(groupName, standings, matches)) continue
+    const group = groupStandingsFor(standings, groupName)
+    const third = rowAtPosition(group, 3)
+    if (!third) continue
+    if (maxPossiblePoints(third, groupName, matches) > eighth.points) return false
+    if (
+      maxPossiblePoints(third, groupName, matches) === eighth.points &&
+      (third.goalDiff > eighth.goalDiff ||
+        (third.goalDiff === eighth.goalDiff && third.goalsFor >= eighth.goalsFor))
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+function isThirdSlotConfirmed(
+  slot: Extract<BracketSlot, { type: 'best_third' }>,
+  opponentSlot: BracketSlot | undefined,
+  standings: GroupStandings[],
+  matches: Match[],
+): boolean {
+  const winnerGroup = opponentWinnerGroup(opponentSlot)
+  if (!winnerGroup) return false
+
+  const qualifying = qualifyingThirdGroupLetters(standings)
+  const assignments = getAnnexCAssignments(qualifying)
+  const assignedGroup = assignments?.[winnerGroup]?.toUpperCase() ?? null
+  if (!assignedGroup || !qualifying.includes(assignedGroup)) return false
+  if (!isGroupFinished(assignedGroup, standings, matches)) return false
+  if (!isQualifyingThirdSetLocked(standings, matches)) return false
+
+  return slot.groups.map((g) => g.toUpperCase()).includes(assignedGroup)
+}
+
 function opponentWinnerGroup(opponentSlot: BracketSlot | undefined): string | null {
   if (opponentSlot?.type === 'group_pos' && opponentSlot.pos === 1) {
     return opponentSlot.group.toUpperCase()
   }
   return null
+}
+
+export const UNDEFINED_OPPONENT_LABEL = 'A definir'
+
+/** Etiqueta pública: confirmado o provisional según Anexo C / tabla en vivo; "A definir" solo si sigue en disputa. */
+export function publicBracketSideLabel(
+  side: SlotSideAnalysis,
+  _slot?: BracketSlot,
+): string {
+  if (side.status === 'pending') return UNDEFINED_OPPONENT_LABEL
+  return side.displayName
+}
+
+/** Equipo resuelto para bandera/UI (Anexo C + tabla en vivo; no el TBD obsoleto de la BD). */
+export function bracketSideTeam(
+  match: Match,
+  side: 'home' | 'away',
+  teams: Team[],
+  allMatches: Match[],
+): Team | null {
+  if (!isKnockoutBracketMatch(match) || !teams.length) {
+    return side === 'home' ? match.home_team ?? null : match.away_team ?? null
+  }
+  const analysis = analyzeMatchBracket(match, teams, allMatches)
+  const slotAnalysis = side === 'home' ? analysis.home : analysis.away
+  return slotAnalysis.team ?? (side === 'home' ? match.home_team ?? null : match.away_team ?? null)
+}
+
+export function bracketSideFlagUrl(
+  match: Match,
+  side: 'home' | 'away',
+  teams: Team[],
+  allMatches: Match[],
+): string | null {
+  return bracketSideTeam(match, side, teams, allMatches)?.flag_url ?? null
+}
+
+export function isBracketSideProvisional(
+  match: Match,
+  side: 'home' | 'away',
+  teams: Team[],
+  allMatches: Match[],
+): boolean {
+  if (!isKnockoutBracketMatch(match) || !teams.length) {
+    return !(side === 'home' ? match.home_team : match.away_team)
+  }
+  const analysis = analyzeMatchBracket(match, teams, allMatches)
+  const slotAnalysis = side === 'home' ? analysis.home : analysis.away
+  return slotAnalysis.status !== 'confirmed'
 }
 
 function analyzeBestThirdSlot(
@@ -228,13 +319,9 @@ function analyzeBestThirdSlot(
   const assignments = getAnnexCAssignments(qualifying)
   const assignedGroup = assignments?.[winnerGroup]?.toUpperCase() ?? null
   const assignedRow = assignedGroup ? rowAtPosition(groupStandingsFor(standings, assignedGroup), 3) : null
+  const thirdLocked = isThirdSlotConfirmed(slot, opponentSlot, standings, matches)
 
-  const allGroupsDone = qualifying.every((g) => isGroupFinished(g, standings, matches))
-  const assignedGroupDone = assignedGroup
-    ? isGroupFinished(assignedGroup, standings, matches)
-    : false
-
-  if (allGroupsDone && assignedGroupDone && assignedRow) {
+  if (thirdLocked && assignedRow) {
     return {
       status: 'confirmed',
       displayName: teamDisplayName(assignedRow.team),
@@ -248,7 +335,7 @@ function analyzeBestThirdSlot(
   if (assignedRow && assignedGroup) {
     const inTopEight = qualifying.includes(assignedGroup)
     const detail = inTopEight
-      ? `Provisional: 3º Gr. ${assignedGroup} (Anexo C con ${thirdPlaceCombinationKey(qualifying)})`
+      ? `Candidato: ${teamDisplayName(assignedRow.team)} (3º Gr. ${assignedGroup}, Anexo C provisional)`
       : `Gr. ${assignedGroup} fuera del top 8 actual — el rival puede cambiar`
 
     return {
@@ -375,36 +462,6 @@ function analyzeSlot(
   allMatches: Match[],
   assignedTeam: Team | null | undefined,
 ): SlotSideAnalysis {
-  if (assignedTeam && slot?.type === 'group_pos') {
-    const finished = isGroupFinished(slot.group, standings, matches)
-    if (finished) {
-      return {
-        status: 'confirmed',
-        displayName: teamDisplayName(assignedTeam),
-        team: assignedTeam,
-        slotLabel: `${slotOrdinal(slot.pos)} Gr. ${slot.group.toUpperCase()}`,
-        possibleTeams: [assignedTeam],
-        detail: 'Clasificación confirmada',
-      }
-    }
-  }
-
-  if (assignedTeam && slot?.type === 'best_third') {
-    const winnerGroup = opponentWinnerGroup(opponentSlot)
-    const qualifying = qualifyingThirdGroupLetters(standings)
-    const allDone = qualifying.every((g) => isGroupFinished(g, standings, matches))
-    if (allDone && assignedTeam.group_name) {
-      return {
-        status: 'confirmed',
-        displayName: teamDisplayName(assignedTeam),
-        team: assignedTeam,
-        slotLabel: `3º Gr. ${assignedTeam.group_name.toUpperCase()}`,
-        possibleTeams: [assignedTeam],
-        detail: 'Rival confirmado (Anexo C)',
-      }
-    }
-  }
-
   if (assignedTeam && (slot?.type === 'winner' || slot?.type === 'loser')) {
     const sourceFinished =
       slot.type === 'winner' || slot.type === 'loser'
@@ -434,19 +491,11 @@ function analyzeSlot(
   }
 
   if (slot.type === 'group_pos') {
-    const analysis = analyzeGroupPosSlot(slot, standings, matches)
-    if (assignedTeam && analysis.status === 'provisional') {
-      return { ...analysis, team: assignedTeam, displayName: teamDisplayName(assignedTeam) }
-    }
-    return analysis
+    return analyzeGroupPosSlot(slot, standings, matches)
   }
 
   if (slot.type === 'best_third') {
-    const analysis = analyzeBestThirdSlot(slot, opponentSlot, standings, matches)
-    if (assignedTeam && analysis.status !== 'confirmed') {
-      return { ...analysis, team: assignedTeam, displayName: teamDisplayName(assignedTeam) }
-    }
-    return analysis
+    return analyzeBestThirdSlot(slot, opponentSlot, standings, matches)
   }
 
   if (slot.type === 'winner') return analyzeWinnerSlot(slot, allMatches)

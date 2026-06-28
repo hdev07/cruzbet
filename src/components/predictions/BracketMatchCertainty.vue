@@ -4,6 +4,7 @@ import { CheckCircle2, HelpCircle, Radio } from '@lucide/vue'
 import {
   analyzeMatchBracket,
   isKnockoutBracketMatch,
+  publicBracketSideLabel,
   type SlotSideAnalysis,
 } from '@/lib/bracketSlotCertainty'
 import { teamDisplayName } from '@/lib/teamDisplay'
@@ -47,9 +48,15 @@ function sideStatusLabel(status: SlotSideAnalysis['status']): string {
   return 'En disputa'
 }
 
-function formatPossibleTeams(side: SlotSideAnalysis): string {
-  if (side.status === 'confirmed' || side.possibleTeams.length <= 1) return ''
-  return side.possibleTeams.map((t) => teamDisplayName(t)).join(' · ')
+function sidePublicName(sideKey: 'home' | 'away', side: SlotSideAnalysis): string {
+  if (!analysis.value) return side.displayName
+  const slot =
+    sideKey === 'home' ? props.match.bracket_meta?.home : props.match.bracket_meta?.away
+  return publicBracketSideLabel(side, slot)
+}
+
+function showPossibleTeams(side: SlotSideAnalysis): boolean {
+  return side.status !== 'confirmed' && side.possibleTeams.length > 1
 }
 </script>
 
@@ -76,7 +83,7 @@ function formatPossibleTeams(side: SlotSideAnalysis): string {
             {{ side[0] === 'home' ? 'Local' : 'Visita' }}
           </span>
           <span class="font-medium" :class="sideStatusClass(side[1].status)">
-            {{ side[1].displayName }}
+            {{ sidePublicName(side[0], side[1]) }}
           </span>
           <span class="text-[0.6rem] text-slate-500">({{ sideStatusLabel(side[1].status) }})</span>
         </div>
@@ -84,7 +91,7 @@ function formatPossibleTeams(side: SlotSideAnalysis): string {
           {{ side[1].detail }}
         </p>
         <div
-          v-if="formatPossibleTeams(side[1])"
+          v-if="showPossibleTeams(side[1])"
           class="mt-1 flex flex-wrap gap-1"
         >
           <span class="text-[0.6rem] text-slate-500">En disputa:</span>
