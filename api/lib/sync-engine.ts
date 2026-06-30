@@ -22,7 +22,12 @@ const MATCH_SELECT = `
   home_team_id,
   away_team_id,
   status,
+  phase,
   match_date,
+  home_score,
+  away_score,
+  penalty_home_score,
+  penalty_away_score,
   current_minute,
   live_clock_display,
   auto_sync_enabled,
@@ -30,6 +35,16 @@ const MATCH_SELECT = `
   home_team:teams!home_team_id(code, name),
   away_team:teams!away_team_id(code, name)
 `
+
+function mergeMatchRows(...lists: DbMatchRow[][]): DbMatchRow[] {
+  const byId = new Map<string, DbMatchRow>()
+  for (const row of lists.flat()) {
+    byId.set(row.id, row)
+  }
+  return [...byId.values()]
+}
+
+const KNOCKOUT_PHASES = ['r32', 'r16', 'qf', 'sf'] as const
 
 async function resolveSnapshot(
   match: DbMatchRow,
@@ -50,18 +65,33 @@ export async function syncAllLiveMatches(): Promise<{
   const now = Date.now()
   const windowStart = new Date(now - 4 * 60 * 60 * 1000).toISOString()
   const windowEnd = new Date(now + 30 * 60 * 1000).toISOString()
+  const penaltyBackfillSince = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString()
 
-  const { data: matches, error } = await supabase
-    .from('matches')
-    .select(MATCH_SELECT)
-    .eq('auto_sync_enabled', true)
-    .neq('status', 'finished')
-    .gte('match_date', windowStart)
-    .lte('match_date', windowEnd)
+  const [liveRes, penaltyRes] = await Promise.all([
+    supabase
+      .from('matches')
+      .select(MATCH_SELECT)
+      .eq('auto_sync_enabled', true)
+      .neq('status', 'finished')
+      .gte('match_date', windowStart)
+      .lte('match_date', windowEnd),
+    supabase
+      .from('matches')
+      .select(MATCH_SELECT)
+      .eq('auto_sync_enabled', true)
+      .eq('status', 'finished')
+      .in('phase', [...KNOCKOUT_PHASES])
+      .is('penalty_home_score', null)
+      .gte('match_date', penaltyBackfillSince),
+  ])
 
-  if (error) throw new Error(error.message)
+  if (liveRes.error) throw new Error(liveRes.error.message)
+  if (penaltyRes.error) throw new Error(penaltyRes.error.message)
 
-  const rows = (matches ?? []) as DbMatchRow[]
+  const rows = mergeMatchRows(
+    (liveRes.data ?? []) as DbMatchRow[],
+    (penaltyRes.data ?? []) as DbMatchRow[],
+  )
   const errors: string[] = []
   let updated = 0
 

@@ -5,7 +5,7 @@ import {
   MATCHES_PER_GROUP,
   allGroupLetters,
 } from '@/lib/groupStandings'
-import { matchKnockoutWinnerSide } from '@/lib/matchScoreDisplay'
+import { hasPenaltyShootout, matchKnockoutWinnerSide } from '@/lib/matchScoreDisplay'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import type { BracketSlot, GroupStandingRow, GroupStandings, Match, Team } from '@/types'
 
@@ -359,17 +359,46 @@ function analyzeBestThirdSlot(
   }
 }
 
+function bracketSlotMatchNumber(matchNumber: number | string | undefined): number | null {
+  if (matchNumber == null) return null
+  const n = typeof matchNumber === 'number' ? matchNumber : Number.parseInt(String(matchNumber), 10)
+  return Number.isFinite(n) ? n : null
+}
+
+function findBracketSourceMatch(allMatches: Match[], matchNumber: number | string): Match | undefined {
+  const num = bracketSlotMatchNumber(matchNumber)
+  if (num == null) return undefined
+  return allMatches.find(
+    (m) => m.bracket_meta?.match_number === num || m.bracket_key === `M${num}`,
+  )
+}
+
+function teamOnMatchSide(match: Match, side: 'home' | 'away', teams: Team[]): Team | null {
+  const linked = side === 'home' ? match.home_team : match.away_team
+  if (linked) return linked
+  const teamId = side === 'home' ? match.home_team_id : match.away_team_id
+  if (!teamId) return null
+  return teams.find((t) => t.id === teamId) ?? null
+}
+
+function knockoutWinnerTeam(source: Match, teams: Team[]): Team | null {
+  const side = matchKnockoutWinnerSide(source)
+  if (!side) return null
+  return teamOnMatchSide(source, side, teams)
+}
+
 function analyzeWinnerSlot(
   slot: Extract<BracketSlot, { type: 'winner' }>,
   allMatches: Match[],
+  teams: Team[],
 ): SlotSideAnalysis {
-  const source = allMatches.find((m) => m.bracket_meta?.match_number === slot.match)
+  const source = findBracketSourceMatch(allMatches, slot.match)
   const slotLabel = `Ganador M${slot.match}`
 
   if (source?.status === 'finished') {
-    const winnerSide = matchKnockoutWinnerSide(source)
-    const winner =
-      winnerSide === 'home' ? source.home_team : winnerSide === 'away' ? source.away_team : null
+    const winner = knockoutWinnerTeam(source, teams)
+    const homeTeam = teamOnMatchSide(source, 'home', teams)
+    const awayTeam = teamOnMatchSide(source, 'away', teams)
 
     if (winner) {
       return {
@@ -381,15 +410,31 @@ function analyzeWinnerSlot(
         detail: 'Ganador confirmado',
       }
     }
+
+    if (
+      source.home_score === source.away_score &&
+      !hasPenaltyShootout(source)
+    ) {
+      return {
+        status: 'provisional',
+        displayName: slotLabel,
+        team: null,
+        slotLabel,
+        possibleTeams: [homeTeam, awayTeam].filter(Boolean) as Team[],
+        detail: 'Empate: faltan penales en el sistema',
+      }
+    }
   }
 
   if (source?.home_team_id && source?.away_team_id) {
+    const homeTeam = teamOnMatchSide(source, 'home', teams)
+    const awayTeam = teamOnMatchSide(source, 'away', teams)
     return {
       status: 'provisional',
       displayName: slotLabel,
       team: null,
       slotLabel,
-      possibleTeams: [source.home_team, source.away_team].filter(Boolean) as Team[],
+      possibleTeams: [homeTeam, awayTeam].filter(Boolean) as Team[],
       detail: 'Partido anterior sin definir',
     }
   }
@@ -407,14 +452,19 @@ function analyzeWinnerSlot(
 function analyzeLoserSlot(
   slot: Extract<BracketSlot, { type: 'loser' }>,
   allMatches: Match[],
+  teams: Team[],
 ): SlotSideAnalysis {
-  const source = allMatches.find((m) => m.bracket_meta?.match_number === slot.match)
+  const source = findBracketSourceMatch(allMatches, slot.match)
   const slotLabel = `Perdedor M${slot.match}`
 
   if (source?.status === 'finished') {
     const winnerSide = matchKnockoutWinnerSide(source)
     const loser =
-      winnerSide === 'home' ? source.away_team : winnerSide === 'away' ? source.home_team : null
+      winnerSide === 'home'
+        ? teamOnMatchSide(source, 'away', teams)
+        : winnerSide === 'away'
+          ? teamOnMatchSide(source, 'home', teams)
+          : null
 
     if (loser) {
       return {
@@ -429,12 +479,14 @@ function analyzeLoserSlot(
   }
 
   if (source?.home_team_id && source?.away_team_id) {
+    const homeTeam = teamOnMatchSide(source, 'home', teams)
+    const awayTeam = teamOnMatchSide(source, 'away', teams)
     return {
       status: 'provisional',
       displayName: slotLabel,
       team: null,
       slotLabel,
-      possibleTeams: [source.home_team, source.away_team].filter(Boolean) as Team[],
+      possibleTeams: [homeTeam, awayTeam].filter(Boolean) as Team[],
       detail: 'Esperando semifinal',
     }
   }
@@ -456,24 +508,8 @@ function analyzeSlot(
   matches: Match[],
   allMatches: Match[],
   assignedTeam: Team | null | undefined,
+  teams: Team[],
 ): SlotSideAnalysis {
-  if (assignedTeam && (slot?.type === 'winner' || slot?.type === 'loser')) {
-    const sourceFinished =
-      slot.type === 'winner' || slot.type === 'loser'
-        ? allMatches.find((m) => m.bracket_meta?.match_number === slot.match)?.status === 'finished'
-        : false
-    if (sourceFinished) {
-      return {
-        status: 'confirmed',
-        displayName: teamDisplayName(assignedTeam),
-        team: assignedTeam,
-        slotLabel: slot.type === 'winner' ? `Ganador M${slot.match}` : `Perdedor M${slot.match}`,
-        possibleTeams: [assignedTeam],
-        detail: 'Confirmado',
-      }
-    }
-  }
-
   if (!slot) {
     return {
       status: assignedTeam ? 'provisional' : 'pending',
@@ -485,6 +521,44 @@ function analyzeSlot(
     }
   }
 
+  if (slot.type === 'winner') {
+    const resolved = analyzeWinnerSlot(slot, allMatches, teams)
+    if (resolved.status === 'confirmed') return resolved
+    if (
+      assignedTeam &&
+      findBracketSourceMatch(allMatches, slot.match)?.status === 'finished'
+    ) {
+      return {
+        status: 'confirmed',
+        displayName: teamDisplayName(assignedTeam),
+        team: assignedTeam,
+        slotLabel: `Ganador M${slot.match}`,
+        possibleTeams: [assignedTeam],
+        detail: 'Confirmado',
+      }
+    }
+    return resolved
+  }
+
+  if (slot.type === 'loser') {
+    const resolved = analyzeLoserSlot(slot, allMatches, teams)
+    if (resolved.status === 'confirmed') return resolved
+    if (
+      assignedTeam &&
+      findBracketSourceMatch(allMatches, slot.match)?.status === 'finished'
+    ) {
+      return {
+        status: 'confirmed',
+        displayName: teamDisplayName(assignedTeam),
+        team: assignedTeam,
+        slotLabel: `Perdedor M${slot.match}`,
+        possibleTeams: [assignedTeam],
+        detail: 'Confirmado',
+      }
+    }
+    return resolved
+  }
+
   if (slot.type === 'group_pos') {
     return analyzeGroupPosSlot(slot, standings, matches)
   }
@@ -492,9 +566,6 @@ function analyzeSlot(
   if (slot.type === 'best_third') {
     return analyzeBestThirdSlot(slot, opponentSlot, standings, matches)
   }
-
-  if (slot.type === 'winner') return analyzeWinnerSlot(slot, allMatches)
-  if (slot.type === 'loser') return analyzeLoserSlot(slot, allMatches)
 
   return {
     status: 'pending',
@@ -549,6 +620,7 @@ export function analyzeMatchBracket(
     allMatches.filter((m) => m.phase === 'group'),
     allMatches,
     match.home_team,
+    teams,
   )
   const away = analyzeSlot(
     meta?.away,
@@ -557,6 +629,7 @@ export function analyzeMatchBracket(
     allMatches.filter((m) => m.phase === 'group'),
     allMatches,
     match.away_team,
+    teams,
   )
 
   const level = computeMatchLevel(home, away)

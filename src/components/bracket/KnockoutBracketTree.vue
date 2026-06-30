@@ -4,6 +4,7 @@ import BracketMatchCertainty from '@/components/predictions/BracketMatchCertaint
 import {
   analyzeMatchBracket,
   bracketSideFlagUrl,
+  bracketSideTeam,
   isBracketSideProvisional,
   isKnockoutBracketMatch,
   publicBracketSideLabel,
@@ -34,8 +35,10 @@ const props = defineProps<{
 function sideLabel(match: Match, side: 'home' | 'away'): string {
   if (isKnockoutBracketMatch(match) && props.teams.length) {
     const analysis = analyzeMatchBracket(match, props.teams, props.allMatches)
-    const slot = side === 'home' ? match.bracket_meta?.home : match.bracket_meta?.away
     const slotAnalysis = side === 'home' ? analysis.home : analysis.away
+    const team = bracketSideTeam(match, side, props.teams, props.allMatches)
+    if (team && slotAnalysis.status === 'confirmed') return teamDisplayName(team)
+    const slot = side === 'home' ? match.bracket_meta?.home : match.bracket_meta?.away
     return publicBracketSideLabel(slotAnalysis, slot)
   }
   const team = side === 'home' ? match.home_team : match.away_team
@@ -171,7 +174,13 @@ function formatDate(iso: string | null | undefined): string {
             </div>
 
             <p
-              v-if="match.status === 'finished' && hasPenaltyShootout(match)"
+              v-if="match.status === 'finished' && match.home_score === match.away_score && !hasPenaltyShootout(match)"
+              class="mt-1 text-center text-[10px] font-medium text-amber-400/90"
+            >
+              Ganador pendiente (penales)
+            </p>
+            <p
+              v-else-if="match.status === 'finished' && hasPenaltyShootout(match)"
               class="mt-1 text-center text-[10px] font-semibold tabular-nums text-slate-400"
             >
               {{ penaltyShootoutLabel(match) }}

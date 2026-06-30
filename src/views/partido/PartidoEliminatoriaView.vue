@@ -10,6 +10,7 @@ import {
   isGroupStageComplete,
   isKnockoutFilled,
 } from '@/lib/knockoutBracket'
+import { refreshKnockoutBracket } from '@/lib/knockoutBracketRefresh'
 import { useGroupStandingsStore } from '@/stores/groupStandingsStore'
 import { useMatchStore } from '@/stores/matchStore'
 
@@ -17,8 +18,9 @@ const matchStore = useMatchStore()
 const standingsStore = useGroupStandingsStore()
 
 onMounted(async () => {
-  if (!matchStore.matches.length) await matchStore.fetchMatches()
   if (!standingsStore.teams.length) await standingsStore.fetchStandingsData()
+  await refreshKnockoutBracket()
+  await matchStore.fetchMatches()
 })
 
 const progress = computed(() =>

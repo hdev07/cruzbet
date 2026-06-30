@@ -14,14 +14,16 @@ language sql
 immutable
 as $$
   select case
-    when p_home_score > p_away_score then p_home_team_id
-    when p_away_score > p_home_score then p_away_team_id
     when p_penalty_home_score is not null
          and p_penalty_away_score is not null
+         and p_penalty_home_score <> p_penalty_away_score
          and p_penalty_home_score > p_penalty_away_score then p_home_team_id
     when p_penalty_home_score is not null
          and p_penalty_away_score is not null
+         and p_penalty_home_score <> p_penalty_away_score
          and p_penalty_away_score > p_penalty_home_score then p_away_team_id
+    when p_home_score > p_away_score then p_home_team_id
+    when p_away_score > p_home_score then p_away_team_id
     else null
   end;
 $$;
@@ -154,7 +156,14 @@ begin
     loser := src.home_team_id;
   end if;
 
-  src_num := (src.bracket_meta ->> 'match_number')::int;
+  src_num := coalesce(
+    (src.bracket_meta ->> 'match_number')::int,
+    nullif(regexp_replace(src.bracket_key, '\D', '', 'g'), '')::int
+  );
+
+  if src_num is null then
+    return jsonb_build_object('ok', false, 'reason', 'missing_match_number');
+  end if;
 
   for tgt in
     select id, bracket_meta
@@ -194,7 +203,7 @@ begin
 end;
 $$;
 
--- Reprocesar partidos ya finalizados en penales que no avanzaron al cuadro
+-- Reprocesar todos los partidos de eliminatoria con penales definidos
 do $$
 declare
   mid uuid;
@@ -205,7 +214,6 @@ begin
     where m.status = 'finished'
       and m.bracket_key is not null
       and m.phase in ('r32', 'r16', 'qf', 'sf')
-      and m.home_score = m.away_score
       and m.penalty_home_score is not null
       and m.penalty_away_score is not null
       and m.penalty_home_score <> m.penalty_away_score

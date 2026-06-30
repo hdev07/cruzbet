@@ -17,6 +17,7 @@ interface EspnCompetitor {
   homeAway: 'home' | 'away'
   score: string
   shootoutScore?: number
+  winner?: boolean
   team: { abbreviation: string; id: string }
 }
 
@@ -277,8 +278,8 @@ export function findEspnEvent(
 
 function parseShootoutScore(value: unknown): number | null {
   if (value == null) return null
-  const n = typeof value === 'number' ? value : Number.parseInt(String(value), 10)
-  return Number.isFinite(n) ? n : null
+  const n = typeof value === 'number' ? value : Number.parseFloat(String(value))
+  return Number.isFinite(n) ? Math.trunc(n) : null
 }
 
 function parsePenaltyShootout(
@@ -287,8 +288,55 @@ function parsePenaltyShootout(
 ): { home: number | null; away: number | null } {
   const home = parseShootoutScore(homeComp?.shootoutScore)
   const away = parseShootoutScore(awayComp?.shootoutScore)
-  if (home == null || away == null) return { home: null, away: null }
-  return { home, away }
+  if (home != null && away != null) return { home, away }
+  return { home: null, away: null }
+}
+
+/** Alinea marcador y penales de ESPN con local/visita de la BD (pueden estar invertidos). */
+export function alignSnapshotToDbOrientation(
+  snapshot: LiveMatchSnapshot,
+  espnHomeCode: string,
+  espnAwayCode: string,
+  dbHomeCode: string,
+  dbAwayCode: string,
+): LiveMatchSnapshot {
+  const espnHome = normalizeCode(espnHomeCode)
+  const espnAway = normalizeCode(espnAwayCode)
+  const dbHome = normalizeCode(dbHomeCode)
+  const dbAway = normalizeCode(dbAwayCode)
+
+  if (espnHome === dbHome && espnAway === dbAway) {
+    return snapshot
+  }
+
+  if (espnHome === dbAway && espnAway === dbHome) {
+    return {
+      ...snapshot,
+      home_score: snapshot.away_score,
+      away_score: snapshot.home_score,
+      penalty_home_score: snapshot.penalty_away_score ?? null,
+      penalty_away_score: snapshot.penalty_home_score ?? null,
+      goals: snapshot.goals.map((goal) => ({
+        ...goal,
+        team_side: goal.team_side === 'home' ? 'away' : 'home',
+      })),
+      cards: (snapshot.cards ?? []).map((card) => ({
+        ...card,
+        team_side: card.team_side === 'home' ? 'away' : 'home',
+      })),
+    }
+  }
+
+  return snapshot
+}
+
+function competitorCodes(comp: EspnCompetition): { home: string; away: string } {
+  const homeComp = comp.competitors.find((c) => c.homeAway === 'home')
+  const awayComp = comp.competitors.find((c) => c.homeAway === 'away')
+  return {
+    home: homeComp?.team.abbreviation ?? '',
+    away: awayComp?.team.abbreviation ?? '',
+  }
 }
 
 async function buildEspnSnapshotFromCompetition(
@@ -342,24 +390,31 @@ async function buildEspnSnapshotFromCompetition(
 
 export async function buildEspnSnapshot(
   event: EspnEvent,
-  _homeCode: string,
-  _awayCode: string,
+  dbHomeCode: string,
+  dbAwayCode: string,
   previousClock?: { current_minute?: number | null; live_clock_display?: string | null } | null,
 ): Promise<LiveMatchSnapshot> {
   const comp = event.competitions[0]!
   const summary = await fetchEspnSummary(event.id)
   const headerComp = summary?.header?.competitions?.[0]
-  return buildEspnSnapshotFromCompetition(event.id, headerComp ?? comp, summary, previousClock)
+  const espnComp = headerComp ?? comp
+  const raw = await buildEspnSnapshotFromCompetition(event.id, espnComp, summary, previousClock)
+  const codes = competitorCodes(espnComp)
+  return alignSnapshotToDbOrientation(raw, codes.home, codes.away, dbHomeCode, dbAwayCode)
 }
 
 async function fetchSnapshotByEventId(
   eventId: string,
+  dbHomeCode: string,
+  dbAwayCode: string,
   previousClock?: { current_minute?: number | null; live_clock_display?: string | null } | null,
 ): Promise<LiveMatchSnapshot | null> {
   const summary = await fetchEspnSummary(eventId)
   const comp = summary?.header?.competitions?.[0]
   if (!comp) return null
-  return buildEspnSnapshotFromCompetition(eventId, comp, summary, previousClock)
+  const raw = await buildEspnSnapshotFromCompetition(eventId, comp, summary, previousClock)
+  const codes = competitorCodes(comp)
+  return alignSnapshotToDbOrientation(raw, codes.home, codes.away, dbHomeCode, dbAwayCode)
 }
 
 async function resolveEspnEventsForMatch(
@@ -383,7 +438,12 @@ export async function fetchLiveSnapshotForMatch(
   }
 
   if (match.external_event_id) {
-    const direct = await fetchSnapshotByEventId(match.external_event_id, previousClock)
+    const direct = await fetchSnapshotByEventId(
+      match.external_event_id,
+      match.home_team.code,
+      match.away_team.code,
+      previousClock,
+    )
     if (direct) return direct
   }
 

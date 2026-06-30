@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import { supabase } from '@/lib/supabase'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import { refreshKnockoutBracket } from '@/lib/knockoutBracketRefresh'
 import { triggerLiveSync } from '@/lib/liveSync'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchEvent } from '@/types'
@@ -345,6 +346,9 @@ async function updateLiveState() {
   if (err) error.value = err.message
   else {
     message.value = 'Marcador y minuto guardados'
+    if (penaltyHomeScore.value != null && penaltyAwayScore.value != null) {
+      await maybeAdvanceKnockoutBracket()
+    }
     await refreshMatch()
   }
 }
@@ -419,7 +423,24 @@ async function deleteGoal(event: MatchEvent) {
   await refreshMatch()
 }
 
+async function maybeAdvanceKnockoutBracket() {
+  const phase = props.match.phase
+  if (!phase || phase === 'group') return
+  await refreshKnockoutBracket()
+}
+
 async function finishMatch() {
+  if (
+    props.match.phase &&
+    props.match.phase !== 'group' &&
+    homeScore.value === awayScore.value &&
+    (penaltyHomeScore.value == null || penaltyAwayScore.value == null)
+  ) {
+    error.value =
+      'Empate en eliminatoria: indica el marcador de penales (local y visita) antes de finalizar.'
+    return
+  }
+
   saving.value = true
   error.value = ''
   const { error: err } = await supabase
@@ -436,6 +457,7 @@ async function finishMatch() {
   if (err) error.value = err.message
   else {
     message.value = 'Partido finalizado'
+    await maybeAdvanceKnockoutBracket()
     await refreshMatch()
   }
 }

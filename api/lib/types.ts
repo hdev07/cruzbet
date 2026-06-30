@@ -48,7 +48,12 @@ export interface DbMatchRow {
   home_team_id: string
   away_team_id: string
   status: MatchStatus
+  phase?: string | null
   match_date: string | null
+  home_score?: number | null
+  away_score?: number | null
+  penalty_home_score?: number | null
+  penalty_away_score?: number | null
   current_minute: number | null
   live_clock_display: string | null
   auto_sync_enabled: boolean

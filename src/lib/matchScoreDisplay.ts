@@ -42,11 +42,12 @@ type KnockoutWinnerMatch = Pick<
 export function matchKnockoutWinnerSide(match: KnockoutWinnerMatch): 'home' | 'away' | null {
   if (match.status !== 'finished') return null
 
+  if (hasPenaltyShootout(match) && match.penalty_home_score !== match.penalty_away_score) {
+    if (match.penalty_home_score! > match.penalty_away_score!) return 'home'
+    if (match.penalty_away_score! > match.penalty_home_score!) return 'away'
+  }
+
   if (match.home_score > match.away_score) return 'home'
   if (match.away_score > match.home_score) return 'away'
-
-  if (!hasPenaltyShootout(match)) return null
-  if (match.penalty_home_score! > match.penalty_away_score!) return 'home'
-  if (match.penalty_away_score! > match.penalty_home_score!) return 'away'
   return null
 }
