@@ -26,3 +26,27 @@ export function penaltyShootoutLabel(
   if (!hasPenaltyShootout(match)) return null
   return `Pen. ${match.penalty_home_score}-${match.penalty_away_score}`
 }
+
+type KnockoutWinnerMatch = Pick<
+  Match,
+  | 'status'
+  | 'home_score'
+  | 'away_score'
+  | 'penalty_home_score'
+  | 'penalty_away_score'
+  | 'home_team_id'
+  | 'away_team_id'
+>
+
+/** Lado ganador en eliminatoria (incluye tanda de penales). */
+export function matchKnockoutWinnerSide(match: KnockoutWinnerMatch): 'home' | 'away' | null {
+  if (match.status !== 'finished') return null
+
+  if (match.home_score > match.away_score) return 'home'
+  if (match.away_score > match.home_score) return 'away'
+
+  if (!hasPenaltyShootout(match)) return null
+  if (match.penalty_home_score! > match.penalty_away_score!) return 'home'
+  if (match.penalty_away_score! > match.penalty_home_score!) return 'away'
+  return null
+}

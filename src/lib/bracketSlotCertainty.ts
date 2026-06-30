@@ -5,6 +5,7 @@ import {
   MATCHES_PER_GROUP,
   allGroupLetters,
 } from '@/lib/groupStandings'
+import { matchKnockoutWinnerSide } from '@/lib/matchScoreDisplay'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import type { BracketSlot, GroupStandingRow, GroupStandings, Match, Team } from '@/types'
 
@@ -366,12 +367,9 @@ function analyzeWinnerSlot(
   const slotLabel = `Ganador M${slot.match}`
 
   if (source?.status === 'finished') {
+    const winnerSide = matchKnockoutWinnerSide(source)
     const winner =
-      source.home_score > source.away_score
-        ? source.home_team
-        : source.away_score > source.home_score
-          ? source.away_team
-          : null
+      winnerSide === 'home' ? source.home_team : winnerSide === 'away' ? source.away_team : null
 
     if (winner) {
       return {
@@ -414,12 +412,9 @@ function analyzeLoserSlot(
   const slotLabel = `Perdedor M${slot.match}`
 
   if (source?.status === 'finished') {
+    const winnerSide = matchKnockoutWinnerSide(source)
     const loser =
-      source.home_score > source.away_score
-        ? source.away_team
-        : source.away_score > source.home_score
-          ? source.home_team
-          : null
+      winnerSide === 'home' ? source.away_team : winnerSide === 'away' ? source.home_team : null
 
     if (loser) {
       return {

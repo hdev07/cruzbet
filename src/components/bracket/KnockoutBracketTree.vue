@@ -13,6 +13,12 @@ import {
   matchBracketLabel,
   type BracketRound,
 } from '@/lib/knockoutBracket'
+import {
+  displayRegulationScore,
+  hasPenaltyShootout,
+  matchKnockoutWinnerSide,
+  penaltyShootoutLabel,
+} from '@/lib/matchScoreDisplay'
 import { formatLiveStatusLabel } from '@/lib/matchClock'
 import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
@@ -53,9 +59,12 @@ function sideFlag(match: Match, side: 'home' | 'away'): string | null {
 }
 
 function isWinner(match: Match, side: 'home' | 'away'): boolean {
-  if (match.status !== 'finished') return false
-  if (side === 'home') return match.home_score > match.away_score
-  return match.away_score > match.home_score
+  return matchKnockoutWinnerSide(match) === side
+}
+
+function regulationScore(match: Match, side: 'home' | 'away'): number {
+  const score = displayRegulationScore(match)
+  return side === 'home' ? score.home : score.away
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -133,7 +142,7 @@ function formatDate(iso: string | null | undefined): string {
                 v-if="match.status !== 'scheduled'"
                 class="shrink-0 tabular-nums text-slate-300"
               >
-                {{ match.home_score }}
+                {{ regulationScore(match, 'home') }}
               </span>
             </div>
 
@@ -157,9 +166,16 @@ function formatDate(iso: string | null | undefined): string {
                 v-if="match.status !== 'scheduled'"
                 class="shrink-0 tabular-nums text-slate-300"
               >
-                {{ match.away_score }}
+                {{ regulationScore(match, 'away') }}
               </span>
             </div>
+
+            <p
+              v-if="match.status === 'finished' && hasPenaltyShootout(match)"
+              class="mt-1 text-center text-[10px] font-semibold tabular-nums text-slate-400"
+            >
+              {{ penaltyShootoutLabel(match) }}
+            </p>
 
             <BracketMatchCertainty
               v-if="isKnockoutBracketMatch(match)"
