@@ -13,6 +13,25 @@ export function actualMatchWinner(
   return winnerFromRegulationScores(home, away)
 }
 
+/** Ganador según el marcador en vivo (90'+agregado). Null si el partido no ha empezado. */
+export function provisionalMatchWinner(
+  match: Match,
+  events?: readonly MatchEvent[],
+): PredictedWinner | null {
+  if (match.status === 'scheduled') return null
+  const { home, away } = regulationScoresForMatch(match, events)
+  return winnerFromRegulationScores(home, away)
+}
+
+export function isProvisionalPredictionCorrect(
+  predicted: PredictedWinner,
+  match: Match,
+  events?: readonly MatchEvent[],
+): boolean {
+  const provisional = provisionalMatchWinner(match, events)
+  return provisional != null && predicted === provisional
+}
+
 export const BASE_WINNER_OPTIONS: {
   key: PredictedWinner
   code: string

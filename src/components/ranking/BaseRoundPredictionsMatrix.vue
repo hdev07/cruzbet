@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import {
   actualMatchWinner,
   isPredictionCorrect,
+  isProvisionalPredictionCorrect,
+  provisionalMatchWinner,
   winnerCode,
 } from '@/lib/baseQuinielaDisplay'
 import { firstKickoffFromRoundMatches, hasRoundStarted } from '@/lib/baseQuinielaRound'
@@ -26,6 +28,10 @@ const loading = ref(false)
 const error = ref('')
 const flashingMatchIds = ref(new Set<string>())
 const flashTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const matchSnapshots = new Map<
+  string,
+  { home: number; away: number; status: string; eventCount: number }
+>()
 
 const sortedMatches = computed(() =>
   [...props.roundMatches].sort((a, b) => a.position - b.position),
@@ -77,10 +83,13 @@ async function loadParticipants() {
   error.value = ''
   try {
     participants.value = await baseStore.fetchRoundParticipants(props.roundId)
-    const finishedIds = props.roundMatches
-      .filter((row) => row.match?.status === 'finished')
+    const eventIds = props.roundMatches
+      .filter(
+        (row) =>
+          row.match?.status === 'finished' || row.match?.status === 'live',
+      )
       .map((row) => row.match_id)
-    if (finishedIds.length) await matchStore.fetchEventsForMatches(finishedIds)
+    if (eventIds.length) await matchStore.fetchEventsForMatches(eventIds)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudieron cargar los pronósticos'
     participants.value = []
@@ -95,7 +104,10 @@ function matchEvents(match: Match) {
 
 function roundMatchWinner(match: Match | undefined): PredictedWinner | null {
   if (!match) return null
-  return actualMatchWinner(match, matchEvents(match))
+  if (match.status === 'finished') {
+    return actualMatchWinner(match, matchEvents(match))
+  }
+  return provisionalMatchWinner(match, matchEvents(match))
 }
 
 watch(
@@ -127,26 +139,47 @@ watch(
   { deep: true },
 )
 
+function syncMatchSnapshots(matches: BaseQuinielaRoundMatch[]) {
+  if (!roundStarted.value) return
+  for (const rm of matches) {
+    if (!rm.match || rm.match.status === 'finished') continue
+    const events = matchEvents(rm.match)
+    const next = {
+      home: rm.match.home_score,
+      away: rm.match.away_score,
+      status: rm.match.status,
+      eventCount: events.length,
+    }
+    const prev = matchSnapshots.get(rm.match_id)
+    if (
+      prev &&
+      (prev.home !== next.home ||
+        prev.away !== next.away ||
+        prev.status !== next.status ||
+        prev.eventCount !== next.eventCount)
+    ) {
+      flashMatchColumn(rm.match_id)
+    }
+    matchSnapshots.set(rm.match_id, next)
+  }
+}
+
 watch(
   () => props.roundMatches,
-  (matches, prev) => {
-    if (!prev?.length || !roundStarted.value) return
-    for (const rm of matches) {
-      if (!rm.match || rm.match.status === 'finished') continue
-      const old = prev.find((row) => row.match_id === rm.match_id)?.match
-      if (!old) continue
-      const scoreChanged =
-        old.home_score !== rm.match.home_score || old.away_score !== rm.match.away_score
-      const statusChanged = old.status !== rm.match.status
-      if (scoreChanged || statusChanged) flashMatchColumn(rm.match_id)
-    }
-  },
+  (matches) => syncMatchSnapshots(matches),
+  { deep: true, immediate: true },
+)
+
+watch(
+  () => matchStore.eventsByMatchId,
+  () => syncMatchSnapshots(props.roundMatches),
   { deep: true },
 )
 
 onBeforeUnmount(() => {
   for (const timer of flashTimers.values()) clearTimeout(timer)
   flashTimers.clear()
+  matchSnapshots.clear()
 })
 
 function flashMatchColumn(matchId: string) {
@@ -199,23 +232,26 @@ function cellClass(userId: string, entryNumber: number, match: BaseQuinielaRound
     return `${base} theme-cell-idle text-slate-500`
   }
 
-  if (!roundStarted.value || !match.match || match.match.status !== 'finished') {
-    if (isMatchColumnFlashing(match)) {
+  if (!roundStarted.value || !match.match) {
+    return `${base} theme-cell-pending text-slate-300`
+  }
+
+  const events = matchEvents(match.match)
+
+  if (match.match.status === 'live') {
+    if (isProvisionalPredictionCorrect(pick.predicted_winner, match.match, events)) {
       return `${base} bg-amber-500/30 text-amber-100 ring-1 ring-amber-400/70`
     }
     return `${base} theme-cell-pending text-slate-300`
   }
 
-  const correct = isPredictionCorrect(
-    pick.predicted_winner,
-    match.match,
-    matchEvents(match.match),
-  )
+  if (match.match.status !== 'finished') {
+    return `${base} theme-cell-pending text-slate-300`
+  }
+
+  const correct = isPredictionCorrect(pick.predicted_winner, match.match, events)
   if (correct === true) return `${base} bg-mundial-green/25 text-mundial-green`
   if (correct === false) return `${base} bg-red-500/15 text-red-400`
-  if (isMatchColumnFlashing(match)) {
-    return `${base} bg-amber-500/30 text-amber-100 ring-1 ring-amber-400/70`
-  }
   return `${base} theme-cell-pending text-slate-300`
 }
 
@@ -270,7 +306,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
     <template v-else>
       <p class="mb-3 text-xs text-slate-500">
         <template v-if="roundStarted">
-          Compara tus picks L/E/V con los demás. Verde = acierto, rojo = fallo.
+          Compara tus picks L/E/V con los demás. Verde = acierto, rojo = fallo, amarillo = va acertando en vivo.
           <span v-if="currentUserId"> Tu fila está resaltada.</span>
         </template>
         <template v-else>
@@ -330,7 +366,12 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                 </span>
                 <span
                   v-if="roundStarted && match.match && roundMatchWinner(match.match)"
-                  class="mt-0.5 block text-[0.65rem] font-bold text-mundial-green"
+                  class="mt-0.5 block text-[0.65rem] font-bold"
+                  :class="
+                    match.match.status === 'finished'
+                      ? 'text-mundial-green'
+                      : 'text-amber-300'
+                  "
                 >
                   {{ winnerCode(roundMatchWinner(match.match)!) }}
                 </span>
@@ -465,7 +506,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
         </span>
         <span class="inline-flex items-center gap-1">
           <span class="h-3 w-3 rounded bg-amber-500/30 ring-1 ring-amber-400/70" />
-          Actualizando en vivo
+          Va acertando (en vivo)
         </span>
       </div>
     </template>
