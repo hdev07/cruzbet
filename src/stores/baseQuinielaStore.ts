@@ -5,6 +5,7 @@ import {
   buildFirstKickoffByRoundId,
   resolveActiveBaseRound,
 } from '@/lib/baseQuinielaRound'
+import { compareBaseRoundRank } from '@/lib/baseQuinielaStats'
 import { isMatchOpenForPredictions, teamsPendingReason } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
 import type {
@@ -226,11 +227,13 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
       .eq('is_complete', true)
       .order('correct_count', { ascending: false })
       .order('total_points', { ascending: false })
+      .order('username', { ascending: true })
       .order('entry_number', { ascending: true })
       .limit(limit)
 
     if (error) throw error
-    return (data ?? []) as BaseRoundLeaderboardEntry[]
+    const rows = (data ?? []) as BaseRoundLeaderboardEntry[]
+    return rows.sort(compareBaseRoundRank)
   }
 
   async function fetchRoundLeaderboard(roundId: string) {

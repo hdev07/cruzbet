@@ -4,6 +4,7 @@ import { Clock, Radio, Trophy } from '@lucide/vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
 import MatchCardsList from '@/components/shared/MatchCardsList.vue'
 import MatchGoalsList from '@/components/shared/MatchGoalsList.vue'
+import MatchScoreDisplay from '@/components/shared/MatchScoreDisplay.vue'
 import { formatLiveStatusLabel, isMatchDelayed } from '@/lib/matchClock'
 import { formatKickoff } from '@/lib/matchRules'
 import { phaseLabel } from '@/lib/matchPhases'
@@ -135,14 +136,11 @@ const countdown = computed(() => {
         </div>
 
         <div class="shrink-0 text-center">
-          <p
+          <MatchScoreDisplay
             v-if="isLive || isRecentlyFinished || match.status === 'finished'"
-            class="text-3xl font-black tabular-nums tracking-tight sm:text-4xl"
-          >
-            {{ match.home_score }}
-            <span class="mx-1 text-slate-500">-</span>
-            {{ match.away_score }}
-          </p>
+            :match="match"
+            size="lg"
+          />
           <p v-else class="text-2xl font-bold text-slate-500 sm:text-3xl">VS</p>
           <LiveMatchPulse v-if="isLive" class="live-pulse-under-score" />
           <p v-if="kickoffLabel && !isLive" class="mt-1 text-[11px] text-slate-500 sm:text-xs">

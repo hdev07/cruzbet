@@ -4,6 +4,7 @@ import { ChevronRight, Radio, Users } from '@lucide/vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
 import MatchCardsList from '@/components/shared/MatchCardsList.vue'
 import MatchGoalsList from '@/components/shared/MatchGoalsList.vue'
+import MatchScoreDisplay from '@/components/shared/MatchScoreDisplay.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { bracketParticipantLabel } from '@/lib/knockoutBracket'
 import { isEffectivelyLive, isRecentlyFinished } from '@/lib/matchLifecycle'
@@ -98,12 +99,8 @@ function awayLabel(match: Match) {
       </div>
 
       <div class="shrink-0 px-1 text-center">
-        <p class="text-lg font-bold tabular-nums sm:text-xl">
-          <template v-if="match.status !== 'scheduled'">
-            {{ match.home_score }} - {{ match.away_score }}
-          </template>
-          <template v-else>vs</template>
-        </p>
+        <MatchScoreDisplay v-if="match.status !== 'scheduled'" :match="match" />
+        <p v-else class="text-lg font-bold sm:text-xl">vs</p>
         <LiveMatchPulse v-if="isLive" compact class="live-pulse-under-score live-pulse-under-score--compact" />
       </div>
 

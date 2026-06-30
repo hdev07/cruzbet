@@ -35,6 +35,8 @@ export interface LiveMatchSnapshot {
   live_status_detail: LiveStatusDetail | null
   home_score: number
   away_score: number
+  penalty_home_score?: number | null
+  penalty_away_score?: number | null
   goals: ParsedGoal[]
   cards: ParsedCard[]
   external_event_id: string | null

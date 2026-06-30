@@ -1,4 +1,34 @@
-import type { BasePrediction, BaseRoundLeaderboardEntry } from '@/types'
+import type { BasePrediction, BaseRoundLeaderboardEntry, BaseRoundParticipant } from '@/types'
+
+export type BaseRoundRankRow =
+  | BaseRoundLeaderboardEntry
+  | BaseRoundParticipant
+  | {
+      correct_count: number
+      total_points: number
+      user_id: string
+      entry_number: number
+      username?: string | null
+      profiles?: { username?: string | null }
+    }
+
+export function rankDisplayName(row: BaseRoundRankRow): string {
+  if ('username' in row && row.username != null) return row.username
+  if ('profiles' in row && row.profiles?.username) return row.profiles.username
+  return ''
+}
+
+/** Orden oficial: aciertos ↓, puntos ↓, nombre ↑, quiniela ↑. */
+export function compareBaseRoundRank(a: BaseRoundRankRow, b: BaseRoundRankRow): number {
+  if (b.correct_count !== a.correct_count) return b.correct_count - a.correct_count
+  if (b.total_points !== a.total_points) return b.total_points - a.total_points
+  const byName = rankDisplayName(a).localeCompare(rankDisplayName(b), 'es', {
+    sensitivity: 'base',
+  })
+  if (byName !== 0) return byName
+  if (a.entry_number !== b.entry_number) return a.entry_number - b.entry_number
+  return a.user_id.localeCompare(b.user_id)
+}
 
 export interface BasePredictionSummary {
   picks_count: number

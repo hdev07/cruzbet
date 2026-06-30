@@ -16,6 +16,7 @@ const ESPN_FETCH_RETRIES = 2
 interface EspnCompetitor {
   homeAway: 'home' | 'away'
   score: string
+  shootoutScore?: number
   team: { abbreviation: string; id: string }
 }
 
@@ -274,6 +275,22 @@ export function findEspnEvent(
   )
 }
 
+function parseShootoutScore(value: unknown): number | null {
+  if (value == null) return null
+  const n = typeof value === 'number' ? value : Number.parseInt(String(value), 10)
+  return Number.isFinite(n) ? n : null
+}
+
+function parsePenaltyShootout(
+  homeComp: EspnCompetitor | undefined,
+  awayComp: EspnCompetitor | undefined,
+): { home: number | null; away: number | null } {
+  const home = parseShootoutScore(homeComp?.shootoutScore)
+  const away = parseShootoutScore(awayComp?.shootoutScore)
+  if (home == null || away == null) return { home: null, away: null }
+  return { home, away }
+}
+
 async function buildEspnSnapshotFromCompetition(
   eventId: string,
   comp: EspnCompetition,
@@ -305,6 +322,8 @@ async function buildEspnSnapshotFromCompetition(
     previousClock,
   )
 
+  const penalties = parsePenaltyShootout(homeComp, awayComp)
+
   return {
     status: matchStatus,
     current_minute: clock.current_minute,
@@ -312,6 +331,8 @@ async function buildEspnSnapshotFromCompetition(
     live_status_detail: mapEspnStatusDetail(status.type),
     home_score: Number.parseInt(homeComp?.score ?? '0', 10),
     away_score: Number.parseInt(awayComp?.score ?? '0', 10),
+    penalty_home_score: penalties.home,
+    penalty_away_score: penalties.away,
     goals,
     cards,
     external_event_id: eventId,

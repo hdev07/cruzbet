@@ -74,7 +74,7 @@ export const BASE_QUINIELA_LOGIC = {
     'Al guardar la quiniela completa, tus picks quedan bloqueados definitivamente.',
     'Al terminar cada partido se revisa tu pick automáticamente.',
     `Cada acierto vale ${BASE_QUINIELA_POINTS_PER_HIT} puntos (el máximo depende de cuántos partidos tenga la jornada).`,
-    'El ranking de la jornada ordena por aciertos; en empate, por puntos.',
+    'El ranking de la jornada ordena por aciertos; en empate, por puntos y luego por nombre.',
   ],
   scoring: [
     { label: 'Acierto L/E/V', points: BASE_QUINIELA_POINTS_PER_HIT },

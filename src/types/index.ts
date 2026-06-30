@@ -52,6 +52,9 @@ export interface Match {
   /** Marcador al final de 90 min + agregado (sin prórroga). */
   regulation_home_score?: number | null
   regulation_away_score?: number | null
+  /** Goles convertidos en la tanda de penales (si aplica). */
+  penalty_home_score?: number | null
+  penalty_away_score?: number | null
   current_minute: number | null
   live_clock_display?: string | null
   live_status_detail?: LiveStatusDetail | null

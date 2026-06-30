@@ -1,6 +1,5 @@
--- L/E/V: marcador al final de 90 min + agregado (goles con minute <= 90), sin prórroga
--- Ejecutar en SQL Editor de Supabase
--- Si finalizar partido da 400, ejecutar también regulation_time_winner_fix_migration.sql
+-- Fix: finalizar partido fallaba (400) por UPDATE anidado en trigger AFTER UPDATE
+-- Ejecutar en SQL Editor de Supabase (después de regulation_time_winner_migration.sql)
 
 alter table public.matches
   add column if not exists regulation_home_score integer,
@@ -58,6 +57,7 @@ begin
 end;
 $$;
 
+-- Escribe marcador reglamentario en la misma fila (sin UPDATE anidado)
 create or replace function public.set_regulation_scores_before_finish()
 returns trigger
 language plpgsql
@@ -311,36 +311,5 @@ drop trigger if exists match_finished_trigger on public.matches;
 create trigger match_finished_trigger
   after update on public.matches
   for each row execute function public.on_match_finished();
-
-do $$
-declare
-  mid uuid;
-begin
-  for mid in select id from matches where status = 'finished'
-  loop
-    perform sync_match_regulation_scores(mid);
-  end loop;
-end;
-$$;
-
-do $$
-declare
-  mid uuid;
-begin
-  for mid in
-    select distinct m.id
-    from matches m
-    where m.status = 'finished'
-      and exists (
-        select 1 from match_events me
-        where me.match_id = m.id
-          and me.event_type = 'goal'
-          and me.minute > 90
-      )
-  loop
-    perform rescore_winner_predictions_for_match(mid);
-  end loop;
-end;
-$$;
 
 notify pgrst, 'reload schema';

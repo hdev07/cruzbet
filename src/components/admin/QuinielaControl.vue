@@ -19,6 +19,8 @@ const matchStore = useMatchStore()
 const currentMinute = ref(0)
 const homeScore = ref(0)
 const awayScore = ref(0)
+const penaltyHomeScore = ref<number | null>(null)
+const penaltyAwayScore = ref<number | null>(null)
 const goalTeamId = ref('')
 const goalMinute = ref(1)
 const goalSecond = ref(0)
@@ -98,6 +100,8 @@ function syncForm(match: Match) {
   currentMinute.value = match.current_minute ?? 0
   homeScore.value = match.home_score
   awayScore.value = match.away_score
+  penaltyHomeScore.value = match.penalty_home_score ?? null
+  penaltyAwayScore.value = match.penalty_away_score ?? null
   goalMinute.value = Math.max((match.current_minute ?? 0) + 1, 1)
   goalSecond.value = 0
   goalExtraTime.value = 0
@@ -310,6 +314,21 @@ async function reopenMatch() {
   }
 }
 
+function penaltyUpdateFields(): {
+  penalty_home_score: number | null
+  penalty_away_score: number | null
+} {
+  const home = penaltyHomeScore.value
+  const away = penaltyAwayScore.value
+  if (home == null && away == null) {
+    return { penalty_home_score: null, penalty_away_score: null }
+  }
+  if (home == null || away == null) {
+    return { penalty_home_score: null, penalty_away_score: null }
+  }
+  return { penalty_home_score: home, penalty_away_score: away }
+}
+
 async function updateLiveState() {
   saving.value = true
   error.value = ''
@@ -319,6 +338,7 @@ async function updateLiveState() {
       current_minute: currentMinute.value,
       home_score: homeScore.value,
       away_score: awayScore.value,
+      ...penaltyUpdateFields(),
     })
     .eq('id', props.match.id)
   saving.value = false
@@ -404,7 +424,13 @@ async function finishMatch() {
   error.value = ''
   const { error: err } = await supabase
     .from('matches')
-    .update({ status: 'finished' })
+    .update({
+      status: 'finished',
+      home_score: homeScore.value,
+      away_score: awayScore.value,
+      current_minute: currentMinute.value,
+      ...penaltyUpdateFields(),
+    })
     .eq('id', props.match.id)
   saving.value = false
   if (err) error.value = err.message
@@ -499,6 +525,29 @@ async function finishMatch() {
             <input v-model.number="awayScore" type="number" min="0" :class="inputClass" />
           </label>
         </div>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="block text-xs text-slate-400">
+            Penales local
+            <input
+              v-model.number="penaltyHomeScore"
+              type="number"
+              min="0"
+              placeholder="—"
+              :class="inputClass"
+            />
+          </label>
+          <label class="block text-xs text-slate-400">
+            Penales visita
+            <input
+              v-model.number="penaltyAwayScore"
+              type="number"
+              min="0"
+              placeholder="—"
+              :class="inputClass"
+            />
+          </label>
+        </div>
+        <p class="text-[11px] text-slate-500">Opcional. Solo si el partido se definió en tanda de penales.</p>
         <button
           type="button"
           :class="[btnSecondary, 'bg-slate-600 font-semibold text-white']"

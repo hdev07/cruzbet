@@ -107,6 +107,8 @@ export async function syncAllLiveMatches(): Promise<{
         p_external_event_id: snapshot.external_event_id,
         p_live_clock_display: snapshot.live_clock_display,
         p_live_status_detail: snapshot.live_status_detail,
+        p_penalty_home_score: snapshot.penalty_home_score ?? null,
+        p_penalty_away_score: snapshot.penalty_away_score ?? null,
       })
 
       if (rpcError) {
