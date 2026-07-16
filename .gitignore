@@ -43,3 +43,6 @@ __screenshots__/
 
 .vercel
 .env*.local
+
+# Supabase CLI local state
+supabase/.temp/
