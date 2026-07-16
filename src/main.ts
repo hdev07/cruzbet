@@ -1,5 +1,6 @@
 import './assets/main.css'
 
+import { registerSW } from 'virtual:pwa-register'
 import { initTheme } from './lib/theme'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -20,6 +21,8 @@ window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault()
   reloadForStaleChunks()
 })
+
+registerSW({ immediate: true })
 
 const app = createApp(App)
 const pinia = createPinia()
