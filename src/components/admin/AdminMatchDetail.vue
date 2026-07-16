@@ -46,11 +46,8 @@ function formatDate() {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-1 flex-col">
-    <header
-      class="shrink-0 rounded-xl border border-white/10 bg-white/5 p-4"
-      :class="mobile ? 'mx-0 rounded-none border-x-0' : ''"
-    >
+  <div class="flex min-h-0 flex-1 flex-col gap-4">
+    <header class="theme-card shrink-0 p-4">
       <div class="flex flex-wrap items-center justify-center gap-2 text-center">
         <TeamFlag
           v-if="match.home_team?.flag_url"
@@ -58,7 +55,7 @@ function formatDate() {
           :alt="teamDisplayName(match.home_team, 'Local')"
           img-class="h-7 w-10 rounded-sm object-cover"
         />
-        <span class="text-base font-bold text-slate-100">
+        <span class="text-base font-bold text-app-text">
           {{ teamDisplayName(match.home_team, 'Local') }}
         </span>
         <span class="text-xl font-bold tabular-nums text-mundial-accent">
@@ -67,7 +64,7 @@ function formatDate() {
           </template>
           <template v-else>vs</template>
         </span>
-        <span class="text-base font-bold text-slate-100">
+        <span class="text-base font-bold text-app-text">
           {{ teamDisplayName(match.away_team, 'Visita') }}
         </span>
         <TeamFlag
@@ -77,7 +74,7 @@ function formatDate() {
           img-class="h-7 w-10 rounded-sm object-cover"
         />
       </div>
-      <div class="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs">
+      <div class="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
         <span class="rounded-full px-2.5 py-0.5 font-semibold" :class="statusClass">
           {{ statusLabel }}
           <template v-if="match.status === 'live'">
@@ -89,10 +86,7 @@ function formatDate() {
       </div>
     </header>
 
-    <div
-      class="app-scrollbar min-h-0 flex-1 overflow-y-auto py-4"
-      :class="mobile ? 'px-4' : 'mt-1'"
-    >
+    <div class="app-scrollbar min-h-0 flex-1 overflow-y-auto">
       <MatchEventControl :match="match" :mobile="mobile" />
     </div>
   </div>

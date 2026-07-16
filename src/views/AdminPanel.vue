@@ -4,8 +4,10 @@ import {
   ArrowLeft,
   BarChart3,
   CalendarDays,
+  ImageDown,
   Radio,
   RefreshCw,
+  Users,
 } from '@lucide/vue'
 import AdminBasePaymentVerification from '@/components/admin/AdminBasePaymentVerification.vue'
 import AdminBaseRoundList from '@/components/admin/AdminBaseRoundList.vue'
@@ -14,12 +16,14 @@ import type { AdminPaymentStats } from '@/components/admin/AdminDashboard.vue'
 import AdminLiveSyncPanel from '@/components/admin/AdminLiveSyncPanel.vue'
 import AdminMatchDetail from '@/components/admin/AdminMatchDetail.vue'
 import AdminMatchList from '@/components/admin/AdminMatchList.vue'
+import AdminRoundSharePanel from '@/components/admin/AdminRoundSharePanel.vue'
 import { APP_NAME } from '@/constants/branding'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import { useMatchStore } from '@/stores/matchStore'
 
 type AdminTab = 'resumen' | 'jornadas' | 'partidos' | 'sync'
 type MobileScreen = 'list' | 'detail'
+type JornadaDetailTab = 'users' | 'share'
 
 const matchStore = useMatchStore()
 const baseStore = useBaseQuinielaStore()
@@ -34,6 +38,7 @@ const baseParticipantCounts = ref<Record<string, number>>({})
 const paymentStats = ref<AdminPaymentStats | null>(null)
 const statsLoading = ref(false)
 const mobileScreen = ref<MobileScreen>('list')
+const jornadaDetailTab = ref<JornadaDetailTab>('users')
 
 const selectedMatch = computed(() =>
   matchStore.matches.find((m) => m.id === selectedMatchId.value),
@@ -131,6 +136,7 @@ function openMatch(matchId: string) {
 
 function openRound(roundId: string) {
   selectedRoundId.value = roundId
+  jornadaDetailTab.value = 'users'
   mobileScreen.value = 'detail'
 }
 
@@ -188,19 +194,26 @@ watch(activeRoundId, async (id) => {
   <div
     class="-mx-4 -my-6 flex min-h-[calc(100dvh-3.5rem)] flex-col sm:-mx-0 sm:my-0 md:min-h-[calc(100dvh-4.5rem)]"
   >
-    <header class="shrink-0 border-b border-white/10 px-4 py-3">
+    <header class="shrink-0 border-b border-white/10 px-4 py-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 class="text-lg font-bold text-slate-100">{{ APP_NAME }} — Admin</h1>
-          <p class="text-xs text-slate-500">
-            Usuarios, pagos y respaldo manual de partidos
+          <p class="text-xs font-semibold uppercase tracking-widest text-mundial-accent">
+            {{ APP_NAME }}
+          </p>
+          <h1 class="mt-1 text-lg font-bold text-app-text">Panel de admin</h1>
+          <p class="mt-1 text-xs text-slate-500">
+            Usuarios, pagos, tabla para compartir y respaldo de partidos
           </p>
         </div>
-        <nav class="flex flex-wrap rounded-lg border border-white/10 bg-black/20 p-1">
+        <nav class="theme-tab-bar flex flex-wrap gap-1">
           <button
             type="button"
             class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition"
-            :class="adminTab === 'resumen' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
+            :class="
+              adminTab === 'resumen'
+                ? 'bg-mundial-accent text-mundial-dark'
+                : 'text-slate-400 hover:text-slate-200'
+            "
             @click="switchTab('resumen')"
           >
             <BarChart3 class="h-3.5 w-3.5" />
@@ -209,7 +222,11 @@ watch(activeRoundId, async (id) => {
           <button
             type="button"
             class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition"
-            :class="adminTab === 'jornadas' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
+            :class="
+              adminTab === 'jornadas'
+                ? 'bg-mundial-accent text-mundial-dark'
+                : 'text-slate-400 hover:text-slate-200'
+            "
             @click="switchTab('jornadas')"
           >
             <CalendarDays class="h-3.5 w-3.5" />
@@ -218,7 +235,11 @@ watch(activeRoundId, async (id) => {
           <button
             type="button"
             class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition"
-            :class="adminTab === 'partidos' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
+            :class="
+              adminTab === 'partidos'
+                ? 'bg-mundial-accent text-mundial-dark'
+                : 'text-slate-400 hover:text-slate-200'
+            "
             @click="switchTab('partidos')"
           >
             <Radio class="h-3.5 w-3.5" />
@@ -227,7 +248,11 @@ watch(activeRoundId, async (id) => {
           <button
             type="button"
             class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition"
-            :class="adminTab === 'sync' ? 'bg-mundial-accent text-white' : 'text-slate-400'"
+            :class="
+              adminTab === 'sync'
+                ? 'bg-mundial-accent text-mundial-dark'
+                : 'text-slate-400 hover:text-slate-200'
+            "
             @click="switchTab('sync')"
           >
             <RefreshCw class="h-3.5 w-3.5" />
@@ -238,7 +263,7 @@ watch(activeRoundId, async (id) => {
     </header>
 
     <!-- ========== RESUMEN ========== -->
-    <div v-if="adminTab === 'resumen'" class="app-scrollbar flex-1 overflow-y-auto p-4">
+    <div v-if="adminTab === 'resumen'" class="app-scrollbar admin-page flex-1 overflow-y-auto">
       <AdminDashboard
         :active-round-id="activeRoundId"
         :payment-stats="paymentStats"
@@ -253,11 +278,11 @@ watch(activeRoundId, async (id) => {
     <template v-else-if="adminTab === 'jornadas'">
       <header
         v-if="mobileScreen === 'detail' && selectedRound"
-        class="sticky top-0 z-20 shrink-0 border-b border-white/10 bg-mundial-dark/95 backdrop-blur md:hidden"
+        class="sticky top-0 z-20 shrink-0 border-b border-white/10 bg-[color-mix(in_srgb,var(--theme-bg)_95%,transparent)] backdrop-blur md:hidden"
       >
         <button
           type="button"
-          class="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-400 hover:text-slate-200"
+          class="flex w-full items-center gap-2 px-4 py-3 text-sm text-slate-400 hover:text-slate-200"
           @click="backToList"
         >
           <ArrowLeft class="h-4 w-4" />
@@ -265,7 +290,7 @@ watch(activeRoundId, async (id) => {
         </button>
       </header>
 
-      <div class="hidden min-h-0 flex-1 gap-4 p-4 md:flex">
+      <div class="admin-split hidden md:flex">
         <AdminBaseRoundList
           v-model="selectedRoundId"
           v-model:search="search"
@@ -274,14 +299,52 @@ watch(activeRoundId, async (id) => {
           :participant-counts="baseParticipantCounts"
           @select="openRound"
         />
-        <div class="min-h-0 min-w-0 flex-1">
-          <AdminBasePaymentVerification
-            v-if="selectedRound"
-            :round="selectedRound"
-            :round-matches="baseStore.roundMatches"
-          />
-          <p v-else class="p-8 text-center text-sm text-slate-500">
-            Selecciona una jornada para ver participantes y pagos.
+        <div class="admin-stack min-w-0">
+          <template v-if="selectedRound">
+            <div class="theme-tab-bar flex shrink-0 gap-1 self-start">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold"
+                :class="
+                  jornadaDetailTab === 'users'
+                    ? 'bg-mundial-accent text-mundial-dark'
+                    : 'text-slate-400'
+                "
+                @click="jornadaDetailTab = 'users'"
+              >
+                <Users class="h-3.5 w-3.5" />
+                Usuarios
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold"
+                :class="
+                  jornadaDetailTab === 'share'
+                    ? 'bg-mundial-accent text-mundial-dark'
+                    : 'text-slate-400'
+                "
+                @click="jornadaDetailTab = 'share'"
+              >
+                <ImageDown class="h-3.5 w-3.5" />
+                Compartir tabla
+              </button>
+            </div>
+
+            <div class="min-h-0 flex-1">
+              <AdminBasePaymentVerification
+                v-if="jornadaDetailTab === 'users'"
+                :round="selectedRound"
+                :round-matches="baseStore.roundMatches"
+              />
+              <AdminRoundSharePanel
+                v-else
+                :round="selectedRound"
+                :round-matches="baseStore.roundMatches"
+              />
+            </div>
+          </template>
+          <p v-else class="theme-card admin-empty text-slate-500">
+            Selecciona una jornada para ver participantes y exportar resultados.
           </p>
         </div>
       </div>
@@ -296,12 +359,48 @@ watch(activeRoundId, async (id) => {
           :participant-counts="baseParticipantCounts"
           @select="openRound"
         />
-        <AdminBasePaymentVerification
-          v-else-if="selectedRound"
-          :round="selectedRound"
-          :round-matches="baseStore.roundMatches"
-          mobile
-        />
+        <div v-else-if="selectedRound" class="admin-stack admin-page">
+          <div class="theme-tab-bar flex shrink-0 gap-1">
+            <button
+              type="button"
+              class="flex-1 rounded-md px-3 py-2 text-xs font-semibold"
+              :class="
+                jornadaDetailTab === 'users'
+                  ? 'bg-mundial-accent text-mundial-dark'
+                  : 'text-slate-400'
+              "
+              @click="jornadaDetailTab = 'users'"
+            >
+              Usuarios
+            </button>
+            <button
+              type="button"
+              class="flex-1 rounded-md px-3 py-2 text-xs font-semibold"
+              :class="
+                jornadaDetailTab === 'share'
+                  ? 'bg-mundial-accent text-mundial-dark'
+                  : 'text-slate-400'
+              "
+              @click="jornadaDetailTab = 'share'"
+            >
+              Compartir
+            </button>
+          </div>
+          <AdminBasePaymentVerification
+            v-if="jornadaDetailTab === 'users'"
+            class="min-h-0 flex-1"
+            :round="selectedRound"
+            :round-matches="baseStore.roundMatches"
+            mobile
+          />
+          <AdminRoundSharePanel
+            v-else
+            class="min-h-0 flex-1"
+            :round="selectedRound"
+            :round-matches="baseStore.roundMatches"
+            mobile
+          />
+        </div>
       </div>
     </template>
 
@@ -309,11 +408,11 @@ watch(activeRoundId, async (id) => {
     <template v-else-if="adminTab === 'partidos'">
       <header
         v-if="mobileScreen === 'detail' && selectedMatch"
-        class="sticky top-0 z-20 shrink-0 border-b border-white/10 bg-mundial-dark/95 backdrop-blur md:hidden"
+        class="sticky top-0 z-20 shrink-0 border-b border-white/10 bg-[color-mix(in_srgb,var(--theme-bg)_95%,transparent)] backdrop-blur md:hidden"
       >
         <button
           type="button"
-          class="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-400 hover:text-slate-200"
+          class="flex w-full items-center gap-2 px-4 py-3 text-sm text-slate-400 hover:text-slate-200"
           @click="backToList"
         >
           <ArrowLeft class="h-4 w-4" />
@@ -321,7 +420,7 @@ watch(activeRoundId, async (id) => {
         </button>
       </header>
 
-      <div class="hidden min-h-0 flex-1 gap-4 p-4 md:flex">
+      <div class="admin-split hidden md:flex">
         <AdminMatchList
           v-model="selectedMatchId"
           v-model:search="search"
@@ -331,7 +430,7 @@ watch(activeRoundId, async (id) => {
         />
         <div class="min-h-0 min-w-0 flex-1">
           <AdminMatchDetail v-if="selectedMatch" :match="selectedMatch" />
-          <p v-else class="p-8 text-center text-sm text-slate-500">
+          <p v-else class="theme-card admin-empty text-slate-500">
             Selecciona un partido para control manual y eventos.
           </p>
         </div>
@@ -346,16 +445,14 @@ watch(activeRoundId, async (id) => {
           mobile-full-screen
           @select="openMatch"
         />
-        <AdminMatchDetail
-          v-else-if="selectedMatch"
-          :match="selectedMatch"
-          mobile
-        />
+        <div v-else-if="selectedMatch" class="admin-stack admin-page">
+          <AdminMatchDetail :match="selectedMatch" mobile />
+        </div>
       </div>
     </template>
 
     <!-- ========== SYNC ========== -->
-    <div v-else class="app-scrollbar flex-1 overflow-y-auto p-4">
+    <div v-else class="app-scrollbar admin-page flex-1 overflow-y-auto">
       <AdminLiveSyncPanel />
     </div>
   </div>

@@ -11,11 +11,17 @@ import {
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import { BASE_ENTRY_FEE_MXN, computeRoundPool } from '@/constants/base-quiniela-rules'
 import { formatMxn } from '@/lib/formatMoney'
-import { winnerCode } from '@/lib/baseQuinielaDisplay'
+import { BASE_WINNER_OPTIONS, winnerCode } from '@/lib/baseQuinielaDisplay'
 import { formatEntryLabel } from '@/lib/baseQuinielaStats'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
-import type { BasePrediction, BaseQuinielaRound, BaseQuinielaRoundMatch, BaseRoundParticipant } from '@/types'
+import type {
+  BasePrediction,
+  BaseQuinielaRound,
+  BaseQuinielaRoundMatch,
+  BaseRoundParticipant,
+  PredictedWinner,
+} from '@/types'
 
 const props = defineProps<{
   round: BaseQuinielaRound
@@ -31,11 +37,12 @@ const participants = ref<BaseRoundParticipant[]>([])
 const loading = ref(false)
 const togglingKey = ref<string | null>(null)
 const resettingKey = ref<string | null>(null)
+const savingPickKey = ref<string | null>(null)
 const resetTarget = ref<BaseRoundParticipant | null>(null)
 const error = ref('')
 const userSearch = ref('')
-const paymentFilter = ref<PaymentFilter>('pending')
-const sortKey = ref<SortKey>('status')
+const paymentFilter = ref<PaymentFilter>('all')
+const sortKey = ref<SortKey>('username')
 const expandedKey = ref<string | null>(null)
 
 function participantKey(participant: BaseRoundParticipant): string {
@@ -54,7 +61,10 @@ async function loadParticipants() {
   loading.value = true
   error.value = ''
   try {
-    participants.value = await baseStore.fetchRoundParticipants(props.round.id)
+    participants.value = await baseStore.fetchRoundParticipants(
+      props.round.id,
+      props.round.match_count,
+    )
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error al cargar predicciones'
     participants.value = []
@@ -126,16 +136,6 @@ function predictionLine(participant: BaseRoundParticipant): string {
     .join(' ')
 }
 
-function predictionDetail(pred: BasePrediction): string {
-  const rm = props.roundMatches.find((m) => m.match_id === pred.match_id)
-  const pos = rm?.position ?? '?'
-  const home = rm?.match ? teamDisplayName(rm.match.home_team, 'L') : 'Local'
-  const away = rm?.match ? teamDisplayName(rm.match.away_team, 'V') : 'Visita'
-  const code = winnerCode(pred.predicted_winner)
-  const pts = pred.scored_at ? ` · ${pred.points} pts` : ''
-  return `#${pos} ${home} vs ${away}: ${code}${pts}`
-}
-
 function toggleExpanded(participant: BaseRoundParticipant) {
   const key = participantKey(participant)
   expandedKey.value = expandedKey.value === key ? null : key
@@ -190,6 +190,52 @@ async function confirmResetQuiniela() {
     resettingKey.value = null
   }
 }
+
+function pickForMatch(
+  participant: BaseRoundParticipant,
+  matchId: string,
+): BasePrediction | undefined {
+  return participant.predictions.find((p) => p.match_id === matchId)
+}
+
+function pickSaveKey(
+  participant: BaseRoundParticipant,
+  matchId: string,
+): string {
+  return `${participantKey(participant)}:${matchId}`
+}
+
+async function adminChangePick(
+  participant: BaseRoundParticipant,
+  matchId: string,
+  winner: PredictedWinner,
+) {
+  const current = pickForMatch(participant, matchId)
+  if (current?.predicted_winner === winner) return
+
+  const key = pickSaveKey(participant, matchId)
+  savingPickKey.value = key
+  error.value = ''
+  try {
+    await baseStore.adminSetPrediction(
+      participant.user_id,
+      props.round.id,
+      matchId,
+      winner,
+      participant.entry_number,
+    )
+    await loadParticipants()
+    expandedKey.value = participantKey(participant)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'No se pudo cambiar el pick'
+  } finally {
+    savingPickKey.value = null
+  }
+}
+
+const sortedRoundMatches = computed(() =>
+  [...props.roundMatches].sort((a, b) => a.position - b.position),
+)
 </script>
 
 <template>
@@ -197,16 +243,16 @@ async function confirmResetQuiniela() {
     class="flex min-h-0 flex-col overflow-hidden"
     :class="
       mobile
-        ? 'rounded-none border-0 bg-transparent'
-        : 'rounded-xl border border-white/10 bg-white/5'
+        ? 'h-full rounded-none border-0 bg-transparent'
+        : 'theme-card h-full'
     "
   >
-    <header class="shrink-0 space-y-3 border-b border-white/10 pb-3" :class="mobile ? '' : 'px-4 py-3'">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="font-semibold text-slate-100">Depósitos y quinielas</h2>
+    <header class="admin-panel-header space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-semibold text-app-text">Usuarios y quinielas</h2>
         <button
           type="button"
-          class="rounded-lg border border-white/15 px-3 py-2 text-xs text-slate-300 hover:bg-white/5 md:px-2.5 md:py-1"
+          class="rounded-lg border border-white/15 px-3 py-2 text-xs text-slate-300 hover:bg-white/5"
           :disabled="loading"
           @click="loadParticipants"
         >
@@ -215,7 +261,7 @@ async function confirmResetQuiniela() {
       </div>
 
       <p class="text-xs text-slate-400">
-        <span class="text-slate-200">{{ stats.total }}</span> participantes ·
+        <span class="text-app-text">{{ stats.total }}</span> participantes ·
         <span class="text-mundial-green">{{ stats.verified }}</span> verificados ·
         <span class="text-amber-300">{{ stats.pending }}</span> pendientes ·
         <span class="text-mundial-accent">{{ formatMxn(stats.pool.net) }}</span> en el pozo
@@ -225,30 +271,30 @@ async function confirmResetQuiniela() {
       </p>
 
       <p class="text-xs text-slate-500">
-        Entrada ${{ BASE_ENTRY_FEE_MXN }} MXN. El pozo se calcula solo con depósitos verificados.
+        Entrada ${{ BASE_ENTRY_FEE_MXN }} MXN. Expande un usuario para cambiar sus picks L/E/V.
       </p>
 
-      <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div class="relative min-w-0 flex-1">
           <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
             v-model="userSearch"
             type="search"
             placeholder="Buscar usuario..."
-            class="w-full rounded-lg border border-white/10 bg-mundial-dark py-3 pl-10 pr-3 text-base md:py-2 md:text-sm"
+            class="theme-field w-full rounded-lg py-2.5 pl-10 pr-3 text-sm"
           />
         </div>
 
-        <div class="flex gap-1.5">
+        <div class="theme-tab-bar flex gap-1">
           <button
             v-for="f in ([['all', 'Todos'], ['pending', 'Pend.'], ['verified', 'OK']] as const)"
             :key="f[0]"
             type="button"
-            class="flex-1 rounded-lg px-3 py-2.5 text-xs font-medium sm:flex-none sm:px-2.5 sm:py-1.5"
+            class="flex-1 rounded-md px-2.5 py-1.5 text-xs font-medium sm:flex-none"
             :class="
               paymentFilter === f[0]
-                ? 'bg-mundial-accent text-white'
-                : 'bg-white/10 text-slate-300'
+                ? 'bg-mundial-accent text-mundial-dark'
+                : 'text-slate-300'
             "
             @click="paymentFilter = f[0]"
           >
@@ -260,7 +306,7 @@ async function confirmResetQuiniela() {
           <ArrowUpDown class="h-3 w-3 shrink-0" />
           <select
             v-model="sortKey"
-            class="min-w-0 flex-1 rounded-lg border border-white/10 bg-mundial-dark px-2 py-2.5 text-xs sm:flex-none sm:py-1.5"
+            class="theme-field min-w-0 flex-1 rounded-lg px-2 py-2 text-xs sm:flex-none"
           >
             <option value="status">Pendientes primero</option>
             <option value="username">Nombre A-Z</option>
@@ -272,17 +318,17 @@ async function confirmResetQuiniela() {
     </header>
 
     <!-- Vista móvil: tarjetas -->
-    <div v-if="mobile" class="app-scrollbar min-h-0 flex-1 overflow-y-auto pt-3">
+    <div v-if="mobile" class="app-scrollbar admin-panel-body">
       <p v-if="loading" class="flex items-center gap-2 py-6 text-sm text-slate-400">
         <Loader2 class="h-4 w-4 animate-spin" />
         Cargando...
       </p>
 
-      <p v-else-if="!participants.length" class="py-6 text-sm text-slate-500">
+      <p v-else-if="!participants.length" class="admin-empty">
         Nadie ha registrado predicciones en esta jornada.
       </p>
 
-      <p v-else-if="!filteredParticipants.length" class="py-6 text-sm text-slate-500">
+      <p v-else-if="!filteredParticipants.length" class="admin-empty">
         No hay resultados con los filtros actuales.
       </p>
 
@@ -290,7 +336,7 @@ async function confirmResetQuiniela() {
         <li
           v-for="participant in filteredParticipants"
           :key="participantKey(participant)"
-          class="rounded-xl border border-white/10 p-4"
+          class="rounded-xl border border-white/10 p-3"
           :class="participant.verified ? 'bg-mundial-green/[0.04]' : 'bg-amber-500/[0.04]'"
         >
           <div class="mb-3 flex items-start justify-between gap-3">
@@ -357,20 +403,46 @@ async function confirmResetQuiniela() {
             class="mb-2 text-xs font-medium text-mundial-accent hover:underline"
             @click="toggleExpanded(participant)"
           >
-            {{ expandedKey === participantKey(participant) ? 'Ocultar detalle' : 'Ver quiniela completa' }}
+            {{ expandedKey === participantKey(participant) ? 'Ocultar detalle' : 'Editar quiniela' }}
           </button>
 
           <p v-if="expandedKey !== participantKey(participant)" class="font-mono text-xs leading-relaxed text-slate-300">
-            {{ predictionLine(participant) }}
+            {{ predictionLine(participant) || 'Sin picks aún' }}
           </p>
 
-          <ul v-else class="space-y-1 text-sm text-slate-300">
+          <ul v-else class="space-y-3">
             <li
-              v-for="pred in sortedPredictions(participant.predictions)"
-              :key="pred.id"
-              class="leading-snug"
+              v-for="rm in sortedRoundMatches"
+              :key="`${participantKey(participant)}-m-${rm.match_id}`"
+              class="rounded-lg border border-white/10 bg-black/20 p-2.5"
             >
-              {{ predictionDetail(pred) }}
+              <p class="mb-2 text-xs text-slate-400">
+                <span class="font-semibold text-slate-300">#{{ rm.position }}</span>
+                <template v-if="rm.match">
+                  {{ teamDisplayName(rm.match.home_team, 'L') }} vs
+                  {{ teamDisplayName(rm.match.away_team, 'V') }}
+                </template>
+              </p>
+              <div class="grid grid-cols-3 gap-1.5">
+                <button
+                  v-for="option in BASE_WINNER_OPTIONS"
+                  :key="`${participantKey(participant)}-${rm.match_id}-${option.key}`"
+                  type="button"
+                  class="rounded-md border px-2 py-2 text-xs font-bold disabled:opacity-50"
+                  :class="
+                    pickForMatch(participant, rm.match_id)?.predicted_winner === option.key
+                      ? 'border-mundial-accent bg-mundial-accent/25 text-mundial-accent'
+                      : 'border-white/10 bg-white/5 text-slate-300'
+                  "
+                  :disabled="
+                    savingPickKey === pickSaveKey(participant, rm.match_id) ||
+                    resettingKey === participantKey(participant)
+                  "
+                  @click="adminChangePick(participant, rm.match_id, option.key)"
+                >
+                  {{ option.code }}
+                </button>
+              </div>
             </li>
           </ul>
         </li>
@@ -380,7 +452,7 @@ async function confirmResetQuiniela() {
     <!-- Vista desktop: tabla -->
     <template v-else>
       <div
-        class="grid shrink-0 grid-cols-[100px_1fr_2fr] gap-3 border-b border-white/10 bg-slate-900/80 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+        class="theme-table-head grid shrink-0 grid-cols-[100px_1fr_2fr] gap-3 border-b border-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500"
       >
         <span>Depósito</span>
         <span>Usuario</span>
@@ -393,11 +465,11 @@ async function confirmResetQuiniela() {
           Cargando...
         </p>
 
-        <p v-else-if="!participants.length" class="px-4 py-6 text-sm text-slate-500">
+        <p v-else-if="!participants.length" class="admin-empty">
           Nadie ha registrado predicciones en esta jornada.
         </p>
 
-        <p v-else-if="!filteredParticipants.length" class="px-4 py-6 text-sm text-slate-500">
+        <p v-else-if="!filteredParticipants.length" class="admin-empty">
           No hay resultados con los filtros actuales.
         </p>
 
@@ -472,17 +544,47 @@ async function confirmResetQuiniela() {
                 class="mb-1 text-[11px] font-medium text-mundial-accent hover:underline"
                 @click="toggleExpanded(participant)"
               >
-                {{ expandedKey === participantKey(participant) ? 'Resumir' : 'Expandir' }}
+                {{ expandedKey === participantKey(participant) ? 'Cerrar editor' : 'Editar picks' }}
               </button>
               <p
                 v-if="expandedKey !== participantKey(participant)"
                 class="font-mono text-xs leading-relaxed text-slate-300"
               >
-                {{ predictionLine(participant) }}
+                {{ predictionLine(participant) || 'Sin picks aún' }}
               </p>
-              <ul v-else class="space-y-0.5 text-sm leading-relaxed text-slate-300">
-                <li v-for="pred in sortedPredictions(participant.predictions)" :key="pred.id">
-                  {{ predictionDetail(pred) }}
+              <ul v-else class="space-y-2">
+                <li
+                  v-for="rm in sortedRoundMatches"
+                  :key="`desk-${participantKey(participant)}-${rm.match_id}`"
+                  class="rounded-lg border border-white/10 bg-black/15 px-2 py-2"
+                >
+                  <p class="mb-1.5 text-[11px] text-slate-400">
+                    <span class="font-semibold text-slate-300">#{{ rm.position }}</span>
+                    <template v-if="rm.match">
+                      {{ teamDisplayName(rm.match.home_team, 'L') }} vs
+                      {{ teamDisplayName(rm.match.away_team, 'V') }}
+                    </template>
+                  </p>
+                  <div class="flex gap-1">
+                    <button
+                      v-for="option in BASE_WINNER_OPTIONS"
+                      :key="`desk-${participantKey(participant)}-${rm.match_id}-${option.key}`"
+                      type="button"
+                      class="min-w-[2.25rem] flex-1 rounded border px-1.5 py-1 text-[11px] font-bold disabled:opacity-50"
+                      :class="
+                        pickForMatch(participant, rm.match_id)?.predicted_winner === option.key
+                          ? 'border-mundial-accent bg-mundial-accent/25 text-mundial-accent'
+                          : 'border-white/10 bg-white/5 text-slate-300'
+                      "
+                      :disabled="
+                        savingPickKey === pickSaveKey(participant, rm.match_id) ||
+                        resettingKey === participantKey(participant)
+                      "
+                      @click="adminChangePick(participant, rm.match_id, option.key)"
+                    >
+                      {{ option.code }}
+                    </button>
+                  </div>
                 </li>
               </ul>
             </div>
@@ -491,10 +593,7 @@ async function confirmResetQuiniela() {
       </div>
     </template>
 
-    <footer
-      class="shrink-0 border-t border-white/10 pt-2 text-xs text-slate-500"
-      :class="mobile ? 'mt-3' : 'px-4 py-2'"
-    >
+    <footer class="admin-panel-footer text-xs text-slate-500">
       {{ filteredParticipants.length }} de {{ participants.length }} participantes
       <span v-if="participants.length && stats.verified === 0">
         · Sin depósitos verificados: no hay ranking oficial
@@ -503,8 +602,7 @@ async function confirmResetQuiniela() {
 
     <p
       v-if="error"
-      class="shrink-0 border-t border-red-500/20 bg-red-500/10 py-2 text-sm text-red-300"
-      :class="mobile ? 'mt-2 rounded-lg px-3' : 'px-4'"
+      class="admin-panel-footer border-t border-red-500/20 bg-red-500/10 text-sm text-red-300"
     >
       {{ error }}
     </p>

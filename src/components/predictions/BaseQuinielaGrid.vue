@@ -74,6 +74,11 @@ const isComplete = computed(() => {
   return filled === total
 })
 
+const filledCount = computed(
+  () =>
+    sortedMatches.value.filter((row) => baseStore.getPredictionForMatch(row.match_id)).length,
+)
+
 const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
 
 function matchCanEdit(matchId: string): boolean {
@@ -85,7 +90,13 @@ function matchCanEdit(matchId: string): boolean {
 async function pickWinner(matchId: string, winner: PredictedWinner) {
   const row = props.roundMatches.find((rm) => rm.match_id === matchId)
   if (!row?.match || !matchCanEdit(matchId) || !props.userId) return
+  if (savingMatchId.value) return
 
+  const existing = baseStore.getPredictionForMatch(matchId)
+  // Evita doble click / re-click en la misma opción
+  if (existing?.predicted_winner === winner) return
+
+  const wasEmpty = !existing
   const filledBefore = sortedMatches.value.filter((r) =>
     baseStore.getPredictionForMatch(r.match_id),
   ).length
@@ -95,7 +106,8 @@ async function pickWinner(matchId: string, winner: PredictedWinner) {
   savingMatchId.value = matchId
   try {
     await baseStore.savePrediction(props.roundId, row.match, props.userId, winner)
-    if (total > 0 && filledBefore === total - 1 && !isSubmitted.value) {
+    // Solo abrir modal al completar el ÚLTIMO partido pendiente (no al cambiar un pick)
+    if (wasEmpty && total > 0 && filledBefore === total - 1 && !isSubmitted.value) {
       showSubmitModal.value = true
     }
   } catch (err) {
@@ -187,7 +199,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
 </script>
 
 <template>
-  <div>
+  <div class="relative pb-20 md:pb-0">
     <div
       v-if="canPredict && isSubmitted"
       class="mb-4 flex gap-2 rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-3 py-2.5 text-sm text-mundial-green"
@@ -198,20 +210,10 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
 
     <div
       v-else-if="canPredict && isComplete"
-      class="mb-4 flex flex-col gap-3 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+      class="mb-4 flex gap-2 rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-3 py-2.5 text-sm text-mundial-accent"
     >
-      <div class="flex gap-2 text-sm text-mundial-accent">
-        <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0" />
-        <p>{{ fillTip.readyToSubmit }}</p>
-      </div>
-      <button
-        type="button"
-        class="shrink-0 rounded-lg bg-mundial-accent px-4 py-2 text-sm font-bold text-mundial-dark hover:bg-mundial-accent/90 disabled:opacity-50"
-        :disabled="baseStore.saving"
-        @click="openSubmitModal"
-      >
-        {{ baseStore.saving ? 'Guardando...' : 'Guardar quiniela' }}
-      </button>
+      <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0" />
+      <p>{{ fillTip.readyToSubmit }}</p>
     </div>
 
     <div
@@ -459,5 +461,26 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
       @confirm="confirmSubmitQuiniela"
       @cancel="cancelSubmitModal"
     />
+
+    <!-- Botón fijo: siempre visible mientras se puede guardar -->
+    <div
+      v-if="canPredict && !isSubmitted"
+      class="pointer-events-none fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] z-30 px-4 md:static md:inset-auto md:mt-4 md:px-0"
+    >
+      <div class="pointer-events-auto mx-auto max-w-lg md:max-w-none">
+        <button
+          type="button"
+          class="w-full rounded-xl bg-mundial-accent px-4 py-3.5 text-sm font-bold text-mundial-dark shadow-lg shadow-black/30 hover:bg-mundial-accent/90 disabled:cursor-not-allowed disabled:opacity-45 md:w-auto md:shadow-none"
+          :disabled="baseStore.saving || !isComplete"
+          @click="openSubmitModal"
+        >
+          <template v-if="baseStore.saving">Guardando...</template>
+          <template v-else-if="isComplete">Guardar quiniela</template>
+          <template v-else>
+            Guardar quiniela ({{ filledCount }}/{{ sortedMatches.length }})
+          </template>
+        </button>
+      </div>
+    </div>
   </div>
 </template>

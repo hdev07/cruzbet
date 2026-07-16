@@ -65,29 +65,39 @@ function formatDate(match: Match) {
 
 <template>
   <aside
-    class="flex min-h-0 flex-col rounded-xl border border-white/10 bg-white/5"
-    :class="mobileFullScreen ? 'h-full rounded-none border-x-0 border-t-0' : 'h-full'"
+    class="flex min-h-0 flex-col"
+    :class="
+      mobileFullScreen
+        ? 'h-full rounded-none border-0'
+        : 'theme-card h-full'
+    "
   >
-    <header class="shrink-0 border-b border-white/10 p-4">
-      <p v-if="!mobileFullScreen" class="text-sm font-medium text-slate-200">Partidos</p>
-      <p class="text-xs text-slate-500" :class="mobileFullScreen ? '' : 'mt-1'">
-        {{ matchStore.matches.length }} partidos
-      </p>
+    <header class="admin-panel-header space-y-3">
+      <div>
+        <p v-if="!mobileFullScreen" class="text-sm font-medium text-app-text">Partidos</p>
+        <p class="text-xs text-slate-500" :class="mobileFullScreen ? '' : 'mt-1'">
+          {{ matchStore.matches.length }} partidos
+        </p>
+      </div>
 
       <input
         v-model="search"
         type="search"
         placeholder="Buscar equipo..."
-        class="mt-3 w-full rounded-lg border border-white/10 bg-mundial-dark px-3 py-3 text-base md:py-2 md:text-sm"
+        class="theme-field w-full rounded-lg px-3 py-2.5 text-sm"
       />
 
-      <div class="mt-3 flex flex-wrap gap-2">
+      <div class="theme-tab-bar flex flex-wrap gap-1">
         <button
           v-for="f in ([['all', 'Todos'], ['scheduled', 'Prog.'], ['live', 'Vivo'], ['finished', 'Fin.']] as const)"
           :key="f[0]"
           type="button"
-          class="rounded-lg px-3 py-2 text-xs font-medium md:rounded-md md:px-2 md:py-1 md:text-[11px]"
-          :class="statusFilter === f[0] ? 'bg-mundial-accent text-white' : 'bg-white/10 text-slate-400'"
+          class="rounded-md px-2.5 py-1.5 text-xs font-medium"
+          :class="
+            statusFilter === f[0]
+              ? 'bg-mundial-accent text-mundial-dark'
+              : 'text-slate-400'
+          "
           @click="statusFilter = f[0]"
         >
           {{ f[1] }}
@@ -95,19 +105,19 @@ function formatDate(match: Match) {
       </div>
     </header>
 
-    <ul class="app-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
-      <li v-if="!filteredMatches.length" class="px-3 py-8 text-center text-sm text-slate-500">
+    <ul class="app-scrollbar admin-list">
+      <li v-if="!filteredMatches.length" class="admin-empty">
         No hay partidos con estos filtros.
       </li>
 
-      <li v-for="match in filteredMatches" :key="match.id" class="mb-1.5">
+      <li v-for="match in filteredMatches" :key="match.id" class="admin-list-item">
         <button
           type="button"
-          class="w-full rounded-xl border p-4 text-left transition md:rounded-lg md:p-3"
+          class="w-full rounded-xl border p-3 text-left transition"
           :class="
             selectedMatchId === match.id
               ? 'border-mundial-accent bg-mundial-accent/10 ring-1 ring-mundial-accent/50'
-              : 'border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/5'
+              : 'theme-card hover:border-mundial-accent/40'
           "
           @click="selectMatch(match.id)"
         >
@@ -138,9 +148,9 @@ function formatDate(match: Match) {
               v-if="match.home_team?.flag_url"
               :src="match.home_team.flag_url"
               :alt="teamDisplayName(match.home_team, 'Local')"
-              img-class="h-6 w-8 shrink-0 rounded-sm object-cover md:h-5 md:w-7"
+              img-class="h-5 w-7 shrink-0 rounded-sm object-cover"
             />
-            <span class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-200 md:text-xs">
+            <span class="min-w-0 flex-1 truncate text-xs font-semibold text-app-text">
               {{ teamDisplayName(match.home_team, 'Local') }}
             </span>
             <span class="shrink-0 text-sm font-bold tabular-nums text-mundial-accent">
@@ -149,7 +159,7 @@ function formatDate(match: Match) {
               </template>
               <template v-else>vs</template>
             </span>
-            <span class="min-w-0 flex-1 truncate text-right text-sm font-semibold text-slate-200 md:text-xs">
+            <span class="min-w-0 flex-1 truncate text-right text-xs font-semibold text-app-text">
               {{ teamDisplayName(match.away_team, 'Visitante') }}
             </span>
             <TeamFlag

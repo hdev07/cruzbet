@@ -44,63 +44,69 @@ function selectRound(roundId: string) {
 
 <template>
   <aside
-    class="flex min-h-0 flex-col rounded-xl border border-white/10 bg-white/5"
-    :class="mobileFullScreen ? 'h-full rounded-none border-x-0 border-t-0' : 'h-full'"
+    class="flex min-h-0 flex-col"
+    :class="
+      mobileFullScreen
+        ? 'h-full rounded-none border-0'
+        : 'theme-card h-full'
+    "
   >
-    <header class="shrink-0 border-b border-white/10 p-4">
-      <p v-if="!mobileFullScreen" class="text-sm font-medium text-slate-200">Jornadas</p>
-      <p class="text-xs text-slate-500" :class="mobileFullScreen ? '' : 'mt-1'">
-        {{ roundsWithParticipants }} con participantes · {{ baseStore.rounds.length }} total
-      </p>
+    <header class="admin-panel-header space-y-3">
+      <div>
+        <p v-if="!mobileFullScreen" class="text-sm font-medium text-app-text">Jornadas</p>
+        <p class="text-xs text-slate-500" :class="mobileFullScreen ? '' : 'mt-1'">
+          {{ roundsWithParticipants }} con participantes · {{ baseStore.rounds.length }} total
+        </p>
+      </div>
 
       <input
         v-model="search"
         type="search"
         placeholder="Buscar jornada..."
-        class="mt-3 w-full rounded-lg border border-white/10 bg-mundial-dark px-3 py-3 text-base md:py-2 md:text-sm"
+        class="theme-field w-full rounded-lg px-3 py-2.5 text-sm"
       />
 
-      <label class="mt-3 flex cursor-pointer items-center gap-2 py-1 text-sm text-slate-400 md:text-xs">
+      <label class="flex cursor-pointer items-center gap-2 text-xs text-slate-400">
         <input
           v-model="onlyWithParticipants"
           type="checkbox"
-          class="rounded border-white/20 bg-mundial-dark text-mundial-accent"
+          class="rounded border-white/20 bg-transparent text-mundial-accent"
         />
         Solo con participantes
       </label>
     </header>
 
-    <ul class="app-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
-      <li v-if="baseStore.loading && !baseStore.rounds.length" class="px-3 py-8 text-center text-sm text-slate-500">
+    <ul class="app-scrollbar admin-list">
+      <li v-if="baseStore.loading && !baseStore.rounds.length" class="admin-empty">
         Cargando jornadas...
       </li>
 
-      <li v-else-if="!filteredRounds.length" class="px-3 py-8 text-center text-sm text-slate-500">
+      <li v-else-if="!filteredRounds.length" class="admin-empty">
         No hay jornadas con estos filtros.
       </li>
 
-      <li v-for="round in filteredRounds" :key="round.id" class="mb-1.5">
+      <li v-for="round in filteredRounds" :key="round.id" class="admin-list-item">
         <button
           type="button"
-          class="w-full rounded-xl border p-4 text-left transition md:rounded-lg md:p-3"
+          class="w-full rounded-xl border p-3 text-left transition"
           :class="
             selectedRoundId === round.id
               ? 'border-mundial-accent bg-mundial-accent/10 ring-1 ring-mundial-accent/50'
-              : 'border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/5'
+              : 'theme-card hover:border-mundial-accent/40'
           "
           @click="selectRound(round.id)"
         >
           <div class="flex items-center gap-3">
             <span
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-mundial-green/15 text-base font-bold text-mundial-green md:h-9 md:w-9 md:text-sm"
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-mundial-green/15 text-sm font-bold text-mundial-green"
             >
               {{ round.round_number }}
             </span>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold text-slate-200 md:text-xs">
+              <p class="truncate text-sm font-semibold text-app-text">
                 {{ round.title }}
               </p>
-              <p class="text-[11px] text-slate-500">
+              <p class="text-xs text-slate-500">
                 {{ round.match_count }} partidos · ${{ BASE_ENTRY_FEE_MXN }} MXN
               </p>
             </div>

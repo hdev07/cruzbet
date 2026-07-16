@@ -487,9 +487,9 @@ async function finishMatch() {
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="space-y-4">
     <!-- 1. SYNC -->
-    <section class="rounded-xl border border-mundial-green/30 bg-mundial-green/10 p-4">
+    <section class="theme-card border-mundial-green/30 bg-mundial-green/10 p-4">
       <h3 class="text-sm font-semibold text-mundial-green">1. Sync automático</h3>
       <p class="mt-1 text-xs text-slate-400">
         cron-job.org + sync manual. Si falla, usa las secciones de abajo.
@@ -525,7 +525,7 @@ async function finishMatch() {
     </section>
 
     <!-- 2. EVENTOS -->
-    <section class="rounded-xl border border-white/10 bg-black/20 p-4">
+    <section class="theme-card p-4">
       <h3 class="text-sm font-semibold text-slate-100">2. Eventos del partido</h3>
       <p class="mt-1 text-xs text-slate-500">Goles y tarjetas ordenados por minuto.</p>
 
@@ -625,7 +625,7 @@ async function finishMatch() {
     </section>
 
     <!-- 3. GOLES -->
-    <section class="rounded-xl border border-white/10 bg-black/20 p-4">
+    <section class="theme-card p-4">
       <h3 class="text-sm font-semibold text-slate-100">3. Registrar gol manual</h3>
 
       <div v-if="canManageEvents" class="mt-4 space-y-3">
@@ -661,7 +661,7 @@ async function finishMatch() {
     </section>
 
     <!-- 4. TARJETAS -->
-    <section class="rounded-xl border border-white/10 bg-black/20 p-4">
+    <section class="theme-card p-4">
       <h3 class="text-sm font-semibold text-slate-100">4. Registrar tarjeta manual</h3>
 
       <div v-if="canManageEvents" class="mt-4 space-y-3">

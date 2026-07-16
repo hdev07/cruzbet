@@ -20,9 +20,15 @@ const props = withDefaults(
     roundMatches: BaseQuinielaRoundMatch[]
     currentUserId?: string
     previousWinnerUserIds?: string[]
+    /** Oculta el texto introductorio (útil en admin / export). */
+    hideIntro?: boolean
+    /** Layout más limpio para captura de imagen (sin sticky móvil). */
+    exportLayout?: boolean
   }>(),
   {
     previousWinnerUserIds: () => [],
+    hideIntro: false,
+    exportLayout: false,
   },
 )
 
@@ -110,7 +116,7 @@ function canShowPlayerPicks(userId: string, entryNumber: number): boolean {
 function cellClass(userId: string, entryNumber: number, match: BaseQuinielaRoundMatch): string {
   const pick = getPick(userId, entryNumber, match.match_id)
   const base =
-    'flex h-8 w-8 items-center justify-center rounded text-xs font-bold tabular-nums'
+    'mx-auto flex h-8 w-8 items-center justify-center rounded text-xs font-bold tabular-nums'
 
   if (!pick) return `${base} theme-cell-idle text-slate-600`
 
@@ -177,7 +183,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
     </div>
 
     <template v-else>
-      <p class="mb-3 text-xs text-slate-500">
+      <p v-if="!hideIntro" class="mb-3 text-xs text-slate-500">
         <template v-if="roundStarted">
           Compara tus picks L/E/V con los demás. Verde = acierto, rojo = fallo.
           El chip indica si el depósito ya fue verificado (el pozo solo cuenta pagados).
@@ -190,35 +196,36 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
         </template>
       </p>
 
-      <div class="theme-table-wrap">
-        <table class="theme-table min-w-[40rem] text-sm">
+      <div class="theme-table-wrap" :class="{ 'overflow-visible border-0 bg-transparent': exportLayout }">
+        <table class="theme-table text-sm" :class="exportLayout ? 'min-w-max' : 'min-w-[48rem]'">
           <thead>
             <tr class="theme-table-head text-xs text-slate-400">
               <th
-                class="theme-table-sticky border border-white/10 px-3 py-2 text-left md:sticky md:left-0 md:z-10 md:min-w-[8rem]"
+                class="theme-table-sticky border border-white/10 px-3 py-2 text-left"
+                :class="exportLayout ? 'min-w-[10rem]' : 'md:sticky md:left-0 md:z-10 md:min-w-[10rem]'"
               >
                 <div class="flex min-w-0 items-center gap-2 md:block">
-                  <span class="w-7 shrink-0 md:hidden" aria-hidden="true" />
+                  <span v-if="!exportLayout" class="w-7 shrink-0 md:hidden" aria-hidden="true" />
                   <span class="whitespace-nowrap">Jugador</span>
                 </div>
               </th>
               <th
                 v-for="match in sortedMatches"
                 :key="`head-${match.match_id}`"
-                class="min-w-[2.75rem] border border-white/10 px-1 py-2 text-center"
+                class="min-w-[4.25rem] border border-white/10 px-1.5 py-2 text-center sm:min-w-[4.75rem]"
                 :title="matchTooltip(match)"
               >
                 <span class="block font-bold tabular-nums text-slate-300">{{ match.position }}</span>
                 <div
                   v-if="match.match"
-                  class="mx-auto mt-1 flex items-center justify-center gap-0.5"
+                  class="mx-auto mt-1 flex items-center justify-center gap-1"
                 >
                   <TeamFlag
                     :src="match.match.home_team?.flag_url"
                     :code="match.match.home_team?.code"
                     :alt="teamDisplayName(match.match.home_team, 'Local')"
                     size="sm"
-                    img-class="h-3.5 w-3.5 shrink-0 rounded-sm object-contain"
+                    img-class="h-4 w-4 shrink-0 rounded-sm object-contain"
                   />
                   <span class="text-[0.5rem] text-slate-600">·</span>
                   <TeamFlag
@@ -226,12 +233,12 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     :code="match.match.away_team?.code"
                     :alt="teamDisplayName(match.match.away_team, 'Visitante')"
                     size="sm"
-                    img-class="h-3.5 w-3.5 shrink-0 rounded-sm object-contain"
+                    img-class="h-4 w-4 shrink-0 rounded-sm object-contain"
                   />
                 </div>
                 <span
                   v-if="roundStarted && match.match && match.match.status !== 'scheduled'"
-                  class="mt-0.5 block text-[0.6rem] font-semibold tabular-nums text-mundial-accent"
+                  class="mt-0.5 block text-[0.65rem] font-semibold tabular-nums text-mundial-accent"
                 >
                   {{ match.match.home_score }}-{{ match.match.away_score }}
                 </span>
@@ -257,21 +264,24 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
               }"
             >
               <td
-                class="theme-table-sticky border border-white/10 px-3 py-2 md:sticky md:left-0 md:z-10 md:min-w-[8rem]"
+                class="theme-table-sticky border border-white/10 px-3 py-2"
                 :class="{
+                  'md:sticky md:left-0 md:z-10 md:min-w-[8rem]': !exportLayout,
+                  'min-w-[10rem]': exportLayout,
                   'md:bg-mundial-accent/10':
+                    !exportLayout &&
                     player.user_id === currentUserId &&
                     player.entry_number === baseStore.currentEntryNumber,
                 }"
               >
                 <div class="flex min-w-0 items-start gap-2">
                   <div
-                    class="theme-table-sticky sticky left-0 z-10 order-1 -ml-3 flex shrink-0 items-center py-0.5 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0"
-                    :class="{
-                      'bg-mundial-accent/10 md:bg-transparent':
-                        player.user_id === currentUserId &&
-                        player.entry_number === baseStore.currentEntryNumber,
-                    }"
+                    class="order-1 flex shrink-0 items-center py-0.5"
+                    :class="
+                      exportLayout
+                        ? ''
+                        : 'theme-table-sticky sticky left-0 z-10 -ml-3 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0'
+                    "
                     :title="isPreviousWinner(player.user_id) ? 'Ganador de la jornada previa' : undefined"
                   >
                     <div class="relative shrink-0">
@@ -301,8 +311,11 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   >
                     {{ index + 1 }}
                   </span>
-                  <div class="order-3 min-w-[5.5rem] shrink-0 md:min-w-0">
-                    <p class="whitespace-nowrap font-medium leading-tight text-slate-200">
+                  <div class="order-3 min-w-0 max-w-[7.5rem] flex-1 md:max-w-[11rem]">
+                    <p
+                      class="truncate font-medium leading-tight text-slate-200"
+                      :title="player.profiles?.username ?? 'Anónimo'"
+                    >
                       {{ player.profiles?.username ?? 'Anónimo' }}
                       <span v-if="player.entry_number > 1" class="text-slate-500">
                         Q{{ player.entry_number }}
@@ -319,7 +332,10 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     </p>
                     <PaymentStatusChip class="mt-0.5" :verified="player.verified" compact />
                     <p
-                      v-if="rivalryLabel(player.user_id, player.entry_number, player.correct_count)"
+                      v-if="
+                        !exportLayout &&
+                        rivalryLabel(player.user_id, player.entry_number, player.correct_count)
+                      "
                       class="mt-0.5 whitespace-nowrap text-[0.65rem] font-medium leading-tight text-amber-400/90"
                     >
                       {{ rivalryLabel(player.user_id, player.entry_number, player.correct_count) }} contigo
