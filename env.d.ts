@@ -12,6 +12,12 @@ interface ImportMeta {
   readonly env: ImportMetaEnv
 }
 
+declare global {
+  const __APP_VERSION__: string
+  const __APP_COMMIT__: string
+  const __APP_BUILD_TIME__: string
+}
+
 import 'vue-router'
 
 declare module 'vue-router' {

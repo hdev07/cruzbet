@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { ArrowLeft, Medal } from '@lucide/vue'
+import BaseQuinielaEntrySelector from '@/components/predictions/BaseQuinielaEntrySelector.vue'
 import BaseQuinielaGrid from '@/components/predictions/BaseQuinielaGrid.vue'
 import {
   BASE_QUINIELA_MATCHES_PER_ROUND,
@@ -15,6 +16,7 @@ const baseStore = useBaseQuinielaStore()
 const loadError = ref<string | null>(null)
 
 const roundId = computed(() => route.params.id as string)
+const entrySelectorError = ref<string | null>(null)
 
 const matchCount = computed(
   () => baseStore.currentRound?.match_count ?? BASE_QUINIELA_MATCHES_PER_ROUND,
@@ -99,6 +101,13 @@ watch(roundId, loadRound)
           <p class="text-xs text-slate-400">Tabla comparativa de picks de la jornada</p>
         </div>
       </RouterLink>
+
+      <BaseQuinielaEntrySelector
+        v-if="auth.isLoggedIn"
+        v-model:error="entrySelectorError"
+        :round-id="roundId"
+        :user-id="auth.user?.id"
+      />
 
       <section>
         <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-accent">

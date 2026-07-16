@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Grid3x3 } from '@lucide/vue'
 import BaseRoundPredictionsMatrix from '@/components/ranking/BaseRoundPredictionsMatrix.vue'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
-import { BASE_QUINIELA_MATCHES_PER_ROUND, computeRoundPool } from '@/constants/base-quiniela-rules'
-import { formatMxn } from '@/lib/formatMoney'
-import { getOfficialLeaderboardEntries } from '@/lib/baseQuinielaWinners'
+import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseQuinielaRoundMatch } from '@/types'
@@ -43,21 +40,10 @@ const visibleLeaderboard = computed(() => {
   if (props.maxRows == null || props.maxRows <= 0) return rows
   return rows.slice(0, props.maxRows)
 })
-
-const poolBreakdown = computed(() =>
-  computeRoundPool(getOfficialLeaderboardEntries(baseStore.leaderboard).length),
-)
 </script>
 
 <template>
   <div>
-    <div class="mb-3 flex items-center gap-2">
-      <Grid3x3 class="h-5 w-5 text-mundial-accent" />
-      <h2 class="text-sm font-semibold uppercase tracking-wider text-mundial-accent">
-        Resultados de todos
-      </h2>
-    </div>
-
     <div
       v-if="!standingsOnly"
       class="theme-tab-bar mb-4 flex gap-1"
@@ -90,26 +76,9 @@ const poolBreakdown = computed(() =>
     />
 
     <template v-else>
-      <div
-        v-if="isLeaderboardReady && poolBreakdown.verifiedCount > 0"
-        class="mb-4 rounded-xl border border-mundial-accent/25 bg-mundial-accent/10 px-4 py-3"
-      >
-        <p class="text-xs font-semibold uppercase tracking-wider text-mundial-accent">
-          En el pozo
-        </p>
-        <p class="mt-1 text-2xl font-bold tabular-nums text-mundial-accent">
-          {{ formatMxn(poolBreakdown.net) }}
-        </p>
-        <p class="mt-1 text-xs text-slate-400">
-          {{ poolBreakdown.verifiedCount }} depósitos × ${{ poolBreakdown.entryFee }} =
-          {{ formatMxn(poolBreakdown.gross) }} · comisión {{ poolBreakdown.feePercent }}%
-          ({{ formatMxn(poolBreakdown.adminFee) }})
-        </p>
-      </div>
-
       <p class="mb-4 text-xs text-slate-500">
         Solo participantes con {{ requiredMatches === 1 ? 'el partido marcado' : `los ${requiredMatches} partidos marcados` }}.
-        El ranking muestra a todos; el pozo solo cuenta depósitos verificados (ya con comisión descontada).
+        El pozo solo cuenta depósitos verificados.
       </p>
 
       <p v-if="loading || !isLeaderboardReady" class="text-sm text-slate-400">
@@ -129,10 +98,9 @@ const poolBreakdown = computed(() =>
           :key="`${player.user_id}-${player.entry_number}`"
           class="theme-card flex items-center gap-3 rounded-xl px-4 py-3"
           :class="{
-            'ring-1 ring-mundial-accent/50':
-              player.user_id === auth.user?.id &&
-              player.entry_number === baseStore.currentEntryNumber,
-            'opacity-80': !player.verified,
+            'border border-mundial-accent/40 bg-mundial-accent/15':
+              player.user_id === auth.user?.id,
+            'opacity-80': !player.verified && player.user_id !== auth.user?.id,
           }"
         >
           <span
@@ -156,7 +124,10 @@ const poolBreakdown = computed(() =>
           </span>
 
           <div class="min-w-0 flex-1">
-            <p class="truncate font-medium text-app-text">
+            <p
+              class="truncate font-medium"
+              :class="player.user_id === auth.user?.id ? 'text-mundial-accent' : 'text-app-text'"
+            >
               {{ player.username ?? 'Anónimo' }}
               <span
                 v-if="player.entry_number > 1"
@@ -165,10 +136,7 @@ const poolBreakdown = computed(() =>
                 Q{{ player.entry_number }}
               </span>
               <span
-                v-if="
-                  player.user_id === auth.user?.id &&
-                  player.entry_number === baseStore.currentEntryNumber
-                "
+                v-if="player.user_id === auth.user?.id"
                 class="ml-1 text-xs text-mundial-accent"
               >
                 (tú)

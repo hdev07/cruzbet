@@ -2,6 +2,7 @@
 import { RouterView } from 'vue-router'
 import { usePageMeta } from '@/composables/usePageMeta'
 import AppLayout from '@/layouts/AppLayout.vue'
+import AppUpdateBanner from '@/components/shared/AppUpdateBanner.vue'
 
 usePageMeta()
 </script>
@@ -13,4 +14,5 @@ usePageMeta()
     </AppLayout>
     <component :is="Component" v-else />
   </RouterView>
+  <AppUpdateBanner />
 </template>

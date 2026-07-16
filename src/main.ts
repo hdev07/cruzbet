@@ -3,7 +3,7 @@ import './assets/main.css'
 import { registerSW } from 'virtual:pwa-register'
 import { initTheme } from './lib/theme'
 import { createApp } from 'vue'
-import { createPinia } from 'pinia'
+import { createPinia, setActivePinia } from 'pinia'
 
 import App from './App.vue'
 import {
@@ -12,6 +12,7 @@ import {
 } from './lib/chunkLoadRecovery'
 import router from './router'
 import { useAuthStore } from './stores/authStore'
+import { usePwaStore } from './stores/pwaStore'
 import { useThemeStore } from './stores/themeStore'
 
 initTheme()
@@ -22,10 +23,24 @@ window.addEventListener('vite:preloadError', (event) => {
   reloadForStaleChunks()
 })
 
-registerSW({ immediate: true })
-
 const app = createApp(App)
 const pinia = createPinia()
+setActivePinia(pinia)
+
+const pwa = usePwaStore()
+const updateSW = registerSW({
+  immediate: true,
+  onRegisteredSW() {
+    pwa.markRegistered()
+  },
+  onNeedRefresh() {
+    pwa.markNeedRefresh()
+  },
+  onOfflineReady() {
+    pwa.markOfflineReady()
+  },
+})
+pwa.setUpdateHandler(updateSW)
 
 app.use(pinia)
 app.use(router)

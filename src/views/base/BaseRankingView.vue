@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight, Crown, PiggyBank, Target, Users } from '@lucide/vue'
+import { ChevronRight, Crown, PiggyBank, Target } from '@lucide/vue'
 import BaseRoundRankingPanel from '@/components/ranking/BaseRoundRankingPanel.vue'
 import {
-  BASE_QUINIELA_LOGIC,
   BASE_QUINIELA_MATCHES_PER_ROUND,
-  BASE_QUINIELA_POINTS_PER_HIT,
   computeRoundPool,
 } from '@/constants/base-quiniela-rules'
 import { formatMxn } from '@/lib/formatMoney'
@@ -20,7 +18,6 @@ const baseStore = useBaseQuinielaStore()
 const loadError = ref<string | null>(null)
 const roundLoading = ref(false)
 const selectedRoundId = ref<string | null>(null)
-const participantCount = ref(0)
 const myLeaderboardEntry = ref<BaseRoundLeaderboardEntry | null>(null)
 const previousWinnerUserIds = ref<string[]>([])
 let loadSeq = 0
@@ -124,17 +121,15 @@ async function loadRoundData(roundId: string) {
     await baseStore.fetchRound(roundId)
     if (seq !== loadSeq) return
 
-    const [count, entry] = await Promise.all([
-      baseStore.fetchRoundParticipantCount(roundId),
+    const [, entry] = await Promise.all([
+      baseStore.fetchRoundLeaderboard(roundId),
       auth.user
         ? baseStore.fetchMyLeaderboardEntry(roundId, auth.user.id)
         : Promise.resolve(null),
-      baseStore.fetchRoundLeaderboard(roundId),
       loadPreviousWinners(seq),
     ] as const)
     if (seq !== loadSeq) return
 
-    participantCount.value = count
     myLeaderboardEntry.value = entry ?? null
 
     if (auth.user) {
@@ -174,13 +169,40 @@ watch(activeRoundId, (roundId, prevRoundId) => {
 
 <template>
   <div>
-    <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-mundial-accent">
-      Quiniela
-    </p>
-    <h1 class="mb-2 text-2xl font-bold text-app-text lg:text-3xl">Resultados</h1>
-    <p class="mb-6 text-sm text-slate-400 lg:text-base">
-      Compara los picks L/E/V de todos los jugadores de la jornada
-    </p>
+    <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div class="min-w-0">
+        <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-mundial-accent">
+          Quiniela
+        </p>
+        <h1 class="text-2xl font-bold text-app-text lg:text-3xl">Resultados</h1>
+      </div>
+
+      <div v-if="baseStore.rounds.length" class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <span
+          v-if="selectedRound && isRoundActive && !isRoundFinished"
+          class="rounded-full bg-mundial-green/15 px-2.5 py-1 text-xs font-semibold text-mundial-green"
+        >
+          En curso
+        </span>
+        <span
+          v-else-if="selectedRound && isRoundFinished"
+          class="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-400"
+        >
+          Finalizada
+        </span>
+        <label class="block min-w-[10rem] flex-1 sm:flex-initial">
+          <span class="sr-only">Seleccionar jornada</span>
+          <select
+            v-model="selectedRoundId"
+            class="theme-field w-full rounded-lg px-3 py-2 text-sm"
+          >
+            <option v-for="round in baseStore.rounds" :key="round.id" :value="round.id">
+              {{ round.title }}
+            </option>
+          </select>
+        </label>
+      </div>
+    </div>
 
     <p v-if="baseStore.loading && !baseStore.rounds.length" class="text-slate-400">
       Cargando resultados...
@@ -198,56 +220,10 @@ watch(activeRoundId, (roundId, prevRoundId) => {
     </div>
 
     <template v-else>
-      <div class="mb-6 flex flex-wrap items-end gap-4">
-        <label class="block min-w-[12rem] flex-1 max-w-sm">
-          <span class="mb-1 block text-xs text-slate-400">Jornada</span>
-          <select
-            v-model="selectedRoundId"
-            class="theme-field w-full rounded-lg px-3 py-2 text-sm"
-          >
-            <option v-for="round in baseStore.rounds" :key="round.id" :value="round.id">
-              {{ round.title }}
-            </option>
-          </select>
-        </label>
-
-        <div v-if="selectedRound" class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-2">
-            <h2 class="text-lg font-semibold text-slate-200">{{ selectedRound.title }}</h2>
-            <span
-              v-if="isRoundActive && !isRoundFinished"
-              class="rounded-full bg-mundial-green/15 px-2 py-0.5 text-xs font-semibold text-mundial-green"
-            >
-              En curso
-            </span>
-            <span
-              v-else-if="isRoundFinished"
-              class="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-slate-400"
-            >
-              Finalizada
-            </span>
-          </div>
-          <p class="mt-1 text-xs text-slate-500 sm:text-sm">
-            {{ selectedRound.match_count }} partidos · {{ BASE_QUINIELA_POINTS_PER_HIT }} pts por acierto
-          </p>
-        </div>
-      </div>
-
       <div
         v-if="activeRoundId && !roundLoading"
-        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+        class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
       >
-        <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <p class="flex items-center gap-1.5 text-xs text-slate-400">
-            <Users class="h-3.5 w-3.5" />
-            Participantes
-          </p>
-          <p class="mt-1 text-2xl font-bold tabular-nums text-slate-200">
-            {{ participantCount }}
-          </p>
-          <p class="mt-0.5 text-[0.65rem] text-slate-500">Quinielas completas</p>
-        </div>
-
         <div class="rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-4 py-3">
           <p class="flex items-center gap-1.5 text-xs text-slate-400">
             <PiggyBank class="h-3.5 w-3.5" />
@@ -332,18 +308,14 @@ watch(activeRoundId, (roundId, prevRoundId) => {
 
       <div
         v-else-if="activeRoundId && roundLoading"
-        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+        class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
       >
         <div
-          v-for="n in 5"
+          v-for="n in 4"
           :key="n"
           class="h-[5.5rem] animate-pulse rounded-xl border border-white/10 bg-white/5"
         />
       </div>
-
-      <p class="mb-4 rounded-lg border border-white/5 bg-black/20 px-3 py-2 text-xs text-slate-500">
-        {{ BASE_QUINIELA_LOGIC.summary }}
-      </p>
 
       <BaseRoundRankingPanel
         v-if="activeRoundId"

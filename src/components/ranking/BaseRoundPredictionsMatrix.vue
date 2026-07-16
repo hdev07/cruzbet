@@ -68,15 +68,17 @@ const competitors = computed(() => {
   return sortLeaderboardEntries(rows)
 })
 
+function isMyRow(userId: string, _entryNumber?: number): boolean {
+  return Boolean(props.currentUserId && userId === props.currentUserId)
+}
+
 const myCorrectCount = computed(() => {
   if (!props.currentUserId) return null
-  return (
-    competitors.value.find(
-      (p) =>
-        p.user_id === props.currentUserId &&
-        p.entry_number === baseStore.currentEntryNumber,
-    )?.correct_count ?? null
-  )
+  const mine = competitors.value.filter((p) => p.user_id === props.currentUserId)
+  if (!mine.length) return null
+  const current =
+    mine.find((p) => p.entry_number === baseStore.currentEntryNumber) ?? mine[0]
+  return current?.correct_count ?? null
 })
 
 async function loadParticipants() {
@@ -106,11 +108,8 @@ function getPick(userId: string, entryNumber: number, matchId: string): BasePred
   return predictionMap.value.get(participantKey(userId, entryNumber))?.get(matchId)
 }
 
-function canShowPlayerPicks(userId: string, entryNumber: number): boolean {
-  return (
-    roundStarted.value ||
-    (userId === props.currentUserId && entryNumber === baseStore.currentEntryNumber)
-  )
+function canShowPlayerPicks(userId: string, _entryNumber?: number): boolean {
+  return roundStarted.value || isMyRow(userId)
 }
 
 function cellClass(userId: string, entryNumber: number, match: BaseQuinielaRoundMatch): string {
@@ -136,13 +135,13 @@ function cellClass(userId: string, entryNumber: number, match: BaseQuinielaRound
 
 function rivalryLabel(
   userId: string,
-  entryNumber: number,
+  _entryNumber: number,
   correctCount: number,
 ): string | null {
   if (
     !roundStarted.value ||
     !props.currentUserId ||
-    (userId === props.currentUserId && entryNumber === baseStore.currentEntryNumber) ||
+    isMyRow(userId) ||
     myCorrectCount.value == null
   ) {
     return null
@@ -185,14 +184,12 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
     <template v-else>
       <p v-if="!hideIntro" class="mb-3 text-xs text-slate-500">
         <template v-if="roundStarted">
-          Compara tus picks L/E/V con los demás. Verde = acierto, rojo = fallo.
-          El chip indica si el depósito ya fue verificado (el pozo solo cuenta pagados).
-          <span v-if="currentUserId"> Tu fila está resaltada.</span>
+          Verde = acierto, rojo = fallo.
+          <span v-if="currentUserId"> Tus quinielas están resaltadas.</span>
         </template>
         <template v-else>
-          Los pronósticos de los demás, los marcadores y los aciertos se mostrarán cuando empiece
-          el primer partido de la jornada. Solo ves tus picks hasta entonces.
-          <span v-if="currentUserId"> Tu fila está resaltada.</span>
+          Los picks de los demás se revelan al empezar el primer partido.
+          <span v-if="currentUserId"> Tus quinielas están resaltadas.</span>
         </template>
       </p>
 
@@ -256,22 +253,16 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
             <tr
               v-for="(player, index) in competitors"
               :key="`${player.user_id}-${player.entry_number}`"
-              class="theme-table-row"
-              :class="{
-                'ring-1 ring-inset ring-mundial-accent/40':
-                  player.user_id === currentUserId &&
-                  player.entry_number === baseStore.currentEntryNumber,
-              }"
+              :class="isMyRow(player.user_id) ? 'theme-table-row-mine' : 'theme-table-row'"
             >
               <td
-                class="theme-table-sticky border border-white/10 px-3 py-2"
+                class="border border-white/10 px-3 py-2"
                 :class="{
-                  'md:sticky md:left-0 md:z-10 md:min-w-[8rem]': !exportLayout,
+                  'theme-table-sticky-mine md:sticky md:left-0 md:z-10 md:min-w-[8rem]':
+                    !exportLayout && isMyRow(player.user_id),
+                  'theme-table-sticky md:sticky md:left-0 md:z-10 md:min-w-[8rem]':
+                    !exportLayout && !isMyRow(player.user_id),
                   'min-w-[10rem]': exportLayout,
-                  'md:bg-mundial-accent/10':
-                    !exportLayout &&
-                    player.user_id === currentUserId &&
-                    player.entry_number === baseStore.currentEntryNumber,
                 }"
               >
                 <div class="flex min-w-0 items-start gap-2">
@@ -280,7 +271,12 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     :class="
                       exportLayout
                         ? ''
-                        : 'theme-table-sticky sticky left-0 z-10 -ml-3 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0'
+                        : [
+                            'sticky left-0 z-10 -ml-3 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0',
+                            isMyRow(player.user_id)
+                              ? 'theme-table-sticky-mine'
+                              : 'theme-table-sticky',
+                          ]
                     "
                     :title="isPreviousWinner(player.user_id) ? 'Ganador de la jornada previa' : undefined"
                   >
@@ -313,20 +309,15 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   </span>
                   <div class="order-3 min-w-0 max-w-[7.5rem] flex-1 md:max-w-[11rem]">
                     <p
-                      class="truncate font-medium leading-tight text-slate-200"
+                      class="truncate font-medium leading-tight"
+                      :class="isMyRow(player.user_id) ? 'text-mundial-accent' : 'text-slate-200'"
                       :title="player.profiles?.username ?? 'Anónimo'"
                     >
                       {{ player.profiles?.username ?? 'Anónimo' }}
                       <span v-if="player.entry_number > 1" class="text-slate-500">
                         Q{{ player.entry_number }}
                       </span>
-                      <span
-                        v-if="
-                          player.user_id === currentUserId &&
-                          player.entry_number === baseStore.currentEntryNumber
-                        "
-                        class="text-mundial-accent"
-                      >
+                      <span v-if="isMyRow(player.user_id)" class="text-mundial-accent">
                         (tú)
                       </span>
                     </p>

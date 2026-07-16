@@ -1,17 +1,110 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { Check, ChevronRight, Grid3x3, LogOut, Pencil, Shield, X } from '@lucide/vue'
+import {
+  Check,
+  ChevronRight,
+  Grid3x3,
+  Info,
+  LogOut,
+  Pencil,
+  RefreshCw,
+  Target,
+  Trophy,
+  X,
+  Shield,
+} from '@lucide/vue'
 import { JORNADAS_PATH } from '@/constants/nav'
 import { useAuthStore } from '@/stores/authStore'
+import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
+import { usePwaStore } from '@/stores/pwaStore'
+import type { BaseRoundResultSummary } from '@/types'
 
 const auth = useAuthStore()
+const baseStore = useBaseQuinielaStore()
+const pwa = usePwaStore()
 const router = useRouter()
 const loggingOut = ref(false)
 const editingUsername = ref(false)
 const usernameDraft = ref('')
 const savingUsername = ref(false)
 const usernameError = ref<string | null>(null)
+
+const appVersion = __APP_VERSION__
+const appCommit = __APP_COMMIT__
+const buildDate = new Date(__APP_BUILD_TIME__).toLocaleDateString('es-MX', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
+
+const loadingStats = ref(false)
+const statsError = ref<string | null>(null)
+const roundResults = ref<BaseRoundResultSummary[]>([])
+
+const playedRounds = computed(() =>
+  roundResults.value
+    .filter((r) => (r.myEntry?.predictions_count ?? 0) > 0)
+    .sort((a, b) => a.round.round_number - b.round.round_number),
+)
+
+const roundsPlayedCount = computed(() => playedRounds.value.length)
+
+const avgAciertosPct = computed(() => {
+  if (!playedRounds.value.length) return null
+  const total = playedRounds.value.reduce((sum, r) => {
+    const entry = r.myEntry!
+    return sum + entry.correct_count / Math.max(entry.match_count, 1)
+  }, 0)
+  return (total / playedRounds.value.length) * 100
+})
+
+const avgAciertosCount = computed(() => {
+  if (!playedRounds.value.length) return null
+  const total = playedRounds.value.reduce((sum, r) => sum + (r.myEntry?.correct_count ?? 0), 0)
+  return total / playedRounds.value.length
+})
+
+const totalPoints = computed(() =>
+  playedRounds.value.reduce((sum, r) => sum + (r.myEntry?.total_points ?? 0), 0),
+)
+
+const bestRound = computed<BaseRoundResultSummary | null>(() => {
+  if (!playedRounds.value.length) return null
+  return [...playedRounds.value].sort(
+    (a, b) => (b.myEntry?.correct_count ?? 0) - (a.myEntry?.correct_count ?? 0),
+  )[0]!
+})
+
+function barHeightPct(round: BaseRoundResultSummary): number {
+  const entry = round.myEntry
+  if (!entry || !entry.match_count) return 0
+  const pct = (entry.correct_count / entry.match_count) * 100
+  return entry.correct_count > 0 ? Math.max(pct, 6) : 0
+}
+
+function barTitle(round: BaseRoundResultSummary): string {
+  const entry = round.myEntry
+  if (!entry) return round.round.title
+  return `${round.round.title}: ${entry.correct_count}/${entry.match_count} aciertos · ${entry.total_points} pts`
+}
+
+async function loadStats() {
+  if (!auth.user) return
+  loadingStats.value = true
+  statsError.value = null
+  try {
+    roundResults.value = await baseStore.fetchAllRoundResults(auth.user.id)
+  } catch (err) {
+    statsError.value = err instanceof Error ? err.message : 'No se pudieron cargar tus estadísticas'
+  } finally {
+    loadingStats.value = false
+  }
+}
+
+async function applyPwaUpdate() {
+  await pwa.applyUpdate()
+}
 
 watch(
   () => auth.profile?.username,
@@ -51,6 +144,7 @@ async function saveUsername() {
 onMounted(async () => {
   if (!auth.user) return
   await auth.fetchProfile(auth.user.id)
+  await loadStats()
 })
 
 async function handleLogout() {
@@ -142,6 +236,83 @@ async function handleLogout() {
       </p>
     </div>
 
+    <section v-if="auth.isLoggedIn" class="mb-8" aria-label="Tus estadísticas">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-mundial-accent">
+        Tu desempeño
+      </p>
+
+      <p v-if="loadingStats" class="text-sm text-slate-400">Cargando estadísticas...</p>
+      <p v-else-if="statsError" class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
+        {{ statsError }}
+      </p>
+      <p
+        v-else-if="!roundsPlayedCount"
+        class="rounded-xl border border-dashed border-white/15 px-4 py-6 text-center text-sm text-slate-400"
+      >
+        Aún no tienes quinielas jugadas. ¡Marca tus picks en la jornada activa!
+      </p>
+
+      <template v-else>
+        <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+            <p class="text-xs text-slate-500">Jornadas jugadas</p>
+            <p class="mt-1 text-xl font-bold text-slate-100">{{ roundsPlayedCount }}</p>
+          </div>
+          <div class="rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 p-3">
+            <p class="text-xs text-slate-400">Promedio de aciertos</p>
+            <p class="mt-1 text-xl font-bold text-mundial-accent">
+              {{ avgAciertosCount?.toFixed(1) }}
+              <span class="text-xs font-medium text-slate-400">({{ avgAciertosPct?.toFixed(0) }}%)</span>
+            </p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+            <p class="text-xs text-slate-500">Puntos totales</p>
+            <p class="mt-1 text-xl font-bold text-slate-100">{{ totalPoints }}</p>
+          </div>
+          <div class="rounded-xl border border-mundial-green/30 bg-mundial-green/10 p-3">
+            <p class="inline-flex items-center gap-1 text-xs text-slate-400">
+              <Trophy class="h-3 w-3" />
+              Mejor jornada
+            </p>
+            <p class="mt-1 truncate text-xl font-bold text-mundial-green">
+              {{ bestRound?.myEntry?.correct_count ?? 0 }}/{{ bestRound?.myEntry?.match_count ?? 0 }}
+            </p>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <p class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <Target class="h-3.5 w-3.5" />
+              Aciertos por jornada
+            </p>
+          </div>
+
+          <div class="overflow-x-auto">
+            <div class="flex h-28 min-w-max items-end gap-3 pb-1">
+              <div
+                v-for="round in playedRounds"
+                :key="round.round.id"
+                class="flex w-8 shrink-0 flex-col items-center justify-end gap-1"
+              >
+                <span class="text-[0.65rem] font-semibold tabular-nums text-slate-400">
+                  {{ round.myEntry?.correct_count ?? 0 }}
+                </span>
+                <div class="flex h-20 w-full items-end justify-center">
+                  <div
+                    class="w-4 rounded-t-sm bg-mundial-accent transition-all"
+                    :style="{ height: `${barHeightPct(round)}%` }"
+                    :title="barTitle(round)"
+                  />
+                </div>
+                <span class="text-[0.65rem] text-slate-500">J{{ round.round.round_number }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </section>
+
     <section class="mb-8 space-y-2">
       <RouterLink
         v-if="auth.isAdmin"
@@ -167,7 +338,7 @@ async function handleLogout() {
       </RouterLink>
     </section>
 
-    <section>
+    <section class="mb-8">
       <button
         type="button"
         class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
@@ -177,6 +348,37 @@ async function handleLogout() {
         <LogOut class="h-4 w-4" />
         {{ loggingOut ? 'Cerrando sesión...' : 'Cerrar sesión' }}
       </button>
+    </section>
+
+    <section
+      class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+      aria-label="Acerca de la app"
+    >
+      <div class="flex items-center gap-2 text-xs text-slate-500">
+        <Info class="h-3.5 w-3.5 shrink-0" />
+        <span>
+          v{{ appVersion }} · {{ appCommit }} · {{ buildDate }}
+        </span>
+      </div>
+
+      <span
+        v-if="pwa.needRefresh"
+        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-mundial-accent px-3 py-1.5 text-xs font-semibold text-mundial-dark"
+        role="button"
+        tabindex="0"
+        @click="applyPwaUpdate"
+        @keyup.enter="applyPwaUpdate"
+      >
+        <RefreshCw class="h-3.5 w-3.5" />
+        Actualizar
+      </span>
+      <span
+        v-else
+        class="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-mundial-green"
+      >
+        <Check class="h-3.5 w-3.5" />
+        Estás al día
+      </span>
     </section>
   </div>
 </template>
