@@ -52,6 +52,18 @@ const router = createRouter({
       meta: { layout: 'mobile', requiresAuth: true, title: 'Mi perfil' },
     },
     {
+      path: '/admin',
+      component: () => import('@/views/AdminPanel.vue'),
+      meta: {
+        layout: 'mobile',
+        requiresAuth: true,
+        requiresAdmin: true,
+        title: 'Admin',
+        hideBottomNav: true,
+        wide: true,
+      },
+    },
+    {
       path: '/login',
       component: () => import('@/views/LoginView.vue'),
       meta: { layout: 'blank', title: 'Entrar' },
@@ -65,6 +77,7 @@ router.beforeEach(async (to: RouteLocationNormalized) => {
   if (!auth.authReady) await auth.init()
   if (to.path === '/login' && auth.isLoggedIn) return '/'
   if (to.meta.requiresAuth && !auth.isLoggedIn) return '/login'
+  if (to.meta.requiresAdmin && !auth.isAdmin) return '/'
 })
 
 router.onError((error) => {

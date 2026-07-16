@@ -20,6 +20,8 @@ declare module 'vue-router' {
     title?: string
     description?: string
     requiresAuth?: boolean
+    requiresAdmin?: boolean
+    hideBottomNav?: boolean
     wide?: boolean
   }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { Check, ChevronRight, Grid3x3, LogOut, Pencil, X } from '@lucide/vue'
+import { Check, ChevronRight, Grid3x3, LogOut, Pencil, Shield, X } from '@lucide/vue'
 import { JORNADAS_PATH } from '@/constants/nav'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -142,7 +142,19 @@ async function handleLogout() {
       </p>
     </div>
 
-    <section class="mb-8">
+    <section class="mb-8 space-y-2">
+      <RouterLink
+        v-if="auth.isAdmin"
+        to="/admin"
+        class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
+      >
+        <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
+          <Shield class="h-4 w-4 text-slate-400" />
+          Panel de admin
+        </span>
+        <ChevronRight class="h-4 w-4 text-slate-500" />
+      </RouterLink>
+
       <RouterLink
         :to="JORNADAS_PATH"
         class="flex items-center justify-between rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-4 py-3 transition hover:bg-mundial-green/15"

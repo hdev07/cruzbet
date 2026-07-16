@@ -103,7 +103,7 @@ const mainMaxWidthClass = computed(() =>
     </main>
 
     <nav
-      v-if="route.path !== '/login'"
+      v-if="route.path !== '/login' && !route.meta.hideBottomNav"
       class="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-mundial-dark/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur md:hidden"
     >
       <div class="mx-auto flex w-full max-w-xl">

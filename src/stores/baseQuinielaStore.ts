@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
+import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 import {
   buildFirstKickoffByRoundId,
   resolveActiveBaseRound,
 } from '@/lib/baseQuinielaRound'
+import { getOfficialLeaderboardEntries, getTiedFirstPlaceEntries, sortLeaderboardEntries } from '@/lib/baseQuinielaWinners'
 import { ACTIVE_COMPETITION_SLUG } from '@/constants/branding'
 import { isMatchOpenForPredictions, teamsPendingReason } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
@@ -244,10 +245,11 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
       .order('correct_count', { ascending: false })
       .order('total_points', { ascending: false })
       .order('entry_number', { ascending: true })
-      .limit(limit)
+      .limit(Math.max(limit * 3, 100))
 
     if (error) throw error
-    return (data ?? []) as BaseRoundLeaderboardEntry[]
+    const sorted = sortLeaderboardEntries((data ?? []) as BaseRoundLeaderboardEntry[])
+    return sorted.slice(0, limit)
   }
 
   async function fetchRoundLeaderboard(roundId: string) {
@@ -256,6 +258,14 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
       leaderboardRoundId.value = roundId
     }
     leaderboard.value = await queryRoundLeaderboard(roundId)
+  }
+
+  /** Ganadores oficiales de una jornada (solo depósitos verificados). */
+  async function fetchRoundTiedWinners(
+    roundId: string,
+  ): Promise<BaseRoundLeaderboardEntry[]> {
+    const entries = await queryRoundLeaderboard(roundId, 100)
+    return getTiedFirstPlaceEntries(getOfficialLeaderboardEntries(entries))
   }
 
   async function fetchMyLeaderboardEntry(
@@ -282,11 +292,13 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
 
     const summaries = await Promise.all(
       rounds.value.map(async (round) => {
-        const [topThree, myEntry, participantCount] = await Promise.all([
-          queryRoundLeaderboard(round.id, 3),
+        const [allEntries, myEntry, participantCount] = await Promise.all([
+          queryRoundLeaderboard(round.id, 100),
           userId ? fetchMyLeaderboardEntry(round.id, userId) : Promise.resolve(null),
           fetchRoundParticipantCount(round.id),
         ])
+        const official = getOfficialLeaderboardEntries(allEntries)
+        const topThree = official.slice(0, 3)
 
         return {
           round,
@@ -630,6 +642,31 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     })[]
   }
 
+  async function fetchRoundPaymentStats(roundId: string): Promise<{
+    total: number
+    submitted: number
+    verified: number
+    pending: number
+    incomplete: number
+    pool: number
+  }> {
+    const participants = await fetchRoundParticipants(roundId)
+    const total = participants.length
+    const complete = participants.filter((p) => p.complete)
+    const verified = complete.filter((p) => p.verified).length
+    const pending = complete.filter((p) => !p.verified).length
+    const incomplete = total - complete.length
+    const submitted = complete.length
+    return {
+      total,
+      submitted,
+      verified,
+      pending,
+      incomplete,
+      pool: verified * BASE_ENTRY_FEE_MXN,
+    }
+  }
+
   return {
     rounds,
     roundFirstKickoff,
@@ -652,6 +689,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     switchEntry,
     startNewEntry,
     fetchRoundLeaderboard,
+    fetchRoundTiedWinners,
     queryRoundLeaderboard,
     fetchAllRoundResults,
     fetchMyLeaderboardEntry,
@@ -662,6 +700,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     fetchRoundParticipationStatus,
     fetchParticipantCountsByRound,
     fetchRoundParticipants,
+    fetchRoundPaymentStats,
     setPaymentVerified,
     resetPlayerQuiniela,
     getPredictionForMatch,
