@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import BaseRoundPredictionsMatrix from '@/components/ranking/BaseRoundPredictionsMatrix.vue'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
+import { denseRankNumbers } from '@/lib/baseQuinielaStats'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseQuinielaRoundMatch } from '@/types'
@@ -39,6 +40,11 @@ const visibleLeaderboard = computed(() => {
   const rows = baseStore.leaderboard
   if (props.maxRows == null || props.maxRows <= 0) return rows
   return rows.slice(0, props.maxRows)
+})
+
+const visibleRanks = computed(() => {
+  const allRanks = denseRankNumbers(baseStore.leaderboard)
+  return visibleLeaderboard.value.map((_, index) => allRanks[index] ?? index + 1)
 })
 </script>
 
@@ -105,9 +111,13 @@ const visibleLeaderboard = computed(() => {
         >
           <span
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-            :class="index < 3 && player.verified ? 'bg-mundial-accent text-mundial-dark' : 'theme-cell-pending text-slate-400'"
+            :class="
+              (visibleRanks[index] ?? index + 1) <= 3 && player.verified
+                ? 'bg-mundial-accent text-mundial-dark'
+                : 'theme-cell-pending text-slate-400'
+            "
           >
-            {{ index + 1 }}
+            {{ visibleRanks[index] ?? index + 1 }}
           </span>
 
           <img

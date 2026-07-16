@@ -1,3 +1,5 @@
+import { compareBaseRoundRank } from '@/lib/baseQuinielaStats'
+
 /** Entradas empatadas en el primer lugar (mismos aciertos y puntos). */
 export function getTiedFirstPlaceEntries<
   T extends { correct_count: number; total_points: number },
@@ -25,16 +27,28 @@ export function winnerUserIdsFromEntries(
   return [...new Set(getTiedFirstPlaceEntries(official).map((entry) => entry.user_id))]
 }
 
-/** Orden público: verificados primero, luego aciertos / puntos. */
+/**
+ * Orden público: verificados primero (pozo), luego puntos → nombre.
+ * El desempate por partido en vivo solo aplica en la tabla comparativa (tiene picks).
+ */
 export function sortLeaderboardEntries<
-  T extends { verified?: boolean; correct_count: number; total_points: number; entry_number?: number },
+  T extends {
+    verified?: boolean
+    correct_count: number
+    total_points: number
+    user_id: string
+    entry_number?: number
+    username?: string | null
+    profiles?: { username?: string | null }
+  },
 >(entries: T[]): T[] {
   return [...entries].sort((a, b) => {
     const aVerified = a.verified === true ? 1 : 0
     const bVerified = b.verified === true ? 1 : 0
     if (bVerified !== aVerified) return bVerified - aVerified
-    if (b.correct_count !== a.correct_count) return b.correct_count - a.correct_count
-    if (b.total_points !== a.total_points) return b.total_points - a.total_points
-    return (a.entry_number ?? 0) - (b.entry_number ?? 0)
+    return compareBaseRoundRank(
+      { ...a, entry_number: a.entry_number ?? 0 },
+      { ...b, entry_number: b.entry_number ?? 0 },
+    )
   })
 }

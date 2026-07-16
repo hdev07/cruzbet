@@ -9,6 +9,7 @@ import {
 } from '@/constants/base-quiniela-rules'
 import { formatMxn } from '@/lib/formatMoney'
 import { getOfficialLeaderboardEntries, winnerUserIdsFromEntries } from '@/lib/baseQuinielaWinners'
+import { denseRankAt } from '@/lib/baseQuinielaStats'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseRoundLeaderboardEntry } from '@/types'
@@ -82,7 +83,7 @@ const myRank = computed(() => {
       e.user_id === auth.user!.id &&
       e.entry_number === baseStore.currentEntryNumber,
   )
-  return index >= 0 ? index + 1 : null
+  return denseRankAt(baseStore.leaderboard, index)
 })
 
 const myDisplayedEntry = computed(

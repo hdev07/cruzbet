@@ -7,7 +7,11 @@ import {
   winnerCode,
 } from '@/lib/baseQuinielaDisplay'
 import { firstKickoffFromRoundMatches, hasRoundStarted } from '@/lib/baseQuinielaRound'
-import { sortLeaderboardEntries } from '@/lib/baseQuinielaWinners'
+import {
+  compareBaseRoundRank,
+  countLiveProvisionalHits,
+  denseRankNumbers,
+} from '@/lib/baseQuinielaStats'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
@@ -63,10 +67,18 @@ const predictionMap = computed(() => {
   return map
 })
 
+/** Orden: puntos → acierto en vivo (provisional) → nombre. Empatados en puntos comparten #. */
 const competitors = computed(() => {
   const rows = participants.value.filter((p) => p.complete)
-  return sortLeaderboardEntries(rows)
+  return [...rows].sort((a, b) =>
+    compareBaseRoundRank(a, b, {
+      liveHitsA: countLiveProvisionalHits(a.predictions, props.roundMatches),
+      liveHitsB: countLiveProvisionalHits(b.predictions, props.roundMatches),
+    }),
+  )
 })
+
+const competitorRanks = computed(() => denseRankNumbers(competitors.value))
 
 function isMyRow(userId: string, _entryNumber?: number): boolean {
   return Boolean(props.currentUserId && userId === props.currentUserId)
@@ -303,9 +315,13 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   </div>
                   <span
                     class="order-2 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
-                    :class="index < 3 ? 'bg-mundial-accent text-white' : 'theme-cell-pending text-slate-400'"
+                    :class="
+                      (competitorRanks[index] ?? index + 1) <= 3
+                        ? 'bg-mundial-accent text-white'
+                        : 'theme-cell-pending text-slate-400'
+                    "
                   >
-                    {{ index + 1 }}
+                    {{ competitorRanks[index] ?? index + 1 }}
                   </span>
                   <div class="order-3 min-w-0 max-w-[7.5rem] flex-1 md:max-w-[11rem]">
                     <p
@@ -337,7 +353,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
               <td
                 v-for="match in sortedMatches"
                 :key="`${player.user_id}-${player.entry_number}-${match.match_id}`"
-                class="border border-white/10 px-1 py-1 text-center"
+                class="border border-white/10 px-1 py-1 text-center align-middle"
               >
                 <span
                   v-if="getPick(player.user_id, player.entry_number, match.match_id)"
@@ -360,7 +376,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                 </span>
                 <span v-else class="text-xs text-slate-600">—</span>
               </td>
-              <td class="border border-white/10 px-2 py-2 text-center">
+              <td class="border border-white/10 px-2 py-2 text-center align-middle">
                 <template v-if="roundStarted">
                   <span class="font-bold tabular-nums text-mundial-accent">
                     {{ player.correct_count }}

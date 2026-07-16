@@ -1,4 +1,13 @@
-import type { BasePrediction, BaseRoundLeaderboardEntry, BaseRoundParticipant } from '@/types'
+import { isProvisionalPredictionCorrect } from '@/lib/baseQuinielaDisplay'
+import { isEffectivelyLive } from '@/lib/matchLifecycle'
+import type {
+  BasePrediction,
+  BaseQuinielaRoundMatch,
+  BaseRoundLeaderboardEntry,
+  BaseRoundParticipant,
+  Match,
+  PredictedWinner,
+} from '@/types'
 
 export type BaseRoundRankRow =
   | BaseRoundLeaderboardEntry
@@ -18,16 +27,80 @@ export function rankDisplayName(row: BaseRoundRankRow): string {
   return ''
 }
 
-/** Orden oficial: aciertos ↓, puntos ↓, nombre ↑, quiniela ↑. */
-export function compareBaseRoundRank(a: BaseRoundRankRow, b: BaseRoundRankRow): number {
+export type CompareBaseRoundRankOptions = {
+  /** Aciertos provisionales en partidos en vivo (desempate). */
+  liveHitsA?: number
+  liveHitsB?: number
+}
+
+/**
+ * Orden tabla comparativa: puntos/aciertos ↓ → acierto en vivo ↓ → nombre ↑ → quiniela ↑.
+ * El número de posición se asigna aparte con denseRankNumbers (empatados comparten lugar).
+ */
+export function compareBaseRoundRank(
+  a: BaseRoundRankRow,
+  b: BaseRoundRankRow,
+  options?: CompareBaseRoundRankOptions,
+): number {
   if (b.correct_count !== a.correct_count) return b.correct_count - a.correct_count
   if (b.total_points !== a.total_points) return b.total_points - a.total_points
+  const liveA = options?.liveHitsA ?? 0
+  const liveB = options?.liveHitsB ?? 0
+  if (liveB !== liveA) return liveB - liveA
   const byName = rankDisplayName(a).localeCompare(rankDisplayName(b), 'es', {
     sensitivity: 'base',
   })
   if (byName !== 0) return byName
   if (a.entry_number !== b.entry_number) return a.entry_number - b.entry_number
   return a.user_id.localeCompare(b.user_id)
+}
+
+/** Cuántos partidos en vivo tiene acertados de forma provisional (marcador actual). */
+export function countLiveProvisionalHits(
+  predictions: readonly Pick<BasePrediction, 'match_id' | 'predicted_winner'>[],
+  roundMatches: readonly Pick<BaseQuinielaRoundMatch, 'match_id' | 'match'>[],
+): number {
+  const byMatch = new Map(
+    predictions.map((p) => [p.match_id, p.predicted_winner as PredictedWinner]),
+  )
+  let hits = 0
+  for (const row of roundMatches) {
+    const match = row.match as Match | null | undefined
+    if (!match || !isEffectivelyLive(match)) continue
+    const predicted = byMatch.get(row.match_id)
+    if (predicted == null) continue
+    if (isProvisionalPredictionCorrect(predicted, match)) hits += 1
+  }
+  return hits
+}
+
+/**
+ * Posiciones densas por puntos/aciertos (1,1,2…): mismos puntos → mismo número.
+ * `entries` debe ir ya ordenado (p. ej. con compareBaseRoundRank).
+ */
+export function denseRankNumbers(
+  entries: readonly { correct_count: number; total_points: number }[],
+): number[] {
+  const ranks: number[] = []
+  let rank = 0
+  let prevKey: string | null = null
+  for (const entry of entries) {
+    const key = `${entry.correct_count}:${entry.total_points}`
+    if (key !== prevKey) {
+      rank += 1
+      prevKey = key
+    }
+    ranks.push(rank)
+  }
+  return ranks
+}
+
+export function denseRankAt(
+  entries: readonly { correct_count: number; total_points: number }[],
+  index: number,
+): number | null {
+  if (index < 0 || index >= entries.length) return null
+  return denseRankNumbers(entries)[index] ?? null
 }
 
 export interface BasePredictionSummary {
@@ -88,7 +161,7 @@ export function getLeaderboardNeighbors(
     return { position: null, above: null, me: null, below: null }
   }
   return {
-    position: idx + 1,
+    position: denseRankAt(leaderboard, idx),
     above: idx > 0 ? leaderboard[idx - 1]! : null,
     me: leaderboard[idx]!,
     below: idx < leaderboard.length - 1 ? leaderboard[idx + 1]! : null,

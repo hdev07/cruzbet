@@ -10,6 +10,7 @@ import {
   resolveActiveBaseRound,
 } from '@/lib/baseQuinielaRound'
 import { getOfficialLeaderboardEntries, getTiedFirstPlaceEntries, sortLeaderboardEntries } from '@/lib/baseQuinielaWinners'
+import { compareBaseRoundRank } from '@/lib/baseQuinielaStats'
 import { ACTIVE_COMPETITION_SLUG } from '@/constants/branding'
 import { isMatchOpenForPredictions, teamsPendingReason } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
@@ -283,7 +284,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
       .eq('is_complete', true)
       .order('correct_count', { ascending: false })
       .order('total_points', { ascending: false })
-      .order('entry_number', { ascending: true })
+      .order('username', { ascending: true })
       .limit(Math.max(limit * 3, 100))
 
     if (error) throw error
@@ -619,7 +620,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
           complete,
         }
       })
-      .sort((a, b) => b.total_points - a.total_points)
+      .sort(compareBaseRoundRank)
   }
 
   async function setPaymentVerified(
