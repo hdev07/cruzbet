@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight, Target } from '@lucide/vue'
+import { ChevronRight, Medal, Table2, Target } from '@lucide/vue'
 import { BASE_QUINIELA_LOGIC } from '@/constants/base-quiniela-rules'
 import { QUINIELA_SUMMARY } from '@/constants/nav'
 import { resolveUpcomingBaseRounds } from '@/lib/baseQuinielaRound'
@@ -48,6 +48,44 @@ const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
         {{ QUINIELA_SUMMARY.tagline }}
       </p>
     </header>
+
+    <div class="mb-6 grid gap-3 sm:grid-cols-2">
+      <RouterLink
+        to="/resultados"
+        class="flex items-center gap-3 rounded-2xl border border-mundial-green/40 bg-mundial-green/10 px-4 py-3 transition hover:border-mundial-green/60 hover:bg-mundial-green/15"
+      >
+        <span
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-mundial-green/20 text-mundial-green"
+        >
+          <Medal class="h-5 w-5" :stroke-width="2" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-mundial-green">Resultados de todos</p>
+          <p class="text-xs text-app-muted">
+            Tabla comparativa L/E/V por jugador
+          </p>
+        </div>
+        <ChevronRight class="h-4 w-4 shrink-0 text-mundial-green" />
+      </RouterLink>
+
+      <RouterLink
+        to="/tablas"
+        class="flex items-center gap-3 rounded-2xl border border-mundial-accent/30 bg-mundial-accent/10 px-4 py-3 transition hover:border-mundial-accent/50 hover:bg-mundial-accent/15"
+      >
+        <span
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-mundial-accent/20 text-mundial-accent"
+        >
+          <Table2 class="h-5 w-5" :stroke-width="2" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-mundial-accent">Tablas Liga MX</p>
+          <p class="text-xs text-app-muted">
+            General · Goleo · Menores · Fair Play
+          </p>
+        </div>
+        <ChevronRight class="h-4 w-4 shrink-0 text-mundial-accent" />
+      </RouterLink>
+    </div>
 
     <section
       class="mb-6 rounded-xl border border-white/10 bg-white/5 p-4"

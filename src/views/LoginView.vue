@@ -21,7 +21,7 @@ async function loginWithUsername() {
   error.value = ''
   try {
     await auth.loginWithUsername(username.value, pin.value)
-    await router.push('/jornadas')
+    await router.push('/')
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error al iniciar sesión'
   } finally {
@@ -135,7 +135,7 @@ async function loginWithGoogle() {
 
       <p v-if="error" class="mt-4 text-sm text-red-400">{{ error }}</p>
 
-      <RouterLink to="/jornadas" class="mt-6 inline-block text-sm text-slate-500 hover:text-slate-300">
+      <RouterLink to="/" class="mt-6 inline-block text-sm text-slate-500 hover:text-slate-300">
         Volver a la quiniela
       </RouterLink>
     </div>

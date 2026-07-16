@@ -10,12 +10,25 @@ const route = useRoute()
 const auth = useAuthStore()
 
 function isNavActive(item: NavItem): boolean {
+  if (item.to === '/') return route.path === '/'
   if (item.to === '/perfil') return route.path === '/perfil'
   if (item.to === '/jornadas') {
     return route.path === '/jornadas' || route.path.startsWith('/jornadas/')
   }
+  if (item.to === '/resultados') {
+    return route.path === '/resultados' || route.path.startsWith('/resultados/')
+  }
+  if (item.to === '/tablas') {
+    return route.path === '/tablas' || route.path.startsWith('/tablas/')
+  }
   return route.path === item.to || route.path.startsWith(`${item.to}/`)
 }
+
+const mainMaxWidthClass = computed(() =>
+  route.meta.wide
+    ? 'mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:max-w-4xl md:max-w-5xl lg:max-w-6xl lg:px-8 lg:py-8'
+    : 'mx-auto w-full max-w-xl flex-1 px-4 py-6 sm:max-w-2xl md:max-w-3xl lg:max-w-4xl lg:px-8 lg:py-8',
+)
 </script>
 
 <template>
@@ -24,7 +37,7 @@ function isNavActive(item: NavItem): boolean {
   >
     <header class="sticky top-0 z-40 border-b border-white/10 bg-mundial-dark/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
       <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6 lg:max-w-7xl lg:px-8">
-        <RouterLink to="/jornadas" class="shrink-0 text-lg font-bold text-mundial-accent lg:text-xl">
+        <RouterLink to="/" class="shrink-0 text-lg font-bold text-mundial-accent lg:text-xl">
           {{ APP_NAME }}
         </RouterLink>
 
@@ -77,7 +90,7 @@ function isNavActive(item: NavItem): boolean {
           <ThemeToggle size="sm" />
           <RouterLink
             to="/login"
-            class="rounded-lg bg-mundial-accent px-3 py-1.5 text-sm font-semibold lg:px-4 lg:py-2"
+            class="rounded-lg bg-mundial-accent px-3 py-1.5 text-sm font-semibold text-mundial-dark lg:px-4 lg:py-2"
           >
             Entrar
           </RouterLink>
@@ -85,9 +98,7 @@ function isNavActive(item: NavItem): boolean {
       </div>
     </header>
 
-    <main
-      class="mx-auto w-full max-w-xl flex-1 px-4 py-6 sm:max-w-2xl md:max-w-3xl lg:max-w-4xl lg:px-8 lg:py-8"
-    >
+    <main :class="mainMaxWidthClass">
       <slot />
     </main>
 

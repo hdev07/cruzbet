@@ -101,7 +101,7 @@ const emit = defineEmits<{
           </button>
           <button
             type="button"
-            class="rounded-lg bg-mundial-accent px-4 py-2.5 text-sm font-bold text-white hover:bg-mundial-accent/90 disabled:opacity-50"
+            class="rounded-lg bg-mundial-accent px-4 py-2.5 text-sm font-bold text-mundial-dark hover:bg-mundial-accent/90 disabled:opacity-50"
             :disabled="saving"
             @click="emit('confirm')"
           >

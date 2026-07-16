@@ -5,6 +5,7 @@ import {
   buildFirstKickoffByRoundId,
   resolveActiveBaseRound,
 } from '@/lib/baseQuinielaRound'
+import { ACTIVE_COMPETITION_SLUG } from '@/constants/branding'
 import { isMatchOpenForPredictions, teamsPendingReason } from '@/lib/matchRules'
 import { supabase } from '@/lib/supabase'
 import type {
@@ -25,7 +26,6 @@ const MATCH_SELECT = '*, home_team:teams!home_team_id(*), away_team:teams!away_t
 function buildEntrySummaries(
   predictions: BasePrediction[],
   payments: BaseRoundPayment[],
-  matchCount: number,
 ): BaseQuinielaEntrySummary[] {
   const paymentByEntry = new Map(payments.map((p) => [p.entry_number, p]))
   const countByEntry = new Map<number, number>()
@@ -61,6 +61,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   const rounds = ref<BaseQuinielaRound[]>([])
   const roundFirstKickoff = ref<Record<string, number | null>>({})
   const currentRound = ref<BaseQuinielaRound | null>(null)
+  const activeCompetitionId = ref<string | null>(null)
 
   const activeRound = computed(() =>
     resolveActiveBaseRound(rounds.value, roundFirstKickoff.value),
@@ -80,16 +81,37 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     return current?.is_submitted === true
   })
 
+  async function fetchActiveCompetitionId(): Promise<string> {
+    if (activeCompetitionId.value) return activeCompetitionId.value
+
+    const { data, error } = await supabase
+      .from('competitions')
+      .select('id')
+      .eq('slug', ACTIVE_COMPETITION_SLUG)
+      .eq('is_active', true)
+      .single()
+
+    if (error || !data) {
+      throw error ?? new Error('No hay una temporada activa de Liga MX')
+    }
+
+    activeCompetitionId.value = data.id
+    return data.id
+  }
+
   async function fetchRounds() {
+    const competitionId = await fetchActiveCompetitionId()
     loading.value = true
     const [roundsResult, kickoffsResult] = await Promise.all([
       supabase
         .from('base_quiniela_rounds')
         .select('*')
+        .eq('competition_id', competitionId)
         .order('round_number', { ascending: true }),
       supabase
         .from('base_quiniela_round_matches')
-        .select('round_id, match:matches(match_date)'),
+        .select('round_id, match:matches!inner(match_date, competition_id)')
+        .eq('match.competition_id', competitionId),
     ])
 
     if (!roundsResult.error && roundsResult.data) {
@@ -109,11 +131,13 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   }
 
   async function fetchRound(roundId: string) {
+    const competitionId = await fetchActiveCompetitionId()
     loading.value = true
     const { data: round, error: roundErr } = await supabase
       .from('base_quiniela_rounds')
       .select('*')
       .eq('id', roundId)
+      .eq('competition_id', competitionId)
       .single()
 
     if (roundErr || !round) {
@@ -145,11 +169,6 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   }
 
   async function fetchMyPredictions(roundId: string, userId: string, entryNumber = currentEntryNumber.value) {
-    const matchCount =
-      currentRound.value?.id === roundId
-        ? (currentRound.value.match_count ?? BASE_QUINIELA_MATCHES_PER_ROUND)
-        : BASE_QUINIELA_MATCHES_PER_ROUND
-
     const [{ data: allPreds, error }, { data: payments, error: paymentErr }] = await Promise.all([
       supabase
         .from('base_predictions')
@@ -171,7 +190,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     const typedPreds = (allPreds ?? []) as BasePrediction[]
     const typedPayments = (payments ?? []) as BaseRoundPayment[]
 
-    myEntries.value = buildEntrySummaries(typedPreds, typedPayments, matchCount)
+    myEntries.value = buildEntrySummaries(typedPreds, typedPayments)
     currentEntryNumber.value = entryNumber
 
     myPredictions.value = typedPreds.filter((p) => p.entry_number === entryNumber)

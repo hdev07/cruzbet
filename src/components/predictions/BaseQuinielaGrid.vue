@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { CheckCircle2, Info, Lock, XCircle } from '@lucide/vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import {
@@ -14,9 +14,8 @@ import {
   isMatchOpenForPredictions,
   teamsPendingReason,
 } from '@/lib/matchRules'
-import { teamDisplayName } from '@/lib/teamDisplay'
+import { teamDisplayName, resolveTeamCrest } from '@/lib/teamDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
-import { useMatchStore } from '@/stores/matchStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseQuinielaRoundMatch, PredictedWinner } from '@/types'
 
@@ -30,7 +29,6 @@ const props = defineProps<{
 
 
 const baseStore = useBaseQuinielaStore()
-const matchStore = useMatchStore()
 const formError = ref<string | null>(null)
 const savingMatchId = ref<string | null>(null)
 const showSubmitModal = ref(false)
@@ -51,17 +49,21 @@ function teamSideFlag(
   side: 'home' | 'away',
 ): string | null {
   const team = side === 'home' ? match.home_team : match.away_team
-  return team?.flag_url ?? null
+  return resolveTeamCrest(team)
+}
+
+function teamSideCode(
+  match: NonNullable<BaseQuinielaRoundMatch['match']>,
+  side: 'home' | 'away',
+): string | null {
+  const team = side === 'home' ? match.home_team : match.away_team
+  return team?.code ?? null
 }
 
 function teamSideLabel(match: NonNullable<BaseQuinielaRoundMatch['match']>, side: 'home' | 'away'): string {
   const team = side === 'home' ? match.home_team : match.away_team
   return teamDisplayName(team, side === 'home' ? 'Local' : 'Visitante')
 }
-
-onMounted(async () => {
-  if (!matchStore.matches.length) await matchStore.fetchMatches()
-})
 
 const isComplete = computed(() => {
   const total = sortedMatches.value.length
@@ -204,7 +206,7 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
       </div>
       <button
         type="button"
-        class="shrink-0 rounded-lg bg-mundial-accent px-4 py-2 text-sm font-bold text-white hover:bg-mundial-accent/90 disabled:opacity-50"
+        class="shrink-0 rounded-lg bg-mundial-accent px-4 py-2 text-sm font-bold text-mundial-dark hover:bg-mundial-accent/90 disabled:opacity-50"
         :disabled="baseStore.saving"
         @click="openSubmitModal"
       >
@@ -249,20 +251,20 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
 
           <div class="flex items-center gap-2">
             <TeamFlag
-              v-if="teamSideFlag(row.match, 'home')"
               :src="teamSideFlag(row.match, 'home')"
+              :code="teamSideCode(row.match, 'home')"
               :alt="teamDisplayName(row.match.home_team, 'Local')"
-              img-class="h-4 w-5 shrink-0 rounded object-cover"
+              size="sm"
             />
             <span class="truncate font-medium text-slate-200">
               {{ teamSideLabel(row.match, 'home') }}
             </span>
             <span class="text-slate-500">vs</span>
             <TeamFlag
-              v-if="teamSideFlag(row.match, 'away')"
               :src="teamSideFlag(row.match, 'away')"
+              :code="teamSideCode(row.match, 'away')"
               :alt="teamDisplayName(row.match.away_team, 'Visitante')"
-              img-class="h-4 w-5 shrink-0 rounded object-cover"
+              size="sm"
             />
             <span class="truncate font-medium text-slate-200">
               {{ teamSideLabel(row.match, 'away') }}
@@ -364,20 +366,20 @@ function rowStatusClass(row: BaseQuinielaRoundMatch): string {
               <div v-if="row.match" class="min-w-0">
                 <div class="flex items-center gap-2">
                   <TeamFlag
-                    v-if="teamSideFlag(row.match, 'home')"
                     :src="teamSideFlag(row.match, 'home')"
+                    :code="teamSideCode(row.match, 'home')"
                     :alt="teamDisplayName(row.match.home_team, 'Local')"
-                    img-class="h-4 w-5 shrink-0 rounded object-cover"
+                    size="sm"
                   />
                   <span class="truncate font-medium text-slate-200">
                     {{ teamSideLabel(row.match, 'home') }}
                   </span>
                   <span class="text-slate-500">vs</span>
                   <TeamFlag
-                    v-if="teamSideFlag(row.match, 'away')"
                     :src="teamSideFlag(row.match, 'away')"
+                    :code="teamSideCode(row.match, 'away')"
                     :alt="teamDisplayName(row.match.away_team, 'Visitante')"
-                    img-class="h-4 w-5 shrink-0 rounded object-cover"
+                    size="sm"
                   />
                   <span class="truncate font-medium text-slate-200">
                     {{ teamSideLabel(row.match, 'away') }}

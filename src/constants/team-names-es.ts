@@ -1,2 +1,21 @@
-/** Códigos de equipo → nombre en español. Completar al cargar datos de la liga. */
-export const TEAM_NAMES_ES: Record<string, string> = {}
+/** Códigos de equipo → nombre en español. */
+export const TEAM_NAMES_ES: Record<string, string> = {
+  AME: 'América',
+  ATN: 'Atlante',
+  ATS: 'Atlas',
+  ASL: 'Atlético de San Luis',
+  TIJ: 'Tijuana',
+  CAZ: 'Cruz Azul',
+  JUA: 'FC Juárez',
+  QRO: 'Querétaro',
+  GDL: 'Guadalajara',
+  LEO: 'León',
+  NEC: 'Necaxa',
+  PAC: 'Pachuca',
+  PUE: 'Puebla',
+  MTY: 'Monterrey',
+  SAN: 'Santos Laguna',
+  TIG: 'Tigres',
+  TOL: 'Toluca',
+  PUM: 'Pumas',
+}

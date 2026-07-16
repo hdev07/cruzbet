@@ -1,7 +1,10 @@
 import type { Component } from 'vue'
-import { Grid3x3, User } from '@lucide/vue'
+import { CalendarDays, Grid3x3, Medal, Table2, User } from '@lucide/vue'
 
+export const INICIO_PATH = '/'
 export const JORNADAS_PATH = '/jornadas'
+export const RESULTADOS_PATH = '/resultados'
+export const TABLAS_PATH = '/tablas'
 export const PERFIL_PATH = '/perfil'
 
 export type NavItem = {
@@ -12,7 +15,10 @@ export type NavItem = {
 }
 
 export const MAIN_NAV: NavItem[] = [
+  { to: INICIO_PATH, label: 'Inicio', icon: CalendarDays },
   { to: JORNADAS_PATH, label: 'Quiniela', icon: Grid3x3 },
+  { to: RESULTADOS_PATH, label: 'Resultados', icon: Medal },
+  { to: TABLAS_PATH, label: 'Tablas', icon: Table2 },
   { to: PERFIL_PATH, label: 'Perfil', icon: User, requiresAuth: true },
 ]
 

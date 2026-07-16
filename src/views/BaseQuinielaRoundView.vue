@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { ArrowLeft } from '@lucide/vue'
+import { ArrowLeft, Medal } from '@lucide/vue'
 import BaseQuinielaGrid from '@/components/predictions/BaseQuinielaGrid.vue'
 import {
   BASE_QUINIELA_MATCHES_PER_ROUND,
@@ -83,11 +83,22 @@ watch(roundId, loadRound)
         <p class="mb-3 text-sm text-slate-300">Inicia sesión para marcar tu quiniela</p>
         <RouterLink
           to="/login"
-          class="inline-block rounded-lg bg-mundial-accent px-4 py-2 text-sm font-semibold"
+          class="inline-block rounded-lg bg-mundial-accent px-4 py-2 text-sm font-semibold text-mundial-dark"
         >
           Entrar
         </RouterLink>
       </div>
+
+      <RouterLink
+        to="/resultados"
+        class="mb-6 flex items-center gap-3 rounded-xl border border-mundial-green/30 bg-mundial-green/10 px-4 py-3 transition hover:border-mundial-green/50"
+      >
+        <Medal class="h-5 w-5 shrink-0 text-mundial-green" />
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-mundial-green">Ver resultados de todos</p>
+          <p class="text-xs text-slate-400">Tabla comparativa de picks de la jornada</p>
+        </div>
+      </RouterLink>
 
       <section>
         <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-accent">

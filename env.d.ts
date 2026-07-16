@@ -11,3 +11,15 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+import 'vue-router'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    layout?: 'mobile' | 'blank'
+    title?: string
+    description?: string
+    requiresAuth?: boolean
+    wide?: boolean
+  }
+}

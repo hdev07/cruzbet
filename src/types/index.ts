@@ -2,6 +2,16 @@ export type MatchStatus = 'scheduled' | 'live' | 'finished'
 
 export type LiveStatusDetail = 'delayed' | 'postponed' | 'suspended' | 'canceled'
 
+export interface Competition {
+  id: string
+  slug: string
+  name: string
+  season: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 export type BracketSlot =
   | { type: 'group_pos'; group: string; pos: number }
   | { type: 'best_third'; groups: string[] }
@@ -45,6 +55,7 @@ export interface Player {
 
 export interface Match {
   id: string
+  competition_id: string
   home_team_id: string | null
   away_team_id: string | null
   home_score: number
@@ -94,6 +105,7 @@ export type PredictedWinner = 'home' | 'draw' | 'away'
 
 export interface BaseQuinielaRound {
   id: string
+  competition_id: string
   round_number: number
   title: string
   match_count: number

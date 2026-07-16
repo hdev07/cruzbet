@@ -3,7 +3,7 @@ export type Theme = 'light' | 'dark'
 export const THEME_STORAGE_KEY = 'cruzbet-theme'
 
 export const THEME_COLORS = {
-  dark: '#1a1a2e',
+  dark: '#071426',
   light: '#f8fafc',
 } as const
 
