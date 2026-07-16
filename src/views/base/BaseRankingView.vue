@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight, Crown, Target, Users } from '@lucide/vue'
+import { ChevronRight, Crown, PiggyBank, Target, Users } from '@lucide/vue'
 import BaseRoundRankingPanel from '@/components/ranking/BaseRoundRankingPanel.vue'
 import {
-  BASE_ENTRY_FEE_MXN,
   BASE_QUINIELA_LOGIC,
   BASE_QUINIELA_MATCHES_PER_ROUND,
   BASE_QUINIELA_POINTS_PER_HIT,
+  computeRoundPool,
 } from '@/constants/base-quiniela-rules'
+import { formatMxn } from '@/lib/formatMoney'
+import { getOfficialLeaderboardEntries, winnerUserIdsFromEntries } from '@/lib/baseQuinielaWinners'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseRoundLeaderboardEntry } from '@/types'
@@ -20,6 +22,7 @@ const roundLoading = ref(false)
 const selectedRoundId = ref<string | null>(null)
 const participantCount = ref(0)
 const myLeaderboardEntry = ref<BaseRoundLeaderboardEntry | null>(null)
+const previousWinnerUserIds = ref<string[]>([])
 let loadSeq = 0
 
 const activeRoundId = computed(() => selectedRoundId.value ?? baseStore.activeRound?.id ?? null)
@@ -29,6 +32,14 @@ const selectedRound = computed(
     baseStore.rounds.find((r) => r.id === activeRoundId.value) ??
     (baseStore.currentRound?.id === activeRoundId.value ? baseStore.currentRound : null),
 )
+
+const previousRound = computed(() => {
+  const current = selectedRound.value
+  if (!current) return null
+  return (
+    baseStore.rounds.find((r) => r.round_number === current.round_number - 1) ?? null
+  )
+})
 
 const isRoundActive = computed(() => activeRoundId.value === baseStore.activeRound?.id)
 
@@ -47,7 +58,25 @@ const isRoundFinished = computed(
   () => matchStats.value.total > 0 && matchStats.value.finished === matchStats.value.total,
 )
 
-const leader = computed(() => baseStore.leaderboard[0] ?? null)
+const leader = computed(() => {
+  const official = getOfficialLeaderboardEntries(baseStore.leaderboard)
+  return official[0] ?? null
+})
+
+const tiedLeaders = computed(() => {
+  if (!leader.value) return []
+  const official = getOfficialLeaderboardEntries(baseStore.leaderboard)
+  return official.filter(
+    (e) =>
+      e.correct_count === leader.value!.correct_count &&
+      e.total_points === leader.value!.total_points,
+  )
+})
+
+const poolBreakdown = computed(() => {
+  const verified = getOfficialLeaderboardEntries(baseStore.leaderboard).length
+  return computeRoundPool(verified)
+})
 
 const myRank = computed(() => {
   if (!auth.user) return null
@@ -71,10 +100,26 @@ const myDisplayedEntry = computed(
       : null),
 )
 
+async function loadPreviousWinners(seq: number) {
+  const prev = previousRound.value
+  if (!prev) {
+    if (seq === loadSeq) previousWinnerUserIds.value = []
+    return
+  }
+  try {
+    const winners = await baseStore.fetchRoundTiedWinners(prev.id)
+    if (seq !== loadSeq) return
+    previousWinnerUserIds.value = winnerUserIdsFromEntries(winners)
+  } catch {
+    if (seq === loadSeq) previousWinnerUserIds.value = []
+  }
+}
+
 async function loadRoundData(roundId: string) {
   const seq = ++loadSeq
   loadError.value = null
   roundLoading.value = true
+  previousWinnerUserIds.value = []
   try {
     await baseStore.fetchRound(roundId)
     if (seq !== loadSeq) return
@@ -85,6 +130,7 @@ async function loadRoundData(roundId: string) {
         ? baseStore.fetchMyLeaderboardEntry(roundId, auth.user.id)
         : Promise.resolve(null),
       baseStore.fetchRoundLeaderboard(roundId),
+      loadPreviousWinners(seq),
     ] as const)
     if (seq !== loadSeq) return
 
@@ -98,7 +144,7 @@ async function loadRoundData(roundId: string) {
     }
   } catch (err) {
     if (seq !== loadSeq) return
-    loadError.value = err instanceof Error ? err.message : 'No se pudo cargar el ranking'
+    loadError.value = err instanceof Error ? err.message : 'No se pudieron cargar los resultados'
   } finally {
     if (seq === loadSeq) roundLoading.value = false
   }
@@ -116,7 +162,7 @@ onMounted(async () => {
       await loadRoundData(activeRoundId.value)
     }
   } catch (err) {
-    loadError.value = err instanceof Error ? err.message : 'No se pudo cargar el ranking'
+    loadError.value = err instanceof Error ? err.message : 'No se pudieron cargar los resultados'
   }
 })
 
@@ -129,15 +175,15 @@ watch(activeRoundId, (roundId, prevRoundId) => {
 <template>
   <div>
     <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-mundial-accent">
-      Clasificación
+      Quiniela
     </p>
-    <h1 class="mb-2 text-2xl font-bold text-app-text lg:text-3xl">Ranking</h1>
+    <h1 class="mb-2 text-2xl font-bold text-app-text lg:text-3xl">Resultados</h1>
     <p class="mb-6 text-sm text-slate-400 lg:text-base">
-      Posiciones y pronósticos por jornada
+      Compara los picks L/E/V de todos los jugadores de la jornada
     </p>
 
     <p v-if="baseStore.loading && !baseStore.rounds.length" class="text-slate-400">
-      Cargando ranking...
+      Cargando resultados...
     </p>
 
     <p v-else-if="loadError" class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -182,15 +228,14 @@ watch(activeRoundId, (roundId, prevRoundId) => {
             </span>
           </div>
           <p class="mt-1 text-xs text-slate-500 sm:text-sm">
-            {{ selectedRound.match_count }} partidos · {{ BASE_QUINIELA_POINTS_PER_HIT }} pts por acierto ·
-            ${{ BASE_ENTRY_FEE_MXN }} MXN
+            {{ selectedRound.match_count }} partidos · {{ BASE_QUINIELA_POINTS_PER_HIT }} pts por acierto
           </p>
         </div>
       </div>
 
       <div
         v-if="activeRoundId && !roundLoading"
-        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
       >
         <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
           <p class="flex items-center gap-1.5 text-xs text-slate-400">
@@ -201,6 +246,24 @@ watch(activeRoundId, (roundId, prevRoundId) => {
             {{ participantCount }}
           </p>
           <p class="mt-0.5 text-[0.65rem] text-slate-500">Quinielas completas</p>
+        </div>
+
+        <div class="rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-4 py-3">
+          <p class="flex items-center gap-1.5 text-xs text-slate-400">
+            <PiggyBank class="h-3.5 w-3.5" />
+            En el pozo
+          </p>
+          <p class="mt-1 text-2xl font-bold tabular-nums text-mundial-accent">
+            {{ formatMxn(poolBreakdown.net) }}
+          </p>
+          <p class="mt-0.5 text-[0.65rem] text-slate-500">
+            <template v-if="poolBreakdown.verifiedCount">
+              {{ poolBreakdown.verifiedCount }} pagados · −{{ poolBreakdown.feePercent }}% admin
+            </template>
+            <template v-else>
+              Solo depósitos verificados
+            </template>
+          </p>
         </div>
 
         <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
@@ -227,13 +290,21 @@ watch(activeRoundId, (roundId, prevRoundId) => {
         >
           <p class="flex items-center gap-1.5 text-xs text-slate-400">
             <Crown class="h-3.5 w-3.5" />
-            {{ isRoundFinished ? 'Ganador' : 'Líder' }}
+            {{
+              isRoundFinished
+                ? tiedLeaders.length > 1
+                  ? 'Ganadores'
+                  : 'Ganador'
+                : tiedLeaders.length > 1
+                  ? 'Líderes'
+                  : 'Líder'
+            }}
           </p>
           <p
-            v-if="leader"
+            v-if="tiedLeaders.length"
             class="mt-1 truncate text-sm font-bold text-mundial-accent sm:text-base"
           >
-            {{ leader.username ?? 'Anónimo' }}
+            {{ tiedLeaders.map((e) => e.username ?? 'Anónimo').join(', ') }}
           </p>
           <p v-else class="mt-1 text-sm text-slate-500">Sin datos aún</p>
           <p v-if="leader" class="mt-0.5 text-[0.65rem] text-slate-500">
@@ -261,10 +332,10 @@ watch(activeRoundId, (roundId, prevRoundId) => {
 
       <div
         v-else-if="activeRoundId && roundLoading"
-        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
       >
         <div
-          v-for="n in 4"
+          v-for="n in 5"
           :key="n"
           class="h-[5.5rem] animate-pulse rounded-xl border border-white/10 bg-white/5"
         />
@@ -279,6 +350,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
         :round-id="activeRoundId"
         :round-matches="baseStore.roundMatches"
         :loading="roundLoading"
+        :previous-winner-user-ids="previousWinnerUserIds"
       />
 
       <RouterLink
@@ -287,14 +359,6 @@ watch(activeRoundId, (roundId, prevRoundId) => {
         class="mt-4 inline-flex items-center gap-1 text-sm text-mundial-green hover:underline"
       >
         Ir a la jornada para marcar tus picks
-        <ChevronRight class="h-4 w-4" />
-      </RouterLink>
-
-      <RouterLink
-        to="/resultados"
-        class="mt-6 inline-flex items-center gap-1 text-sm text-mundial-accent hover:underline"
-      >
-        Ver ganadores y podio por jornada
         <ChevronRight class="h-4 w-4" />
       </RouterLink>
     </template>

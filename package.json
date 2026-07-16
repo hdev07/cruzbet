@@ -1,5 +1,5 @@
 {
-  "name": "mundial-stats",
+  "name": "cruzbet",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,13 +9,10 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
+    "test": "vitest run",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
-    "lint:eslint": "eslint . --fix --cache",
-    "flags:download": "node scripts/download-flags.mjs",
-    "seed:generate": "node scripts/generate-group-seed.mjs && node scripts/generate-knockout-seed.mjs",
-    "seed:annex-c": "node scripts/generate-annex-c-sql.mjs",
-    "validate:espn": "node scripts/validate-espn-matches.mjs"
+    "lint:eslint": "eslint . --fix --cache"
   },
   "dependencies": {
     "@lucide/vue": "^1.17.0",
@@ -28,7 +25,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.12.2",
-    "@vercel/node": "^5.8.17",
+    "@vercel/node": "^5.8.25",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/eslint-config-typescript": "^14.7.0",
     "@vue/tsconfig": "^0.9.1",
@@ -40,14 +37,13 @@
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.60.0",
     "postcss": "^8.5.15",
+    "supabase": "^2.109.1",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.0",
     "vite": "^8.0.8",
-    "vite-plugin-pwa": "^1.3.0",
     "vite-plugin-vue-devtools": "^8.1.1",
-    "vue-tsc": "^3.2.6",
-    "workbox-precaching": "^7.4.1",
-    "workbox-routing": "^7.4.1"
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.2.6"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

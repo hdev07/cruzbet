@@ -1,37 +1,41 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { Crown } from '@lucide/vue'
 import {
   actualMatchWinner,
   isPredictionCorrect,
-  isProvisionalPredictionCorrect,
-  provisionalMatchWinner,
   winnerCode,
 } from '@/lib/baseQuinielaDisplay'
 import { firstKickoffFromRoundMatches, hasRoundStarted } from '@/lib/baseQuinielaRound'
-import { compareBaseRoundRank, formatEntryLabel } from '@/lib/baseQuinielaStats'
+import { sortLeaderboardEntries } from '@/lib/baseQuinielaWinners'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
-import { useMatchStore } from '@/stores/matchStore'
-import type { BasePrediction, BaseQuinielaRoundMatch, BaseRoundParticipant, Match, PredictedWinner } from '@/types'
+import type { BasePrediction, BaseQuinielaRoundMatch, BaseRoundParticipant } from '@/types'
 
-const props = defineProps<{
-  roundId: string
-  roundMatches: BaseQuinielaRoundMatch[]
-  currentUserId?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    roundId: string
+    roundMatches: BaseQuinielaRoundMatch[]
+    currentUserId?: string
+    previousWinnerUserIds?: string[]
+  }>(),
+  {
+    previousWinnerUserIds: () => [],
+  },
+)
 
 const baseStore = useBaseQuinielaStore()
-const matchStore = useMatchStore()
 const participants = ref<BaseRoundParticipant[]>([])
 const loading = ref(false)
 const error = ref('')
-const flashingMatchIds = ref(new Set<string>())
-const flashTimers = new Map<string, ReturnType<typeof setTimeout>>()
-const matchSnapshots = new Map<
-  string,
-  { home: number; away: number; status: string; eventCount: number }
->()
+
+const previousWinnerSet = computed(() => new Set(props.previousWinnerUserIds))
+
+function isPreviousWinner(userId: string): boolean {
+  return previousWinnerSet.value.has(userId)
+}
 
 const sortedMatches = computed(() =>
   [...props.roundMatches].sort((a, b) => a.position - b.position),
@@ -54,17 +58,8 @@ const predictionMap = computed(() => {
 })
 
 const competitors = computed(() => {
-  const leaderboardKeys = new Set(
-    baseStore.leaderboard.map((e) => `${e.user_id}:${e.entry_number}`),
-  )
-  const rows = participants.value.filter(
-    (p) =>
-      p.complete &&
-      (leaderboardKeys.size === 0 ||
-        leaderboardKeys.has(`${p.user_id}:${p.entry_number}`)),
-  )
-
-  return rows.sort(compareBaseRoundRank)
+  const rows = participants.value.filter((p) => p.complete)
+  return sortLeaderboardEntries(rows)
 })
 
 const myCorrectCount = computed(() => {
@@ -83,13 +78,6 @@ async function loadParticipants() {
   error.value = ''
   try {
     participants.value = await baseStore.fetchRoundParticipants(props.roundId)
-    const eventIds = props.roundMatches
-      .filter(
-        (row) =>
-          row.match?.status === 'finished' || row.match?.status === 'live',
-      )
-      .map((row) => row.match_id)
-    if (eventIds.length) await matchStore.fetchEventsForMatches(eventIds)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudieron cargar los pronósticos'
     participants.value = []
@@ -98,113 +86,11 @@ async function loadParticipants() {
   }
 }
 
-function matchEvents(match: Match) {
-  return matchStore.getEventsForMatch(match.id)
-}
-
-function roundMatchWinner(match: Match | undefined): PredictedWinner | null {
-  if (!match) return null
-  if (match.status === 'finished') {
-    return actualMatchWinner(match, matchEvents(match))
-  }
-  return provisionalMatchWinner(match, matchEvents(match))
-}
-
 watch(
   () => props.roundId,
   () => loadParticipants(),
   { immediate: true },
 )
-
-watch(
-  () => baseStore.leaderboard,
-  (rows) => {
-    if (baseStore.leaderboardRoundId !== props.roundId || !rows.length) return
-    const byKey = new Map(rows.map((r) => [`${r.user_id}:${r.entry_number}`, r]))
-    let changed = false
-    for (const participant of participants.value) {
-      const entry = byKey.get(`${participant.user_id}:${participant.entry_number}`)
-      if (
-        entry &&
-        (entry.correct_count !== participant.correct_count ||
-          entry.total_points !== participant.total_points)
-      ) {
-        participant.correct_count = entry.correct_count
-        participant.total_points = entry.total_points
-        changed = true
-      }
-    }
-    if (changed) participants.value = [...participants.value]
-  },
-  { deep: true },
-)
-
-function syncMatchSnapshots(matches: BaseQuinielaRoundMatch[]) {
-  if (!roundStarted.value) return
-  for (const rm of matches) {
-    if (!rm.match || rm.match.status === 'finished') continue
-    const events = matchEvents(rm.match)
-    const next = {
-      home: rm.match.home_score,
-      away: rm.match.away_score,
-      status: rm.match.status,
-      eventCount: events.length,
-    }
-    const prev = matchSnapshots.get(rm.match_id)
-    if (
-      prev &&
-      (prev.home !== next.home ||
-        prev.away !== next.away ||
-        prev.status !== next.status ||
-        prev.eventCount !== next.eventCount)
-    ) {
-      flashMatchColumn(rm.match_id)
-    }
-    matchSnapshots.set(rm.match_id, next)
-  }
-}
-
-watch(
-  () => props.roundMatches,
-  (matches) => syncMatchSnapshots(matches),
-  { deep: true, immediate: true },
-)
-
-watch(
-  () => matchStore.eventsByMatchId,
-  () => syncMatchSnapshots(props.roundMatches),
-  { deep: true },
-)
-
-onBeforeUnmount(() => {
-  for (const timer of flashTimers.values()) clearTimeout(timer)
-  flashTimers.clear()
-  matchSnapshots.clear()
-})
-
-function flashMatchColumn(matchId: string) {
-  flashingMatchIds.value = new Set([...flashingMatchIds.value, matchId])
-  const prev = flashTimers.get(matchId)
-  if (prev) clearTimeout(prev)
-  flashTimers.set(
-    matchId,
-    setTimeout(() => {
-      const next = new Set(flashingMatchIds.value)
-      next.delete(matchId)
-      flashingMatchIds.value = next
-      flashTimers.delete(matchId)
-    }, 2500),
-  )
-}
-
-function isMatchColumnFlashing(match: BaseQuinielaRoundMatch): boolean {
-  return (
-    flashingMatchIds.value.has(match.match_id) &&
-    roundStarted.value &&
-    !!match.match &&
-    match.match.status !== 'finished'
-  )
-}
 
 function participantKey(userId: string, entryNumber: number): string {
   return `${userId}:${entryNumber}`
@@ -232,24 +118,11 @@ function cellClass(userId: string, entryNumber: number, match: BaseQuinielaRound
     return `${base} theme-cell-idle text-slate-500`
   }
 
-  if (!roundStarted.value || !match.match) {
+  if (!roundStarted.value || !match.match || match.match.status !== 'finished') {
     return `${base} theme-cell-pending text-slate-300`
   }
 
-  const events = matchEvents(match.match)
-
-  if (match.match.status === 'live') {
-    if (isProvisionalPredictionCorrect(pick.predicted_winner, match.match, events)) {
-      return `${base} bg-amber-500/30 text-amber-100 ring-1 ring-amber-400/70`
-    }
-    return `${base} theme-cell-pending text-slate-300`
-  }
-
-  if (match.match.status !== 'finished') {
-    return `${base} theme-cell-pending text-slate-300`
-  }
-
-  const correct = isPredictionCorrect(pick.predicted_winner, match.match, events)
+  const correct = isPredictionCorrect(pick.predicted_winner, match.match)
   if (correct === true) return `${base} bg-mundial-green/25 text-mundial-green`
   if (correct === false) return `${base} bg-red-500/15 text-red-400`
   return `${base} theme-cell-pending text-slate-300`
@@ -282,7 +155,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
     roundStarted.value && match.match.status !== 'scheduled'
       ? ` (${match.match.home_score}-${match.match.away_score})`
       : ''
-  const result = roundStarted.value ? roundMatchWinner(match.match) : null
+  const result = roundStarted.value ? actualMatchWinner(match.match) : null
   const resultText = result ? ` → ${winnerCode(result)}` : ''
   return `#${match.position}: ${home} vs ${away}${score}${resultText}`
 }
@@ -306,7 +179,8 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
     <template v-else>
       <p class="mb-3 text-xs text-slate-500">
         <template v-if="roundStarted">
-          Compara tus picks L/E/V con los demás. Verde = acierto, rojo = fallo, amarillo = va acertando en vivo.
+          Compara tus picks L/E/V con los demás. Verde = acierto, rojo = fallo.
+          El chip indica si el depósito ya fue verificado (el pozo solo cuenta pagados).
           <span v-if="currentUserId"> Tu fila está resaltada.</span>
         </template>
         <template v-else>
@@ -331,10 +205,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
               <th
                 v-for="match in sortedMatches"
                 :key="`head-${match.match_id}`"
-                class="min-w-[2.75rem] border border-white/10 px-1 py-2 text-center transition-colors duration-300"
-                :class="{
-                  'bg-amber-500/20 ring-1 ring-inset ring-amber-400/50': isMatchColumnFlashing(match),
-                }"
+                class="min-w-[2.75rem] border border-white/10 px-1 py-2 text-center"
                 :title="matchTooltip(match)"
               >
                 <span class="block font-bold tabular-nums text-slate-300">{{ match.position }}</span>
@@ -343,20 +214,20 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   class="mx-auto mt-1 flex items-center justify-center gap-0.5"
                 >
                   <TeamFlag
-                    v-if="match.match.home_team?.flag_url"
-                    :src="match.match.home_team.flag_url"
+                    :src="match.match.home_team?.flag_url"
+                    :code="match.match.home_team?.code"
                     :alt="teamDisplayName(match.match.home_team, 'Local')"
-                    img-class="h-3 w-4 shrink-0 rounded-sm object-cover"
+                    size="sm"
+                    img-class="h-3.5 w-3.5 shrink-0 rounded-sm object-contain"
                   />
-                  <span v-else class="h-3 w-4 shrink-0 rounded-sm bg-white/10" />
                   <span class="text-[0.5rem] text-slate-600">·</span>
                   <TeamFlag
-                    v-if="match.match.away_team?.flag_url"
-                    :src="match.match.away_team.flag_url"
+                    :src="match.match.away_team?.flag_url"
+                    :code="match.match.away_team?.code"
                     :alt="teamDisplayName(match.match.away_team, 'Visitante')"
-                    img-class="h-3 w-4 shrink-0 rounded-sm object-cover"
+                    size="sm"
+                    img-class="h-3.5 w-3.5 shrink-0 rounded-sm object-contain"
                   />
-                  <span v-else class="h-3 w-4 shrink-0 rounded-sm bg-white/10" />
                 </div>
                 <span
                   v-if="roundStarted && match.match && match.match.status !== 'scheduled'"
@@ -365,15 +236,10 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   {{ match.match.home_score }}-{{ match.match.away_score }}
                 </span>
                 <span
-                  v-if="roundStarted && match.match && roundMatchWinner(match.match)"
-                  class="mt-0.5 block text-[0.65rem] font-bold"
-                  :class="
-                    match.match.status === 'finished'
-                      ? 'text-mundial-green'
-                      : 'text-amber-300'
-                  "
+                  v-if="roundStarted && match.match && actualMatchWinner(match.match)"
+                  class="mt-0.5 block text-[0.65rem] font-bold text-mundial-green"
                 >
-                  {{ winnerCode(roundMatchWinner(match.match)!) }}
+                  {{ winnerCode(actualMatchWinner(match.match)!) }}
                 </span>
               </th>
               <th class="border border-white/10 px-2 py-2 text-center">Aciertos</th>
@@ -406,19 +272,28 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                         player.user_id === currentUserId &&
                         player.entry_number === baseStore.currentEntryNumber,
                     }"
+                    :title="isPreviousWinner(player.user_id) ? 'Ganador de la jornada previa' : undefined"
                   >
-                    <img
-                      v-if="player.profiles?.avatar"
-                      :src="player.profiles.avatar"
-                      :alt="player.profiles.username ?? 'Jugador'"
-                      class="h-7 w-7 shrink-0 rounded-full border border-white/20"
-                    />
-                    <span
-                      v-else
-                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full theme-cell-pending text-xs font-semibold"
-                    >
-                      {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
-                    </span>
+                    <div class="relative shrink-0">
+                      <img
+                        v-if="player.profiles?.avatar"
+                        :src="player.profiles.avatar"
+                        :alt="player.profiles.username ?? 'Jugador'"
+                        class="h-7 w-7 shrink-0 rounded-full border border-white/20"
+                      />
+                      <span
+                        v-else
+                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full theme-cell-pending text-xs font-semibold"
+                      >
+                        {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
+                      </span>
+                      <Crown
+                        v-if="isPreviousWinner(player.user_id)"
+                        class="absolute -right-1 -top-1 h-3.5 w-3.5 text-amber-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]"
+                        fill="currentColor"
+                        aria-label="Ganador de la jornada previa"
+                      />
+                    </div>
                   </div>
                   <span
                     class="order-2 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
@@ -429,8 +304,8 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   <div class="order-3 min-w-[5.5rem] shrink-0 md:min-w-0">
                     <p class="whitespace-nowrap font-medium leading-tight text-slate-200">
                       {{ player.profiles?.username ?? 'Anónimo' }}
-                      <span v-if="player.entry_number > 1 || player.entry_name" class="text-slate-500">
-                        {{ formatEntryLabel(player.entry_number, player.entry_name) }}
+                      <span v-if="player.entry_number > 1" class="text-slate-500">
+                        Q{{ player.entry_number }}
                       </span>
                       <span
                         v-if="
@@ -442,6 +317,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                         (tú)
                       </span>
                     </p>
+                    <PaymentStatusChip class="mt-0.5" :verified="player.verified" compact />
                     <p
                       v-if="rivalryLabel(player.user_id, player.entry_number, player.correct_count)"
                       class="mt-0.5 whitespace-nowrap text-[0.65rem] font-medium leading-tight text-amber-400/90"
@@ -503,10 +379,6 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
         <span class="inline-flex items-center gap-1">
           <span class="h-3 w-3 rounded theme-cell-pending" />
           Pendiente
-        </span>
-        <span class="inline-flex items-center gap-1">
-          <span class="h-3 w-3 rounded bg-amber-500/30 ring-1 ring-amber-400/70" />
-          Va acertando (en vivo)
         </span>
       </div>
     </template>

@@ -1,33 +1,19 @@
 import { createClient } from '@supabase/supabase-js'
-import { fetchGoogleSportsSnapshot } from './google-sports.js'
 import {
   fetchEspnScoreboard,
-  fetchLiveSnapshotForMatch,
+  fetchEspnSnapshotForMatch,
   getEspnDateCandidates,
   mergeEspnEvents,
 } from './espn-provider.js'
-import type { DbMatchRow, LiveMatchSnapshot } from './types.js'
+import type { DbMatchRow, SyncResult } from './types.js'
 
-function getSupabaseAdmin() {
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) {
-    throw new Error('Faltan SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY')
-  }
-  return createClient(url, key, { auth: { persistSession: false } })
-}
+const ACTIVE_COMPETITION_SLUG =
+  process.env.ACTIVE_COMPETITION_SLUG ?? 'liga-mx-apertura-2026'
 
 const MATCH_SELECT = `
   id,
-  home_team_id,
-  away_team_id,
   status,
-  phase,
   match_date,
-  home_score,
-  away_score,
-  penalty_home_score,
-  penalty_away_score,
   current_minute,
   live_clock_display,
   auto_sync_enabled,
@@ -36,163 +22,217 @@ const MATCH_SELECT = `
   away_team:teams!away_team_id(code, name)
 `
 
-function mergeMatchRows(...lists: DbMatchRow[][]): DbMatchRow[] {
-  const byId = new Map<string, DbMatchRow>()
-  for (const row of lists.flat()) {
-    byId.set(row.id, row)
+function getSupabaseAdmin() {
+  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !serviceRoleKey) {
+    throw new Error('Faltan SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY')
   }
-  return [...byId.values()]
+
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  })
 }
 
-const KNOCKOUT_PHASES = ['r32', 'r16', 'qf', 'sf'] as const
+function normalizeMatchRow(row: unknown): DbMatchRow {
+  const candidate = row as DbMatchRow & {
+    home_team: DbMatchRow['home_team'] | DbMatchRow['home_team'][]
+    away_team: DbMatchRow['away_team'] | DbMatchRow['away_team'][]
+  }
 
-async function resolveSnapshot(
-  match: DbMatchRow,
-  cachedEvents?: Awaited<ReturnType<typeof fetchEspnScoreboard>>,
-): Promise<LiveMatchSnapshot | null> {
-  const espn = await fetchLiveSnapshotForMatch(match, cachedEvents)
-  if (espn) return espn
-
-  return fetchGoogleSportsSnapshot(match.home_team.name, match.away_team.name)
+  return {
+    ...candidate,
+    home_team: Array.isArray(candidate.home_team)
+      ? candidate.home_team[0]!
+      : candidate.home_team,
+    away_team: Array.isArray(candidate.away_team)
+      ? candidate.away_team[0]!
+      : candidate.away_team,
+  }
 }
 
-export async function syncAllLiveMatches(): Promise<{
-  processed: number
-  updated: number
-  errors: string[]
-}> {
-  const supabase = getSupabaseAdmin()
-  const now = Date.now()
-  const windowStart = new Date(now - 4 * 60 * 60 * 1000).toISOString()
-  const windowEnd = new Date(now + 30 * 60 * 1000).toISOString()
-  const penaltyBackfillSince = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString()
+async function mapWithConcurrency<T>(
+  values: T[],
+  concurrency: number,
+  worker: (value: T) => Promise<void>,
+): Promise<void> {
+  let nextIndex = 0
 
-  const [liveRes, penaltyRes] = await Promise.all([
-    supabase
-      .from('matches')
-      .select(MATCH_SELECT)
-      .eq('auto_sync_enabled', true)
-      .neq('status', 'finished')
-      .gte('match_date', windowStart)
-      .lte('match_date', windowEnd),
-    supabase
-      .from('matches')
-      .select(MATCH_SELECT)
-      .eq('auto_sync_enabled', true)
-      .eq('status', 'finished')
-      .in('phase', [...KNOCKOUT_PHASES])
-      .is('penalty_home_score', null)
-      .gte('match_date', penaltyBackfillSince),
-  ])
+  async function runWorker() {
+    while (nextIndex < values.length) {
+      const index = nextIndex
+      nextIndex += 1
+      await worker(values[index]!)
+    }
+  }
 
-  if (liveRes.error) throw new Error(liveRes.error.message)
-  if (penaltyRes.error) throw new Error(penaltyRes.error.message)
-
-  const rows = mergeMatchRows(
-    (liveRes.data ?? []) as DbMatchRow[],
-    (penaltyRes.data ?? []) as DbMatchRow[],
+  await Promise.all(
+    Array.from(
+      { length: Math.min(concurrency, values.length) },
+      runWorker,
+    ),
   )
-  const errors: string[] = []
-  let updated = 0
+}
+
+export async function syncEspnMatches(options?: {
+  matchId?: string
+}): Promise<SyncResult> {
+  const supabase = getSupabaseAdmin()
+
+  const { data: competition, error: competitionError } = await supabase
+    .from('competitions')
+    .select('id')
+    .eq('slug', ACTIVE_COMPETITION_SLUG)
+    .eq('is_active', true)
+    .single()
+
+  if (competitionError || !competition) {
+    throw new Error(
+      competitionError?.message ??
+        `No existe la competencia activa ${ACTIVE_COMPETITION_SLUG}`,
+    )
+  }
+
+  let matchQuery = supabase
+    .from('matches')
+    .select(MATCH_SELECT)
+    .eq('competition_id', competition.id)
+    .eq('auto_sync_enabled', true)
+
+  if (options?.matchId) {
+    matchQuery = matchQuery.eq('id', options.matchId)
+  } else {
+    const now = Date.now()
+    matchQuery = matchQuery
+      .gte('match_date', new Date(now - 12 * 60 * 60 * 1000).toISOString())
+      .lte('match_date', new Date(now + 2 * 60 * 60 * 1000).toISOString())
+  }
+
+  const { data, error } = await matchQuery.order('match_date')
+  if (error) throw new Error(error.message)
+
+  const matches = (data ?? []).map(normalizeMatchRow)
+  const result: SyncResult = {
+    processed: matches.length,
+    matched: 0,
+    updated: 0,
+    skipped: 0,
+    errors: [],
+  }
 
   const scoreboardDates = new Set<string>()
-  for (const row of rows) {
-    if (!row.match_date) continue
-    for (const dateYmd of getEspnDateCandidates(row.match_date)) {
-      scoreboardDates.add(dateYmd)
+  for (const match of matches) {
+    if (match.external_event_id || !match.match_date) continue
+    for (const date of getEspnDateCandidates(match.match_date)) {
+      scoreboardDates.add(date)
     }
   }
 
-  const scoreboardCache = new Map<string, Awaited<ReturnType<typeof fetchEspnScoreboard>>>()
+  const scoreboardLists = await Promise.all(
+    [...scoreboardDates].map(async (date) => {
+      try {
+        return await fetchEspnScoreboard(date)
+      } catch (error) {
+        result.errors.push(
+          `${date}: ${error instanceof Error ? error.message : 'ESPN error'}`,
+        )
+        return []
+      }
+    }),
+  )
+  const scoreboard = mergeEspnEvents(...scoreboardLists)
 
-  for (const dateYmd of scoreboardDates) {
+  await mapWithConcurrency(matches, 3, async (match) => {
     try {
-      scoreboardCache.set(dateYmd, await fetchEspnScoreboard(dateYmd))
-    } catch (err) {
-      errors.push(`${dateYmd}: ${err instanceof Error ? err.message : 'ESPN error'}`)
-    }
-  }
+      const snapshot = await fetchEspnSnapshotForMatch(match, scoreboard)
+      if (!snapshot) {
+        result.skipped += 1
+        const kickoff = match.match_date ? Date.parse(match.match_date) : NaN
+        if (
+          match.status === 'live' ||
+          (Number.isFinite(kickoff) &&
+            kickoff <= Date.now() + 30 * 60 * 1000)
+        ) {
+          result.errors.push(`${match.id}: espn_event_not_found`)
+        }
+        return
+      }
 
-  for (const match of rows) {
-    try {
-      const cached = match.match_date
-        ? mergeEspnEvents(
-            ...getEspnDateCandidates(match.match_date).map(
-              (dateYmd) => scoreboardCache.get(dateYmd) ?? [],
-            ),
-          )
-        : undefined
-      const snapshot = await resolveSnapshot(match, cached)
-
-      if (!snapshot) continue
-
-      const { data: result, error: rpcError } = await supabase.rpc('apply_live_sync', {
-        p_match_id: match.id,
-        p_status: snapshot.status,
-        p_current_minute: snapshot.current_minute,
-        p_home_score: snapshot.home_score,
-        p_away_score: snapshot.away_score,
-        p_goals: snapshot.goals,
-        p_cards: snapshot.cards ?? [],
-        p_external_event_id: snapshot.external_event_id,
-        p_live_clock_display: snapshot.live_clock_display,
-        p_live_status_detail: snapshot.live_status_detail,
-        p_penalty_home_score: snapshot.penalty_home_score ?? null,
-        p_penalty_away_score: snapshot.penalty_away_score ?? null,
-      })
+      result.matched += 1
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        'apply_espn_snapshot',
+        {
+          p_match_id: match.id,
+          p_snapshot: snapshot,
+        },
+      )
 
       if (rpcError) {
-        errors.push(`${match.id}: ${rpcError.message}`)
-        continue
+        result.errors.push(`${match.id}: ${rpcError.message}`)
+        return
       }
 
-      if (result && typeof result === 'object' && (result as { ok?: boolean }).ok) {
-        updated += 1
+      const applied = rpcResult as {
+        ok?: boolean
+        skipped?: string
+        error?: string
+      } | null
+
+      if (!applied?.ok) {
+        result.errors.push(
+          `${match.id}: ${applied?.error ?? 'snapshot_not_applied'}`,
+        )
+        return
       }
-    } catch (err) {
-      errors.push(`${match.id}: ${err instanceof Error ? err.message : 'sync error'}`)
+
+      if (applied.skipped) {
+        result.skipped += 1
+      } else {
+        result.updated += 1
+      }
+    } catch (error) {
+      result.errors.push(
+        `${match.id}: ${error instanceof Error ? error.message : 'sync_error'}`,
+      )
     }
-  }
+  })
 
-  return { processed: rows.length, updated, errors }
+  return result
 }
 
-function isStaticSyncToken(token: string): boolean {
-  const liveToken = process.env.LIVE_SYNC_TOKEN
-  if (liveToken && token === liveToken) return true
-
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && token === cronSecret) return true
-
-  return false
+function staticTokenMatches(token: string): boolean {
+  return [process.env.LIVE_SYNC_TOKEN, process.env.CRON_SECRET]
+    .filter((value): value is string => Boolean(value))
+    .some((value) => value === token)
 }
 
-async function isAdminAccessToken(token: string): Promise<boolean> {
+async function tokenBelongsToAdmin(token: string): Promise<boolean> {
   if (!token.includes('.')) return false
 
-  try {
-    const supabase = getSupabaseAdmin()
-    const { data, error } = await supabase.auth.getUser(token)
-    if (error || !data.user) return false
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data.user) return false
 
-    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase()
-    const userEmail = data.user.email?.toLowerCase()
-
-    return (
-      data.user.app_metadata?.role === 'admin' ||
-      (!!adminEmail && userEmail === adminEmail)
+  const expectedAdminEmail = process.env.ADMIN_EMAIL?.toLowerCase()
+  return (
+    data.user.app_metadata?.role === 'admin' ||
+    Boolean(
+      expectedAdminEmail &&
+        data.user.email?.toLowerCase() === expectedAdminEmail,
     )
-  } catch {
-    return false
-  }
+  )
 }
 
 export async function isAuthorizedSyncRequest(
-  authHeader: string | undefined,
+  authorization: string | undefined,
 ): Promise<boolean> {
-  if (!authHeader?.startsWith('Bearer ')) return false
-  const token = authHeader.slice(7)
-
-  if (isStaticSyncToken(token)) return true
-  return isAdminAccessToken(token)
+  if (!authorization?.startsWith('Bearer ')) return false
+  const token = authorization.slice('Bearer '.length).trim()
+  if (!token) return false
+  return staticTokenMatches(token) || tokenBelongsToAdmin(token)
 }

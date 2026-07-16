@@ -1,11 +1,12 @@
 {
+  "functions": {
+    "api/sync-live.ts": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     {
-      "source": "/privacidad",
-      "destination": "/privacidad/index.html"
-    },
-    {
-      "source": "/((?!api/|assets/|privacidad).*)",
+      "source": "/((?!api/|assets/).*)",
       "destination": "/index.html"
     }
   ]

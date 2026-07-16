@@ -1,25 +1,37 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { isAuthorizedSyncRequest, syncAllLiveMatches } from './lib/sync-engine.js'
+import {
+  isAuthorizedSyncRequest,
+  syncEspnMatches,
+} from './lib/sync-engine.js'
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+export default async function handler(
+  request: VercelRequest,
+  response: VercelResponse,
+) {
+  response.setHeader('Cache-Control', 'no-store')
+
+  if (request.method !== 'GET' && request.method !== 'POST') {
+    return response.status(405).json({ ok: false, error: 'method_not_allowed' })
   }
 
-  const authHeader = req.headers.authorization
-  if (!(await isAuthorizedSyncRequest(authHeader))) {
-    return res.status(401).json({ error: 'Unauthorized' })
+  if (!(await isAuthorizedSyncRequest(request.headers.authorization))) {
+    return response.status(401).json({ ok: false, error: 'unauthorized' })
   }
+
+  const rawMatchId = request.query.matchId
+  const matchId = Array.isArray(rawMatchId) ? rawMatchId[0] : rawMatchId
 
   try {
-    const result = await syncAllLiveMatches()
-    return res.status(200).json({
-      ok: true,
+    const result = await syncEspnMatches({ matchId })
+    return response.status(result.errors.length ? 207 : 200).json({
+      ok: result.errors.length === 0,
       ...result,
-      at: new Date().toISOString(),
+      synced_at: new Date().toISOString(),
     })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Sync failed'
-    return res.status(500).json({ ok: false, error: message })
+  } catch (error) {
+    return response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'sync_failed',
+    })
   }
 }

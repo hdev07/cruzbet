@@ -18,21 +18,6 @@ const router = createRouter({
       meta: { layout: 'mobile', title: 'Inicio' },
     },
     {
-      path: '/mundial',
-      component: () => import('@/views/MundialView.vue'),
-      meta: { layout: 'mobile', title: 'Mundial' },
-    },
-    {
-      path: '/grupos',
-      component: () => import('@/views/partido/PartidoGruposView.vue'),
-      meta: { layout: 'mobile', title: 'Grupos' },
-    },
-    {
-      path: '/eliminatoria',
-      component: () => import('@/views/partido/PartidoEliminatoriaView.vue'),
-      meta: { layout: 'mobile', title: 'Eliminatoria' },
-    },
-    {
       path: '/jornadas',
       component: () => import('@/views/BaseQuinielaListView.vue'),
       meta: { layout: 'mobile', title: 'Quiniela' },
@@ -48,64 +33,40 @@ const router = createRouter({
       meta: { layout: 'mobile', title: 'Jornada' },
     },
     {
-      path: '/ranking',
-      component: () => import('@/views/base/BaseRankingView.vue'),
-      meta: { layout: 'mobile', title: 'Ranking' },
-    },
-    {
-      path: '/reglas',
-      component: () => import('@/views/base/BaseRulesView.vue'),
-      meta: { layout: 'mobile', title: 'Reglas' },
-    },
-    {
-      path: '/historial',
-      component: () => import('@/views/base/BaseHistorialView.vue'),
-      meta: { layout: 'mobile', title: 'Historial', requiresAuth: true },
-    },
-    {
       path: '/resultados',
-      component: () => import('@/views/base/BaseRoundResultsView.vue'),
-      meta: { layout: 'mobile', title: 'Resultados' },
+      component: () => import('@/views/base/BaseRankingView.vue'),
+      meta: { layout: 'mobile', title: 'Resultados', wide: true },
     },
-    // Redirecciones de URLs antiguas
-    { path: '/quiniela-base', redirect: '/jornadas' },
-    { path: '/quiniela-base/jornadas', redirect: '/jornadas/todas' },
-    { path: '/quiniela-base/ranking', redirect: '/ranking' },
-    { path: '/quiniela-base/reglas', redirect: '/reglas' },
-    { path: '/quiniela-base/historial', redirect: '/historial' },
-    { path: '/quiniela-base/resultados', redirect: '/resultados' },
-    { path: '/quiniela-base/:id', redirect: (to) => `/jornadas/${to.params.id}` },
-    { path: '/quiniela-partido', redirect: '/jornadas' },
-    { path: '/quiniela-partido/grupos', redirect: '/grupos' },
-    { path: '/quiniela-partido/ranking', redirect: '/ranking' },
-    { path: '/quiniela-partido/reglas', redirect: '/reglas' },
-    { path: '/quiniela-partido/historial', redirect: '/historial' },
-    { path: '/match/:id', redirect: '/' },
-    { path: '/partido/:id', redirect: '/' },
+    {
+      path: '/ranking',
+      redirect: '/resultados',
+    },
+    {
+      path: '/tablas',
+      component: () => import('@/views/TablasView.vue'),
+      meta: { layout: 'mobile', title: 'Tablas', wide: true },
+    },
     {
       path: '/perfil',
       component: () => import('@/views/ProfileView.vue'),
       meta: { layout: 'mobile', requiresAuth: true, title: 'Mi perfil' },
     },
     {
+      path: '/admin',
+      component: () => import('@/views/AdminPanel.vue'),
+      meta: {
+        layout: 'mobile',
+        requiresAuth: true,
+        requiresAdmin: true,
+        title: 'Admin',
+        hideBottomNav: true,
+        wide: true,
+      },
+    },
+    {
       path: '/login',
       component: () => import('@/views/LoginView.vue'),
       meta: { layout: 'blank', title: 'Entrar' },
-    },
-    {
-      path: '/privacidad',
-      component: () => import('@/views/PrivacyView.vue'),
-      meta: { layout: 'mobile', title: 'Privacidad' },
-    },
-    {
-      path: '/terminos',
-      component: () => import('@/views/TermsView.vue'),
-      meta: { layout: 'mobile', title: 'Términos' },
-    },
-    {
-      path: '/admin',
-      component: () => import('@/views/AdminPanel.vue'),
-      meta: { layout: 'mobile', requiresAdmin: true, title: 'Admin', hideBottomNav: true },
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
@@ -116,7 +77,7 @@ router.beforeEach(async (to: RouteLocationNormalized) => {
   if (!auth.authReady) await auth.init()
   if (to.path === '/login' && auth.isLoggedIn) return '/'
   if (to.meta.requiresAuth && !auth.isLoggedIn) return '/login'
-  if (to.meta.requiresAdmin && !auth.isAdmin) return '/login'
+  if (to.meta.requiresAdmin && !auth.isAdmin) return '/'
 })
 
 router.onError((error) => {

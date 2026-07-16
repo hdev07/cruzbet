@@ -9,7 +9,8 @@ import {
   Search,
 } from '@lucide/vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
-import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
+import { BASE_ENTRY_FEE_MXN, computeRoundPool } from '@/constants/base-quiniela-rules'
+import { formatMxn } from '@/lib/formatMoney'
 import { winnerCode } from '@/lib/baseQuinielaDisplay'
 import { formatEntryLabel } from '@/lib/baseQuinielaStats'
 import { teamDisplayName } from '@/lib/teamDisplay'
@@ -71,11 +72,12 @@ watch(
 const stats = computed(() => {
   const total = participants.value.length
   const verified = participants.value.filter((p) => p.verified).length
+  const pool = computeRoundPool(verified)
   return {
     total,
     verified,
     pending: total - verified,
-    pool: verified * BASE_ENTRY_FEE_MXN,
+    pool,
   }
 })
 
@@ -216,11 +218,14 @@ async function confirmResetQuiniela() {
         <span class="text-slate-200">{{ stats.total }}</span> participantes ·
         <span class="text-mundial-green">{{ stats.verified }}</span> verificados ·
         <span class="text-amber-300">{{ stats.pending }}</span> pendientes ·
-        <span class="text-mundial-accent">${{ stats.pool }} MXN</span> bolsa
+        <span class="text-mundial-accent">{{ formatMxn(stats.pool.net) }}</span> en el pozo
+        <span class="text-slate-500">
+          ({{ stats.pool.feePercent }}% comisión · recaudado {{ formatMxn(stats.pool.gross) }})
+        </span>
       </p>
 
       <p class="text-xs text-slate-500">
-        Sin depósito verificado no aparecen en el ranking de la jornada.
+        Entrada ${{ BASE_ENTRY_FEE_MXN }} MXN. El pozo se calcula solo con depósitos verificados.
       </p>
 
       <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">

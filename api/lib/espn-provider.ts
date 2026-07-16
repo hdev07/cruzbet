@@ -1,457 +1,444 @@
 import {
-  extractClockFromEspnStatus,
-  mergeLiveClock,
+  currentMinuteFromClock,
+  formatClockDisplay,
   parseClockDisplay,
 } from './clock.js'
-import type { DbMatchRow, LiveMatchSnapshot, ParsedCard, ParsedGoal, ParsedGoalType } from './types.js'
+import type {
+  DbMatchRow,
+  EspnMatchSnapshot,
+  MatchStatus,
+  SyncedMatchEvent,
+  TeamSide,
+} from './types.js'
 
 const ESPN_SCOREBOARD =
-  'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
+  'https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard'
 const ESPN_SUMMARY =
-  'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
+  'https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/summary'
 
-const ESPN_FETCH_TIMEOUT_MS = 12_000
-const ESPN_FETCH_RETRIES = 2
+const FETCH_TIMEOUT_MS = 12_000
+const FETCH_RETRIES = 2
+
+interface EspnTeam {
+  id: string
+  abbreviation?: string
+  displayName?: string
+  shortDisplayName?: string
+  name?: string
+  location?: string
+}
 
 interface EspnCompetitor {
   homeAway: 'home' | 'away'
-  score: string
-  shootoutScore?: number
-  winner?: boolean
-  team: { abbreviation: string; id: string }
+  score?: unknown
+  team: EspnTeam
+}
+
+interface EspnStatus {
+  type: {
+    state?: string
+    completed?: boolean
+    name?: string
+    description?: string
+    detail?: string
+    shortDetail?: string
+  }
+  displayClock?: string
 }
 
 interface EspnCompetition {
-  id: string
-  status: {
-    type: {
-      state: string
-      completed: boolean
-      name?: string
-      description?: string
-      detail?: string
-      shortDetail?: string
-    }
-    displayClock?: string
-    period?: number
-  }
+  date?: string
+  status: EspnStatus
   competitors: EspnCompetitor[]
 }
 
-interface EspnEvent {
+export interface EspnEvent {
   id: string
   date: string
   competitions: EspnCompetition[]
 }
 
-interface EspnKeyEvent {
+interface EspnPlay {
   id: string
-  type: { text?: string; type?: string }
+  type?: { text?: string; type?: string }
   text?: string
   shortText?: string
   scoringPlay?: boolean
-  clock?: { displayValue?: string }
-  team?: { id: string }
-  participants?: Array<{ athlete?: { displayName?: string } }>
+  shootout?: boolean
+  period?: { number?: number }
+  clock?: { value?: number; displayValue?: string }
+  team?: { id?: string; displayName?: string }
+  participants?: Array<{
+    athlete?: { id?: string; displayName?: string }
+  }>
+  wallclock?: string
 }
 
 interface EspnSummary {
   header?: { competitions?: EspnCompetition[] }
-  keyEvents?: EspnKeyEvent[]
+  keyEvents?: EspnPlay[]
+  commentary?: Array<{ play?: EspnPlay }>
 }
 
-const ESPN_CODE_ALIASES: Record<string, string> = {
-  KOR: 'KOR',
-  KSA: 'KSA',
-  USA: 'USA',
-  ENG: 'ENG',
-  IRN: 'IRN',
-  CPV: 'CPV',
-  CUW: 'CUW',
-  COD: 'COD',
-  CIV: 'CIV',
-  NED: 'NED',
-  SUI: 'SUI',
+const TEAM_ALIASES: Record<string, string> = {
+  'america': 'america',
+  'club america': 'america',
+  'atletico san luis': 'atletico de san luis',
+  'atletico de san luis': 'atletico de san luis',
+  'chivas': 'guadalajara',
+  'chivas guadalajara': 'guadalajara',
+  'guadalajara': 'guadalajara',
+  'fc juarez': 'juarez',
+  'juarez': 'juarez',
+  'pumas': 'pumas',
+  'pumas unam': 'pumas',
+  'santos': 'santos laguna',
+  'santos laguna': 'santos laguna',
+  'tigres': 'tigres',
+  'tigres uanl': 'tigres',
 }
 
-function normalizeCode(code: string): string {
-  return ESPN_CODE_ALIASES[code.toUpperCase()] ?? code.toUpperCase()
+export function canonicalTeamName(value: string): string {
+  const normalized = value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+  return TEAM_ALIASES[normalized] ?? normalized
 }
 
-function parseMatchIsoDate(isoDate: string): Date | null {
-  const normalized = isoDate.replace(/([+-]\d{2})$/, '$1:00')
-  const parsed = new Date(normalized)
-  if (Number.isNaN(parsed.getTime())) return null
-  return parsed
+function espnTeamNames(team: EspnTeam): string[] {
+  return [
+    team.displayName,
+    team.shortDisplayName,
+    team.name,
+    team.location,
+  ].filter((value): value is string => Boolean(value))
 }
 
-function formatEspnDateFromMs(ms: number): string {
-  const d = new Date(ms)
-  const y = d.getUTCFullYear()
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(d.getUTCDate()).padStart(2, '0')
-  return `${y}${m}${day}`
-}
-
-export function formatEspnDate(isoDate: string): string {
-  const d = parseMatchIsoDate(isoDate)
-  if (!d) return ''
-  return formatEspnDateFromMs(d.getTime())
-}
-
-/** ESPN agrupa partidos por fecha local; probamos día anterior, UTC y siguiente. */
-export function getEspnDateCandidates(isoDate: string): string[] {
-  const d = parseMatchIsoDate(isoDate)
-  if (!d) return []
-
-  const candidates = new Set<string>()
-  for (const offsetDays of [-1, 0, 1]) {
-    candidates.add(formatEspnDateFromMs(d.getTime() + offsetDays * 86_400_000))
-  }
-  return [...candidates]
-}
-
-export function mergeEspnEvents(...eventLists: EspnEvent[][]): EspnEvent[] {
-  const byId = new Map<string, EspnEvent>()
-  for (const list of eventLists) {
-    for (const event of list) {
-      byId.set(event.id, event)
-    }
-  }
-  return [...byId.values()]
-}
-
-function mapEspnState(state: string, completed: boolean): LiveMatchSnapshot['status'] {
-  if (completed || state === 'post') return 'finished'
-  if (state === 'in') return 'live'
-  return 'scheduled'
-}
-
-function mapEspnStatusDetail(
-  statusType: EspnCompetition['status']['type'],
-): LiveMatchSnapshot['live_status_detail'] {
-  const name = statusType.name ?? ''
-  const detail = [statusType.detail, statusType.description, statusType.shortDetail]
-    .filter(Boolean)
-    .join(' ')
-
-  if (name === 'STATUS_DELAYED' || /delayed|retras/i.test(detail)) return 'delayed'
-  if (name === 'STATUS_POSTPONED' || /postponed|pospuest/i.test(detail)) return 'postponed'
-  if (name === 'STATUS_SUSPENDED' || /suspend/i.test(detail)) return 'suspended'
-  if (name === 'STATUS_CANCELED' || /cancel/i.test(detail)) return 'canceled'
-  return null
-}
-
-function isGoalEvent(event: EspnKeyEvent): boolean {
-  const type = event.type?.type ?? event.type?.text ?? ''
-  return event.scoringPlay === true || /goal/i.test(type)
-}
-
-function isCardEvent(event: EspnKeyEvent): boolean {
-  const type = (event.type?.type ?? event.type?.text ?? '').toLowerCase()
-  const text = (event.text ?? event.shortText ?? '').toLowerCase()
-  return /yellow.?card|red.?card|tarjeta/i.test(type) || /yellow card|red card|tarjeta/i.test(text)
-}
-
-function mapEspnCardType(event: EspnKeyEvent): ParsedCard['card_type'] {
-  const type = (event.type?.type ?? event.type?.text ?? '').toLowerCase()
-  const text = (event.text ?? event.shortText ?? '').toLowerCase()
-  if (/red.?card|tarjeta roja/i.test(type) || /red card|tarjeta roja/i.test(text)) {
-    return 'red'
-  }
-  return 'yellow'
-}
-
-function mapEspnGoalType(event: EspnKeyEvent): ParsedGoalType {
-  const type = (event.type?.type ?? event.type?.text ?? '').toLowerCase()
-  const text = (event.text ?? event.shortText ?? '').toLowerCase()
-
-  if (/own.?goal|autogol|own goal/i.test(type) || /own goal|autogol/i.test(text)) {
-    return 'own_goal'
-  }
-  if (/penalty/i.test(type) || /penalt/i.test(text)) {
-    return 'penalty'
-  }
-  if (/header|cabez/i.test(type) || /header|cabez/i.test(text)) {
-    return 'header'
-  }
-  if (/free.?kick|tiro libre/i.test(type) || /free kick|tiro libre/i.test(text)) {
-    return 'free_kick'
-  }
-  return 'foot'
-}
-
-function parseGoalsFromKeyEvents(
-  keyEvents: EspnKeyEvent[] | undefined,
-  homeTeamId: string | undefined,
-): ParsedGoal[] {
-  return (keyEvents ?? []).filter(isGoalEvent).map((goal) => {
-    const parsed = parseClockDisplay(goal.clock?.displayValue ?? "0'")
-    const isHome = goal.team?.id === homeTeamId
-    const player = goal.participants?.[0]?.athlete?.displayName ?? null
-    return {
-      sync_key: `espn:${goal.id}`,
-      team_side: isHome ? 'home' : 'away',
-      minute: parsed.minute,
-      extra_time: parsed.extra_time,
-      event_second: 0,
-      player,
-      goal_type: mapEspnGoalType(goal),
-      source: 'espn',
-    }
-  })
-}
-
-function parseCardsFromKeyEvents(
-  keyEvents: EspnKeyEvent[] | undefined,
-  homeTeamId: string | undefined,
-): ParsedCard[] {
-  return (keyEvents ?? []).filter(isCardEvent).map((card) => {
-    const parsed = parseClockDisplay(card.clock?.displayValue ?? "0'")
-    const isHome = card.team?.id === homeTeamId
-    const player = card.participants?.[0]?.athlete?.displayName ?? null
-    return {
-      sync_key: `espn:card:${card.id}`,
-      team_side: isHome ? 'home' : 'away',
-      minute: parsed.minute,
-      extra_time: parsed.extra_time,
-      event_second: 0,
-      player,
-      card_type: mapEspnCardType(card),
-      source: 'espn',
-    }
-  })
-}
-
-async function fetchEspnJson<T>(url: string): Promise<T | null> {
-  for (let attempt = 0; attempt <= ESPN_FETCH_RETRIES; attempt++) {
-    try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), ESPN_FETCH_TIMEOUT_MS)
-      const res = await fetch(url, {
-        headers: { Accept: 'application/json' },
-        signal: controller.signal,
-      })
-      clearTimeout(timeout)
-
-      if (res.ok) return (await res.json()) as T
-      if (res.status === 404) return null
-    } catch {
-      // reintento abajo
-    }
-
-    if (attempt < ESPN_FETCH_RETRIES) {
-      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
-    }
-  }
-  return null
-}
-
-export async function fetchEspnScoreboard(dateYmd: string): Promise<EspnEvent[]> {
-  const url = `${ESPN_SCOREBOARD}?dates=${dateYmd}`
-  const data = await fetchEspnJson<{ events?: EspnEvent[] }>(url)
-  return data?.events ?? []
-}
-
-async function fetchEspnSummary(eventId: string): Promise<EspnSummary | null> {
-  const url = `${ESPN_SUMMARY}?event=${eventId}`
-  return fetchEspnJson<EspnSummary>(url)
+function teamMatches(team: EspnTeam, expectedName: string): boolean {
+  const expected = canonicalTeamName(expectedName)
+  return espnTeamNames(team).some(
+    (candidate) => canonicalTeamName(candidate) === expected,
+  )
 }
 
 export function findEspnEvent(
   events: EspnEvent[],
-  homeCode: string,
-  awayCode: string,
+  homeName: string,
+  awayName: string,
 ): EspnEvent | null {
-  const home = normalizeCode(homeCode)
-  const away = normalizeCode(awayCode)
-
   return (
-    events.find((ev) => {
-      const comp = ev.competitions[0]
-      if (!comp) return false
-      const codes = comp.competitors.map((c) => normalizeCode(c.team.abbreviation))
-      return codes.includes(home) && codes.includes(away)
+    events.find((event) => {
+      const competition = event.competitions[0]
+      const home = competition?.competitors.find(
+        (competitor) => competitor.homeAway === 'home',
+      )
+      const away = competition?.competitors.find(
+        (competitor) => competitor.homeAway === 'away',
+      )
+
+      return (
+        Boolean(home && away) &&
+        teamMatches(home!.team, homeName) &&
+        teamMatches(away!.team, awayName)
+      )
     }) ?? null
   )
 }
 
-function parseShootoutScore(value: unknown): number | null {
-  if (value == null) return null
-  const n = typeof value === 'number' ? value : Number.parseFloat(String(value))
-  return Number.isFinite(n) ? Math.trunc(n) : null
+function parseScore(score: unknown): number {
+  if (typeof score === 'number') return score
+  if (typeof score === 'string') {
+    const parsed = Number.parseInt(score, 10)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+  if (score && typeof score === 'object') {
+    const candidate = score as { value?: number; displayValue?: string }
+    return parseScore(candidate.value ?? candidate.displayValue ?? 0)
+  }
+  return 0
 }
 
-function parsePenaltyShootout(
-  homeComp: EspnCompetitor | undefined,
-  awayComp: EspnCompetitor | undefined,
-): { home: number | null; away: number | null } {
-  const home = parseShootoutScore(homeComp?.shootoutScore)
-  const away = parseShootoutScore(awayComp?.shootoutScore)
-  if (home != null && away != null) return { home, away }
-  return { home: null, away: null }
+function mapStatus(status: EspnStatus): MatchStatus {
+  if (status.type.completed || status.type.state === 'post') return 'finished'
+  if (status.type.state === 'in') return 'live'
+  return 'scheduled'
 }
 
-/** Alinea marcador y penales de ESPN con local/visita de la BD (pueden estar invertidos). */
-export function alignSnapshotToDbOrientation(
-  snapshot: LiveMatchSnapshot,
-  espnHomeCode: string,
-  espnAwayCode: string,
-  dbHomeCode: string,
-  dbAwayCode: string,
-): LiveMatchSnapshot {
-  const espnHome = normalizeCode(espnHomeCode)
-  const espnAway = normalizeCode(espnAwayCode)
-  const dbHome = normalizeCode(dbHomeCode)
-  const dbAway = normalizeCode(dbAwayCode)
+function mapStatusDetail(status: EspnStatus): string | null {
+  const text = [
+    status.type.name,
+    status.type.description,
+    status.type.detail,
+    status.type.shortDetail,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
-  if (espnHome === dbHome && espnAway === dbAway) {
-    return snapshot
+  if (/delay|retras/i.test(text)) return 'delayed'
+  if (/postpon|pospuest/i.test(text)) return 'postponed'
+  if (/suspend/i.test(text)) return 'suspended'
+  if (/cancel/i.test(text)) return 'canceled'
+  return null
+}
+
+function playType(play: EspnPlay): string {
+  return (play.type?.type ?? play.type?.text ?? '').toLowerCase()
+}
+
+function isVarPlay(play: EspnPlay): boolean {
+  return /^var\b|var---|video assistant/i.test(playType(play))
+}
+
+function eventType(play: EspnPlay): SyncedMatchEvent['event_type'] | null {
+  const type = playType(play)
+
+  if (
+    play.scoringPlay === true &&
+    play.shootout !== true &&
+    !/cancel|disallow|var/.test(type)
+  ) {
+    return 'goal'
+  }
+  if (/yellow.?card|red.?card|second.?yellow/.test(type)) return 'card'
+  if (/substitution/.test(type)) return 'substitution'
+  if (isVarPlay(play)) return 'var_review'
+  return null
+}
+
+function teamSide(play: EspnPlay, homeTeamId: string, awayTeamId: string): TeamSide {
+  if (play.team?.id === homeTeamId) return 'home'
+  if (play.team?.id === awayTeamId) return 'away'
+  return null
+}
+
+function goalType(play: EspnPlay): string {
+  const text = `${playType(play)} ${play.text ?? ''}`.toLowerCase()
+  if (/own.?goal/.test(text)) return 'own_goal'
+  if (/penalt/.test(text)) return 'penalty'
+  if (/header|headed/.test(text)) return 'header'
+  if (/free.?kick/.test(text)) return 'free_kick'
+  return 'foot'
+}
+
+function cardType(play: EspnPlay): string {
+  const text = `${playType(play)} ${play.text ?? ''}`.toLowerCase()
+  if (/second.?yellow/.test(text)) return 'second_yellow'
+  if (/red.?card/.test(text)) return 'red'
+  return 'yellow'
+}
+
+export function normalizeEspnPlay(
+  play: EspnPlay,
+  homeTeamId: string,
+  awayTeamId: string,
+): SyncedMatchEvent | null {
+  const normalizedType = eventType(play)
+  if (!play.id || !normalizedType) return null
+
+  const displayClock = play.clock?.displayValue ?? ''
+  const parsedClock = parseClockDisplay(displayClock)
+  const player = play.participants?.[0]?.athlete
+
+  return {
+    external_event_id: play.id,
+    event_type: normalizedType,
+    team_side: teamSide(play, homeTeamId, awayTeamId),
+    minute: parsedClock.minute,
+    extra_time: parsedClock.extra_time,
+    event_second: Math.max(0, Math.trunc(play.clock?.value ?? 0) % 60),
+    metadata: {
+      provider_type: playType(play),
+      text: play.text ?? play.shortText ?? null,
+      player: player?.displayName ?? null,
+      athlete_id: player?.id ?? null,
+      period: play.period?.number ?? null,
+      clock: displayClock || null,
+      wallclock: play.wallclock ?? null,
+      ...(normalizedType === 'goal' ? { goal_type: goalType(play) } : {}),
+      ...(normalizedType === 'card' ? { card_type: cardType(play) } : {}),
+    },
+  }
+}
+
+export function normalizeEspnEvents(
+  summary: EspnSummary | null,
+  homeTeamId: string,
+  awayTeamId: string,
+): { complete: boolean; events: SyncedMatchEvent[] } {
+  if (!Array.isArray(summary?.keyEvents)) {
+    return { complete: false, events: [] }
   }
 
-  if (espnHome === dbAway && espnAway === dbHome) {
-    return {
-      ...snapshot,
-      home_score: snapshot.away_score,
-      away_score: snapshot.home_score,
-      penalty_home_score: snapshot.penalty_away_score ?? null,
-      penalty_away_score: snapshot.penalty_home_score ?? null,
-      goals: snapshot.goals.map((goal) => ({
-        ...goal,
-        team_side: goal.team_side === 'home' ? 'away' : 'home',
-      })),
-      cards: (snapshot.cards ?? []).map((card) => ({
-        ...card,
-        team_side: card.team_side === 'home' ? 'away' : 'home',
-      })),
+  const byId = new Map<string, SyncedMatchEvent>()
+
+  for (const play of summary.keyEvents) {
+    const event = normalizeEspnPlay(play, homeTeamId, awayTeamId)
+    if (event) byId.set(event.external_event_id, event)
+  }
+
+  // Los goles/tarjetas autoritativos vienen de keyEvents. Commentary se usa
+  // solamente para mostrar revisiones VAR; incluir sus goles podría revivir
+  // un gol anulado que ESPN ya retiró de keyEvents.
+  for (const entry of summary.commentary ?? []) {
+    if (!entry.play || !isVarPlay(entry.play)) continue
+    const event = normalizeEspnPlay(entry.play, homeTeamId, awayTeamId)
+    if (event) byId.set(event.external_event_id, event)
+  }
+
+  return { complete: true, events: [...byId.values()] }
+}
+
+export function eventsMatchScore(
+  events: SyncedMatchEvent[],
+  homeScore: number,
+  awayScore: number,
+): boolean {
+  const goals = events.filter((event) => event.event_type === 'goal').length
+  return goals === homeScore + awayScore
+}
+
+async function fetchJson<T>(url: string): Promise<T | null> {
+  for (let attempt = 0; attempt <= FETCH_RETRIES; attempt += 1) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'CruzBet/1.0',
+        },
+        signal: controller.signal,
+      })
+
+      if (response.ok) return (await response.json()) as T
+      if (response.status === 404) return null
+    } catch {
+      // El siguiente intento usa una espera incremental.
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    if (attempt < FETCH_RETRIES) {
+      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
     }
   }
 
-  return snapshot
+  return null
 }
 
-function competitorCodes(comp: EspnCompetition): { home: string; away: string } {
-  const homeComp = comp.competitors.find((c) => c.homeAway === 'home')
-  const awayComp = comp.competitors.find((c) => c.homeAway === 'away')
-  return {
-    home: homeComp?.team.abbreviation ?? '',
-    away: awayComp?.team.abbreviation ?? '',
-  }
-}
-
-async function buildEspnSnapshotFromCompetition(
-  eventId: string,
-  comp: EspnCompetition,
-  summary?: EspnSummary | null,
-  previousClock?: { current_minute?: number | null; live_clock_display?: string | null } | null,
-): Promise<LiveMatchSnapshot> {
-  const status = comp.status
-  const homeComp = comp.competitors.find((c) => c.homeAway === 'home')
-  const awayComp = comp.competitors.find((c) => c.homeAway === 'away')
-  const homeTeamId = homeComp?.team.id
-
-  const matchStatus = mapEspnState(
-    status.type.state,
-    status.type.completed ?? false,
+export async function fetchEspnScoreboard(dateYmd: string): Promise<EspnEvent[]> {
+  const data = await fetchJson<{ events?: EspnEvent[] }>(
+    `${ESPN_SCOREBOARD}?dates=${dateYmd}`,
   )
-
-  let goals: ParsedGoal[] = []
-  let cards: ParsedCard[] = []
-  let keyEvents = summary?.keyEvents
-  if (!keyEvents) {
-    const fetchedSummary = await fetchEspnSummary(eventId)
-    keyEvents = fetchedSummary?.keyEvents
-  }
-  goals = parseGoalsFromKeyEvents(keyEvents, homeTeamId)
-  cards = parseCardsFromKeyEvents(keyEvents, homeTeamId)
-
-  const clock = mergeLiveClock(
-    extractClockFromEspnStatus(status, matchStatus),
-    previousClock,
-  )
-
-  const penalties = parsePenaltyShootout(homeComp, awayComp)
-
-  return {
-    status: matchStatus,
-    current_minute: clock.current_minute,
-    live_clock_display: clock.live_clock_display,
-    live_status_detail: mapEspnStatusDetail(status.type),
-    home_score: Number.parseInt(homeComp?.score ?? '0', 10),
-    away_score: Number.parseInt(awayComp?.score ?? '0', 10),
-    penalty_home_score: penalties.home,
-    penalty_away_score: penalties.away,
-    goals,
-    cards,
-    external_event_id: eventId,
-    source: 'espn',
-  }
+  return data?.events ?? []
 }
 
-export async function buildEspnSnapshot(
+async function fetchEspnSummary(eventId: string): Promise<EspnSummary | null> {
+  return fetchJson<EspnSummary>(`${ESPN_SUMMARY}?event=${eventId}`)
+}
+
+function dateYmd(timestamp: number): string {
+  return new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '')
+}
+
+export function getEspnDateCandidates(isoDate: string): string[] {
+  const timestamp = Date.parse(isoDate)
+  if (!Number.isFinite(timestamp)) return []
+  return [-1, 0, 1].map((offset) => dateYmd(timestamp + offset * 86_400_000))
+}
+
+export function mergeEspnEvents(...lists: EspnEvent[][]): EspnEvent[] {
+  const byId = new Map<string, EspnEvent>()
+  for (const list of lists) {
+    for (const event of list) byId.set(event.id, event)
+  }
+  return [...byId.values()]
+}
+
+async function buildSnapshot(
   event: EspnEvent,
-  dbHomeCode: string,
-  dbAwayCode: string,
-  previousClock?: { current_minute?: number | null; live_clock_display?: string | null } | null,
-): Promise<LiveMatchSnapshot> {
-  const comp = event.competitions[0]!
-  const summary = await fetchEspnSummary(event.id)
-  const headerComp = summary?.header?.competitions?.[0]
-  const espnComp = headerComp ?? comp
-  const raw = await buildEspnSnapshotFromCompetition(event.id, espnComp, summary, previousClock)
-  const codes = competitorCodes(espnComp)
-  return alignSnapshotToDbOrientation(raw, codes.home, codes.away, dbHomeCode, dbAwayCode)
-}
+  summary: EspnSummary | null,
+): Promise<EspnMatchSnapshot | null> {
+  const scoreboardCompetition = event.competitions[0]
+  const competition = summary?.header?.competitions?.[0] ?? scoreboardCompetition
+  if (!competition) return null
 
-async function fetchSnapshotByEventId(
-  eventId: string,
-  dbHomeCode: string,
-  dbAwayCode: string,
-  previousClock?: { current_minute?: number | null; live_clock_display?: string | null } | null,
-): Promise<LiveMatchSnapshot | null> {
-  const summary = await fetchEspnSummary(eventId)
-  const comp = summary?.header?.competitions?.[0]
-  if (!comp) return null
-  const raw = await buildEspnSnapshotFromCompetition(eventId, comp, summary, previousClock)
-  const codes = competitorCodes(comp)
-  return alignSnapshotToDbOrientation(raw, codes.home, codes.away, dbHomeCode, dbAwayCode)
-}
+  const home = competition.competitors.find(
+    (competitor) => competitor.homeAway === 'home',
+  )
+  const away = competition.competitors.find(
+    (competitor) => competitor.homeAway === 'away',
+  )
+  if (!home || !away) return null
 
-async function resolveEspnEventsForMatch(
-  match: DbMatchRow,
-  cachedEvents?: EspnEvent[],
-): Promise<EspnEvent[]> {
-  if (cachedEvents?.length) return cachedEvents
+  const status = mapStatus(competition.status)
+  const displayClock = competition.status.displayClock ?? ''
+  const homeScore = parseScore(home.score)
+  const awayScore = parseScore(away.score)
+  const normalizedEvents = normalizeEspnEvents(
+    summary,
+    home.team.id,
+    away.team.id,
+  )
 
-  const dates = match.match_date ? getEspnDateCandidates(match.match_date) : []
-  const lists = await Promise.all(dates.map((dateYmd) => fetchEspnScoreboard(dateYmd)))
-  return mergeEspnEvents(...lists)
-}
-
-export async function fetchLiveSnapshotForMatch(
-  match: DbMatchRow,
-  cachedEvents?: EspnEvent[],
-): Promise<LiveMatchSnapshot | null> {
-  const previousClock = {
-    current_minute: match.current_minute,
-    live_clock_display: match.live_clock_display,
+  return {
+    provider: 'espn',
+    external_event_id: event.id,
+    scheduled_at: competition.date ?? event.date ?? null,
+    status,
+    status_detail: mapStatusDetail(competition.status),
+    current_minute: currentMinuteFromClock(
+      displayClock,
+      status === 'finished',
+    ),
+    clock:
+      status === 'finished' ? 'FT' : formatClockDisplay(displayClock),
+    home_score: homeScore,
+    away_score: awayScore,
+    events_complete:
+      normalizedEvents.complete &&
+      eventsMatchScore(normalizedEvents.events, homeScore, awayScore),
+    events: normalizedEvents.events,
   }
+}
+
+export async function fetchEspnSnapshotForMatch(
+  match: DbMatchRow,
+  cachedScoreboard?: EspnEvent[],
+): Promise<EspnMatchSnapshot | null> {
+  let event: EspnEvent | null = null
 
   if (match.external_event_id) {
-    const direct = await fetchSnapshotByEventId(
-      match.external_event_id,
-      match.home_team.code,
-      match.away_team.code,
-      previousClock,
-    )
-    if (direct) return direct
+    const summary = await fetchEspnSummary(match.external_event_id)
+    const competition = summary?.header?.competitions?.[0]
+    if (competition) {
+      event = {
+        id: match.external_event_id,
+        date: competition.date ?? match.match_date ?? '',
+        competitions: [competition],
+      }
+      return buildSnapshot(event, summary)
+    }
   }
 
   if (!match.match_date) return null
 
-  const events = await resolveEspnEventsForMatch(match, cachedEvents)
-  const event = findEspnEvent(events, match.home_team.code, match.away_team.code)
+  let events = cachedScoreboard
+  if (!events) {
+    const lists = await Promise.all(
+      getEspnDateCandidates(match.match_date).map(fetchEspnScoreboard),
+    )
+    events = mergeEspnEvents(...lists)
+  }
+
+  event = findEspnEvent(events, match.home_team.name, match.away_team.name)
   if (!event) return null
 
-  return buildEspnSnapshot(event, match.home_team.code, match.away_team.code, previousClock)
+  const summary = await fetchEspnSummary(event.id)
+  return buildSnapshot(event, summary)
 }

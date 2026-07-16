@@ -1,63 +1,69 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
-import { getCachedFlagBlobUrl, resolveFlagSrc } from '@/lib/flagCache'
+import { computed, ref, watch } from 'vue'
+import { teamCrestUrl } from '@/lib/teamDisplay'
 
-const props = defineProps<{
-  src: string | null | undefined
-  alt: string
-  imgClass?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    src?: string | null
+    code?: string | null
+    alt: string
+    imgClass?: string
+    size?: 'sm' | 'md' | 'lg'
+  }>(),
+  {
+    src: null,
+    code: null,
+    imgClass: '',
+    size: 'md',
+  },
+)
 
-const displaySrc = ref<string | null>(null)
-let attempt = 0
-let activeBlobUrl: string | null = null
+const failed = ref(false)
 
-function clearBlobUrl() {
-  if (activeBlobUrl) {
-    URL.revokeObjectURL(activeBlobUrl)
-    activeBlobUrl = null
+const resolvedSrc = computed(() => {
+  if (failed.value) return null
+  if (props.src) return props.src
+  return teamCrestUrl(props.code)
+})
+
+const sizeClass = computed(() => {
+  switch (props.size) {
+    case 'sm':
+      return 'h-5 w-5'
+    case 'lg':
+      return 'h-9 w-9'
+    default:
+      return 'h-7 w-7'
   }
-}
+})
 
-function resetSrc() {
-  clearBlobUrl()
-  attempt = 0
-  displaySrc.value = resolveFlagSrc(props.src)
-}
-
-watch(() => props.src, resetSrc, { immediate: true })
-
-async function onError() {
-  attempt += 1
-  const remote = props.src?.trim()
-  if (!remote) return
-
-  if (attempt === 1 && displaySrc.value?.startsWith('/flags/')) {
-    displaySrc.value = remote
-    return
-  }
-
-  if (attempt === 2) {
-    const cached = await getCachedFlagBlobUrl(remote)
-    if (cached) {
-      clearBlobUrl()
-      activeBlobUrl = cached
-      displaySrc.value = cached
-    }
-  }
-}
-
-onBeforeUnmount(clearBlobUrl)
+watch(
+  () => [props.src, props.code] as const,
+  () => {
+    failed.value = false
+  },
+)
 </script>
 
 <template>
   <img
-    v-if="displaySrc"
-    :src="displaySrc"
+    v-if="resolvedSrc"
+    :src="resolvedSrc"
     :alt="alt"
-    :class="imgClass"
+    :class="[sizeClass, 'shrink-0 object-contain', imgClass]"
     loading="lazy"
     decoding="async"
-    @error="onError"
+    @error="failed = true"
   />
+  <span
+    v-else
+    :class="[
+      sizeClass,
+      'inline-flex shrink-0 items-center justify-center rounded-full bg-app-surface-elevated text-[0.55rem] font-bold text-app-muted',
+      imgClass,
+    ]"
+    aria-hidden="true"
+  >
+    {{ (code ?? alt).slice(0, 2).toUpperCase() }}
+  </span>
 </template>

@@ -2,9 +2,6 @@
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ArrowLeft, ChevronRight } from '@lucide/vue'
-import {
-  BASE_ENTRY_FEE_MXN,
-} from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 
@@ -31,7 +28,7 @@ const roundCount = computed(() => baseStore.rounds.length)
     <div class="mb-6">
       <h1 class="text-2xl font-bold lg:text-3xl">Todas las jornadas</h1>
       <p class="mt-1 text-sm text-slate-400 lg:text-base">
-        ${{ BASE_ENTRY_FEE_MXN }} MXN por jornada · grilla L/E/V · grupos y eliminatoria
+        Liga MX · grilla L/E/V por jornada
       </p>
     </div>
 
@@ -44,7 +41,7 @@ const roundCount = computed(() => baseStore.rounds.length)
         to="/login"
         class="inline-block rounded-lg bg-mundial-green px-4 py-2 text-sm font-semibold text-mundial-dark"
       >
-        Entrar con Google
+        Entrar
       </RouterLink>
     </div>
 
@@ -56,12 +53,11 @@ const roundCount = computed(() => baseStore.rounds.length)
     >
       <p class="mb-1 font-semibold text-slate-300">Sin jornadas aún</p>
       <p class="text-sm">
-        Fase de grupos en jornadas de 16 partidos; eliminatoria en jornadas por ronda
-        (dieciseisavos, octavos, cuartos, semifinal y tercer lugar).
+        Cada jornada agrupa los partidos programados de Liga MX para esa fecha.
       </p>
     </div>
 
-    <div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <RouterLink
         v-for="round in baseStore.rounds"
         :key="round.id"
@@ -94,7 +90,7 @@ const roundCount = computed(() => baseStore.rounds.length)
             </span>
           </p>
           <p class="text-xs text-slate-500">
-            {{ round.match_count }} partidos · ${{ BASE_ENTRY_FEE_MXN }} MXN
+            {{ round.match_count }} partidos
           </p>
         </div>
         <ChevronRight class="h-5 w-5 shrink-0 text-slate-500" />

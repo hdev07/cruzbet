@@ -51,7 +51,7 @@ async function syncAllNow() {
     return
   }
   message.value = 'Todos los partidos en ventana sincronizados'
-  await matchStore.fetchMatches()
+  await matchStore.fetchMatches({ force: true })
 }
 
 async function setAutoSyncForAll(enabled: boolean) {
@@ -70,7 +70,7 @@ async function setAutoSyncForAll(enabled: boolean) {
   message.value = enabled
     ? 'Sync automático activado en todos los partidos pendientes'
     : 'Sync automático pausado en todos los partidos pendientes'
-  await matchStore.fetchMatches()
+  await matchStore.fetchMatches({ force: true })
 }
 </script>
 

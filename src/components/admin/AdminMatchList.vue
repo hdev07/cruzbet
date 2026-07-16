@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { Radio, Users } from '@lucide/vue'
 import { formatMatchClock } from '@/lib/matchClock'
-import { phaseLabel } from '@/lib/matchPhases'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useMatchStore } from '@/stores/matchStore'
@@ -12,10 +11,10 @@ const selectedMatchId = defineModel<string>({ required: true })
 
 const search = defineModel<string>('search', { default: '' })
 const statusFilter = defineModel<'all' | MatchStatus>('statusFilter', { default: 'all' })
-const onlyWithParticipants = defineModel<boolean>('onlyWithParticipants', { default: true })
+const onlyWithParticipants = defineModel<boolean>('onlyWithParticipants', { default: false })
 
 const { participantCounts, mobileFullScreen } = defineProps<{
-  participantCounts: Record<string, number>
+  participantCounts?: Record<string, number>
   mobileFullScreen?: boolean
 }>()
 
@@ -25,11 +24,13 @@ const emit = defineEmits<{
 
 const matchStore = useMatchStore()
 
+const counts = computed(() => participantCounts ?? {})
+
 const filteredMatches = computed(() => {
   const q = search.value.trim().toLowerCase()
   return matchStore.matches.filter((m) => {
     if (statusFilter.value !== 'all' && m.status !== statusFilter.value) return false
-    if (onlyWithParticipants.value && !(participantCounts[m.id] ?? 0)) return false
+    if (onlyWithParticipants.value && !(counts.value[m.id] ?? 0)) return false
     if (!q) return true
     const home = teamDisplayName(m.home_team, 'Local').toLowerCase()
     const away = teamDisplayName(m.away_team, 'Visitante').toLowerCase()
@@ -45,10 +46,6 @@ const filteredMatches = computed(() => {
     )
   })
 })
-
-const matchesWithParticipants = computed(() =>
-  matchStore.matches.filter((m) => (participantCounts[m.id] ?? 0) > 0).length,
-)
 
 function selectMatch(matchId: string) {
   selectedMatchId.value = matchId
@@ -74,7 +71,7 @@ function formatDate(match: Match) {
     <header class="shrink-0 border-b border-white/10 p-4">
       <p v-if="!mobileFullScreen" class="text-sm font-medium text-slate-200">Partidos</p>
       <p class="text-xs text-slate-500" :class="mobileFullScreen ? '' : 'mt-1'">
-        {{ matchesWithParticipants }} con quiniela · {{ matchStore.matches.length }} total
+        {{ matchStore.matches.length }} partidos
       </p>
 
       <input
@@ -96,15 +93,6 @@ function formatDate(match: Match) {
           {{ f[1] }}
         </button>
       </div>
-
-      <label class="mt-3 flex cursor-pointer items-center gap-2 py-1 text-sm text-slate-400 md:text-xs">
-        <input
-          v-model="onlyWithParticipants"
-          type="checkbox"
-          class="rounded border-white/20 bg-mundial-dark text-mundial-accent"
-        />
-        Solo con participantes
-      </label>
     </header>
 
     <ul class="app-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
@@ -124,7 +112,7 @@ function formatDate(match: Match) {
           @click="selectMatch(match.id)"
         >
           <div class="mb-2 flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide text-slate-500">
-            <span>{{ phaseLabel(match.phase) }}</span>
+            <span>{{ match.phase ?? 'Liga MX' }}</span>
             <span class="flex items-center gap-1">
               <span
                 v-if="match.auto_sync_enabled !== false"
@@ -173,11 +161,11 @@ function formatDate(match: Match) {
           </div>
 
           <p
-            v-if="participantCounts[match.id]"
+            v-if="counts[match.id]"
             class="mt-2 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-slate-300"
           >
             <Users class="h-3 w-3" />
-            {{ participantCounts[match.id] }} en quiniela
+            {{ counts[match.id] }} en quiniela
           </p>
         </button>
       </li>

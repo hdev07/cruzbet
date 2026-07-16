@@ -2,6 +2,16 @@ export type MatchStatus = 'scheduled' | 'live' | 'finished'
 
 export type LiveStatusDetail = 'delayed' | 'postponed' | 'suspended' | 'canceled'
 
+export interface Competition {
+  id: string
+  slug: string
+  name: string
+  season: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 export type BracketSlot =
   | { type: 'group_pos'; group: string; pos: number }
   | { type: 'best_third'; groups: string[] }
@@ -45,6 +55,7 @@ export interface Player {
 
 export interface Match {
   id: string
+  competition_id: string
   home_team_id: string | null
   away_team_id: string | null
   home_score: number
@@ -82,6 +93,8 @@ export interface MatchEvent {
   minute: number
   extra_time: number
   event_second?: number
+  source?: string
+  external_event_id?: string | null
   metadata: Record<string, unknown>
   created_at?: string
   players?: Pick<Player, 'name' | 'number'>
@@ -96,51 +109,11 @@ export interface Profile {
   created_at?: string
 }
 
-export type PredictionType = 'goal' | 'score'
-
 export type PredictedWinner = 'home' | 'draw' | 'away'
-
-export interface Prediction {
-  id: number
-  user_id: string
-  match_id: string
-  prediction_type: PredictionType
-  predicted_minute: number | null
-  predicted_team?: 'home' | 'away' | null
-  predicted_winner?: PredictedWinner | null
-  predicted_home_score?: number | null
-  predicted_away_score?: number | null
-  created_at?: string
-  points: number
-  score_points?: number
-  scored_at?: string | null
-  profiles?: Pick<Profile, 'username' | 'avatar'>
-  profile?: Pick<Profile, 'username' | 'avatar'>
-}
-
-export interface PredictionWithMatch extends Prediction {
-  match?: Match
-}
-
-export interface MatchPayment {
-  user_id: string
-  match_id: string
-  verified: boolean
-  verified_at?: string | null
-  created_at?: string
-}
-
-export interface MatchParticipant {
-  user_id: string
-  verified: boolean
-  profiles?: Pick<Profile, 'username' | 'avatar'>
-  predictions: Prediction[]
-  total_points: number
-  complete?: boolean
-}
 
 export interface BaseQuinielaRound {
   id: string
+  competition_id: string
   round_number: number
   title: string
   match_count: number
@@ -181,6 +154,9 @@ export interface BaseRoundLeaderboardEntry {
   total_points: number
   match_count: number
   is_complete: boolean
+  verified: boolean
+  verified_at?: string | null
+  submitted_at?: string | null
 }
 
 export interface BaseRoundPayment {
@@ -221,22 +197,4 @@ export interface BaseRoundResultSummary {
   myEntry: BaseRoundLeaderboardEntry | null
   isActive: boolean
   participantCount: number
-}
-
-export interface GroupStandingRow {
-  team: Team
-  position: number
-  played: number
-  won: number
-  drawn: number
-  lost: number
-  goalsFor: number
-  goalsAgainst: number
-  goalDiff: number
-  points: number
-}
-
-export interface GroupStandings {
-  groupName: string
-  rows: GroupStandingRow[]
 }

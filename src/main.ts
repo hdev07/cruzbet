@@ -3,15 +3,12 @@ import './assets/main.css'
 import { initTheme } from './lib/theme'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { registerSW } from 'virtual:pwa-register'
 
 import App from './App.vue'
-import { dismissAppSplash } from './lib/appSplash'
 import {
   clearStaleChunkReloadFlag,
   reloadForStaleChunks,
 } from './lib/chunkLoadRecovery'
-import { pwaNeedRefresh, setApplyPwaUpdate } from './lib/pwaUpdate'
 import router from './router'
 import { useAuthStore } from './stores/authStore'
 import { useThemeStore } from './stores/themeStore'
@@ -23,15 +20,6 @@ window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault()
   reloadForStaleChunks()
 })
-
-setApplyPwaUpdate(
-  registerSW({
-    immediate: true,
-    onNeedRefresh() {
-      pwaNeedRefresh.value = true
-    },
-  }),
-)
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -45,4 +33,9 @@ const auth = useAuthStore()
 await auth.init()
 
 app.mount('#app')
-dismissAppSplash()
+
+const splash = document.getElementById('app-splash')
+if (splash) {
+  splash.classList.add('app-splash--out')
+  window.setTimeout(() => splash.remove(), 400)
+}

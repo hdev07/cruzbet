@@ -1,19 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { formatMatchClock, LIVE_STATUS_DETAIL_LABELS } from '@/lib/matchClock'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
-import AdminPaymentVerification from '@/components/admin/AdminPaymentVerification.vue'
-import QuinielaControl from '@/components/admin/QuinielaControl.vue'
+import MatchEventControl from '@/components/admin/MatchEventControl.vue'
 import type { Match } from '@/types'
 
 const { match, mobile } = defineProps<{
   match: Match
   mobile?: boolean
 }>()
-
-type DetailTab = 'control' | 'payments'
-const tab = ref<DetailTab>('control')
 
 const statusLabel = computed(() => {
   if (match.status === 'live') {
@@ -84,41 +80,20 @@ function formatDate() {
       <div class="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs">
         <span class="rounded-full px-2.5 py-0.5 font-semibold" :class="statusClass">
           {{ statusLabel }}
-          <template v-if="match.status === 'live'"> · {{ formatMatchClock(match) || `${match.current_minute ?? 0}'` }}</template>
+          <template v-if="match.status === 'live'">
+            · {{ formatMatchClock(match) || `${match.current_minute ?? 0}'` }}
+          </template>
         </span>
         <span class="text-slate-500">{{ formatDate() }}</span>
         <span v-if="match.venue" class="text-slate-500">· {{ match.venue }}</span>
       </div>
     </header>
 
-    <nav
-      class="mt-3 flex shrink-0 gap-1 rounded-lg border border-white/10 bg-black/20 p-1"
-      :class="mobile ? 'mx-4' : ''"
-    >
-      <button
-        type="button"
-        class="flex-1 rounded-md py-2 text-xs font-semibold transition md:py-1.5"
-        :class="tab === 'control' ? 'bg-mundial-accent text-white' : 'text-slate-400 hover:text-slate-200'"
-        @click="tab = 'control'"
-      >
-        Partido y goles
-      </button>
-      <button
-        type="button"
-        class="flex-1 rounded-md py-2 text-xs font-semibold transition md:py-1.5"
-        :class="tab === 'payments' ? 'bg-mundial-accent text-white' : 'text-slate-400 hover:text-slate-200'"
-        @click="tab = 'payments'"
-      >
-        Pagos
-      </button>
-    </nav>
-
     <div
       class="app-scrollbar min-h-0 flex-1 overflow-y-auto py-4"
       :class="mobile ? 'px-4' : 'mt-1'"
     >
-      <QuinielaControl v-if="tab === 'control'" :match="match" :mobile="mobile" />
-      <AdminPaymentVerification v-else :match="match" :mobile="mobile" />
+      <MatchEventControl :match="match" :mobile="mobile" />
     </div>
   </div>
 </template>
