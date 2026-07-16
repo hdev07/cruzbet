@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { BASE_ENTRY_FEE_MXN, BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
+import {
+  BASE_QUINIELA_MATCHES_PER_ROUND,
+  computeRoundPool,
+  type RoundPoolBreakdown,
+} from '@/constants/base-quiniela-rules'
 import {
   buildFirstKickoffByRoundId,
   resolveActiveBaseRound,
@@ -648,7 +652,9 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     verified: number
     pending: number
     incomplete: number
+    /** @deprecated Preferir poolBreakdown.net */
     pool: number
+    poolBreakdown: RoundPoolBreakdown
   }> {
     const participants = await fetchRoundParticipants(roundId)
     const total = participants.length
@@ -657,13 +663,15 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     const pending = complete.filter((p) => !p.verified).length
     const incomplete = total - complete.length
     const submitted = complete.length
+    const poolBreakdown = computeRoundPool(verified)
     return {
       total,
       submitted,
       verified,
       pending,
       incomplete,
-      pool: verified * BASE_ENTRY_FEE_MXN,
+      pool: poolBreakdown.net,
+      poolBreakdown,
     }
   }
 

@@ -11,7 +11,12 @@ import {
   RefreshCw,
   Users,
 } from '@lucide/vue'
-import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
+import {
+  ADMIN_FEE_SMALL_GROUP_MAX,
+  BASE_ENTRY_FEE_MXN,
+  type RoundPoolBreakdown,
+} from '@/constants/base-quiniela-rules'
+import { formatMxn } from '@/lib/formatMoney'
 
 export type AdminPaymentStats = {
   total: number
@@ -20,6 +25,7 @@ export type AdminPaymentStats = {
   pending: number
   incomplete: number
   pool: number
+  poolBreakdown?: RoundPoolBreakdown
 }
 
 const props = defineProps<{
@@ -33,6 +39,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   navigate: [tab: 'jornadas' | 'partidos' | 'sync']
 }>()
+
+const pool = computed(() => props.paymentStats?.poolBreakdown ?? null)
 
 const statCards = computed(() => {
   const stats = props.paymentStats
@@ -69,8 +77,8 @@ const statCards = computed(() => {
     },
     {
       key: 'pool',
-      label: 'Pozo estimado',
-      value: stats ? `$${stats.pool.toLocaleString('es-MX')} MXN` : '$0 MXN',
+      label: 'En el pozo',
+      value: pool.value ? formatMxn(pool.value.net) : '$0 MXN',
       icon: DollarSign,
       accent: true,
       accentClass: 'text-mundial-accent',
@@ -149,6 +157,20 @@ function formatValue(card: (typeof statCards.value)[number]) {
       </div>
 
       <div
+        v-if="pool && pool.verifiedCount > 0"
+        class="rounded-xl border border-mundial-accent/20 bg-mundial-accent/5 px-4 py-3 text-xs text-slate-300"
+      >
+        <p>
+          Recaudado {{ formatMxn(pool.gross) }} · comisión {{ pool.feePercent }}%
+          ({{ formatMxn(pool.adminFee) }}) ·
+          <span class="font-semibold text-mundial-accent">pozo {{ formatMxn(pool.net) }}</span>
+        </p>
+        <p class="mt-1 text-slate-500">
+          5% con hasta {{ ADMIN_FEE_SMALL_GROUP_MAX }} verificados; 10% si hay más.
+        </p>
+      </div>
+
+      <div
         v-if="paymentStats && paymentStats.incomplete > 0"
         class="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200/90"
       >
@@ -187,7 +209,7 @@ function formatValue(card: (typeof statCards.value)[number]) {
       </div>
 
       <p class="text-xs text-slate-500">
-        Pozo estimado = pagos verificados × ${{ BASE_ENTRY_FEE_MXN }} MXN por quiniela.
+        Entrada ${{ BASE_ENTRY_FEE_MXN }} MXN. El pozo se calcula solo con depósitos verificados.
       </p>
     </template>
   </section>

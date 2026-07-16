@@ -3,6 +3,47 @@ export const BASE_QUINIELA_POINTS_PER_HIT = 1
 export const BASE_QUINIELA_MIN_ACTIVE_ROUND = 1
 /** Cuota por quiniela / jornada (MXN). */
 export const BASE_ENTRY_FEE_MXN = 50
+/** Hasta este # de depósitos verificados la comisión es la baja. */
+export const ADMIN_FEE_SMALL_GROUP_MAX = 20
+/** Comisión admin con ≤ ADMIN_FEE_SMALL_GROUP_MAX verificados (0–1). */
+export const ADMIN_FEE_RATE_SMALL = 0.05
+/** Comisión admin con más de ADMIN_FEE_SMALL_GROUP_MAX verificados (0–1). */
+export const ADMIN_FEE_RATE_LARGE = 0.1
+
+export type RoundPoolBreakdown = {
+  verifiedCount: number
+  entryFee: number
+  gross: number
+  feeRate: number
+  feePercent: number
+  adminFee: number
+  /** Pozo a repartir (bruto − comisión). */
+  net: number
+}
+
+/** % de comisión según # de depósitos verificados. */
+export function adminFeeRateForVerifiedCount(verifiedCount: number): number {
+  return verifiedCount <= ADMIN_FEE_SMALL_GROUP_MAX
+    ? ADMIN_FEE_RATE_SMALL
+    : ADMIN_FEE_RATE_LARGE
+}
+
+/** Pozo automático: bruto, comisión y neto a repartir. */
+export function computeRoundPool(verifiedCount: number): RoundPoolBreakdown {
+  const safeCount = Math.max(0, Math.floor(verifiedCount))
+  const feeRate = adminFeeRateForVerifiedCount(safeCount)
+  const gross = safeCount * BASE_ENTRY_FEE_MXN
+  const adminFee = Math.round(gross * feeRate)
+  return {
+    verifiedCount: safeCount,
+    entryFee: BASE_ENTRY_FEE_MXN,
+    gross,
+    feeRate,
+    feePercent: Math.round(feeRate * 100),
+    adminFee,
+    net: Math.max(0, gross - adminFee),
+  }
+}
 
 export type RuleAlertSection = {
   title: string
@@ -47,12 +88,14 @@ export function baseQuinielaSaveAlert(matchCount: number) {
 
 export const BASE_QUINIELA_LOGIC = {
   title: 'Quiniela Liga MX',
-  summary: 'Marca L, E o V en cada partido de la jornada antes del kickoff.',
+  summary:
+    'Marca L, E o V en cada partido. Entrada $50 MXN: el pozo se calcula solo con depósitos verificados (5% comisión hasta 20 jugadores, 10% si hay más).',
   howItWorks: [
     'Cada jornada incluye los partidos programados de Liga MX.',
     'Marca L (local), E (empate) o V (visitante) para cada partido.',
     'Puedes cambiar tus picks mientras no hayas guardado la quiniela.',
     'Al guardar la quiniela completa, tus picks quedan bloqueados.',
     'Al terminar cada partido se revisa tu pick automáticamente.',
+    'El pozo a repartir se calcula solo: no hay que capturarlo a mano.',
   ],
 } as const

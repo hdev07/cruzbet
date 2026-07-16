@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight, Crown, Target, Users } from '@lucide/vue'
+import { ChevronRight, Crown, PiggyBank, Target, Users } from '@lucide/vue'
 import BaseRoundRankingPanel from '@/components/ranking/BaseRoundRankingPanel.vue'
 import {
   BASE_QUINIELA_LOGIC,
   BASE_QUINIELA_MATCHES_PER_ROUND,
   BASE_QUINIELA_POINTS_PER_HIT,
+  computeRoundPool,
 } from '@/constants/base-quiniela-rules'
-import { winnerUserIdsFromEntries } from '@/lib/baseQuinielaWinners'
+import { formatMxn } from '@/lib/formatMoney'
+import { getOfficialLeaderboardEntries, winnerUserIdsFromEntries } from '@/lib/baseQuinielaWinners'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseRoundLeaderboardEntry } from '@/types'
@@ -56,15 +58,24 @@ const isRoundFinished = computed(
   () => matchStats.value.total > 0 && matchStats.value.finished === matchStats.value.total,
 )
 
-const leader = computed(() => baseStore.leaderboard[0] ?? null)
+const leader = computed(() => {
+  const official = getOfficialLeaderboardEntries(baseStore.leaderboard)
+  return official[0] ?? null
+})
 
 const tiedLeaders = computed(() => {
   if (!leader.value) return []
-  return baseStore.leaderboard.filter(
+  const official = getOfficialLeaderboardEntries(baseStore.leaderboard)
+  return official.filter(
     (e) =>
       e.correct_count === leader.value!.correct_count &&
       e.total_points === leader.value!.total_points,
   )
+})
+
+const poolBreakdown = computed(() => {
+  const verified = getOfficialLeaderboardEntries(baseStore.leaderboard).length
+  return computeRoundPool(verified)
 })
 
 const myRank = computed(() => {
@@ -224,7 +235,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
 
       <div
         v-if="activeRoundId && !roundLoading"
-        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
       >
         <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
           <p class="flex items-center gap-1.5 text-xs text-slate-400">
@@ -235,6 +246,24 @@ watch(activeRoundId, (roundId, prevRoundId) => {
             {{ participantCount }}
           </p>
           <p class="mt-0.5 text-[0.65rem] text-slate-500">Quinielas completas</p>
+        </div>
+
+        <div class="rounded-xl border border-mundial-accent/30 bg-mundial-accent/10 px-4 py-3">
+          <p class="flex items-center gap-1.5 text-xs text-slate-400">
+            <PiggyBank class="h-3.5 w-3.5" />
+            En el pozo
+          </p>
+          <p class="mt-1 text-2xl font-bold tabular-nums text-mundial-accent">
+            {{ formatMxn(poolBreakdown.net) }}
+          </p>
+          <p class="mt-0.5 text-[0.65rem] text-slate-500">
+            <template v-if="poolBreakdown.verifiedCount">
+              {{ poolBreakdown.verifiedCount }} pagados · −{{ poolBreakdown.feePercent }}% admin
+            </template>
+            <template v-else>
+              Solo depósitos verificados
+            </template>
+          </p>
         </div>
 
         <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
@@ -303,10 +332,10 @@ watch(activeRoundId, (roundId, prevRoundId) => {
 
       <div
         v-else-if="activeRoundId && roundLoading"
-        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+        class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
       >
         <div
-          v-for="n in 4"
+          v-for="n in 5"
           :key="n"
           class="h-[5.5rem] animate-pulse rounded-xl border border-white/10 bg-white/5"
         />

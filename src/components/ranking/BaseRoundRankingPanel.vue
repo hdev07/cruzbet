@@ -3,7 +3,9 @@ import { computed, ref } from 'vue'
 import { Grid3x3 } from '@lucide/vue'
 import BaseRoundPredictionsMatrix from '@/components/ranking/BaseRoundPredictionsMatrix.vue'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
-import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
+import { BASE_QUINIELA_MATCHES_PER_ROUND, computeRoundPool } from '@/constants/base-quiniela-rules'
+import { formatMxn } from '@/lib/formatMoney'
+import { getOfficialLeaderboardEntries } from '@/lib/baseQuinielaWinners'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseQuinielaRoundMatch } from '@/types'
@@ -18,6 +20,7 @@ const props = defineProps<{
   standingsOnly?: boolean
   /** Limita filas visibles (p. ej. vista compacta en inicio). */
   maxRows?: number
+  previousWinnerUserIds?: string[]
 }>()
 
 const auth = useAuthStore()
@@ -40,6 +43,10 @@ const visibleLeaderboard = computed(() => {
   if (props.maxRows == null || props.maxRows <= 0) return rows
   return rows.slice(0, props.maxRows)
 })
+
+const poolBreakdown = computed(() =>
+  computeRoundPool(getOfficialLeaderboardEntries(baseStore.leaderboard).length),
+)
 </script>
 
 <template>
@@ -79,12 +86,30 @@ const visibleLeaderboard = computed(() => {
       :round-id="roundId"
       :round-matches="roundMatches"
       :current-user-id="auth.user?.id"
+      :previous-winner-user-ids="previousWinnerUserIds"
     />
 
     <template v-else>
+      <div
+        v-if="isLeaderboardReady && poolBreakdown.verifiedCount > 0"
+        class="mb-4 rounded-xl border border-mundial-accent/25 bg-mundial-accent/10 px-4 py-3"
+      >
+        <p class="text-xs font-semibold uppercase tracking-wider text-mundial-accent">
+          En el pozo
+        </p>
+        <p class="mt-1 text-2xl font-bold tabular-nums text-mundial-accent">
+          {{ formatMxn(poolBreakdown.net) }}
+        </p>
+        <p class="mt-1 text-xs text-slate-400">
+          {{ poolBreakdown.verifiedCount }} depósitos × ${{ poolBreakdown.entryFee }} =
+          {{ formatMxn(poolBreakdown.gross) }} · comisión {{ poolBreakdown.feePercent }}%
+          ({{ formatMxn(poolBreakdown.adminFee) }})
+        </p>
+      </div>
+
       <p class="mb-4 text-xs text-slate-500">
         Solo participantes con {{ requiredMatches === 1 ? 'el partido marcado' : `los ${requiredMatches} partidos marcados` }}.
-        El ranking muestra a todos; el pozo solo cuenta depósitos verificados.
+        El ranking muestra a todos; el pozo solo cuenta depósitos verificados (ya con comisión descontada).
       </p>
 
       <p v-if="loading || !isLeaderboardReady" class="text-sm text-slate-400">
