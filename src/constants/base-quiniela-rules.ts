@@ -1,6 +1,8 @@
 export const BASE_QUINIELA_MATCHES_PER_ROUND = 9
 export const BASE_QUINIELA_POINTS_PER_HIT = 1
 export const BASE_QUINIELA_MIN_ACTIVE_ROUND = 1
+/** Cuota por quiniela / jornada (MXN). */
+export const BASE_ENTRY_FEE_MXN = 50
 
 export type RuleAlertSection = {
   title: string

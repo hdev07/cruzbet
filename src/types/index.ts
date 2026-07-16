@@ -87,6 +87,8 @@ export interface MatchEvent {
   minute: number
   extra_time: number
   event_second?: number
+  source?: string
+  external_event_id?: string | null
   metadata: Record<string, unknown>
   created_at?: string
   players?: Pick<Player, 'name' | 'number'>
@@ -145,6 +147,9 @@ export interface BaseRoundLeaderboardEntry {
   total_points: number
   match_count: number
   is_complete: boolean
+  verified: boolean
+  verified_at?: string | null
+  submitted_at?: string | null
 }
 
 export interface BaseRoundPayment {

@@ -1,26 +1,41 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { Crown } from '@lucide/vue'
 import {
   actualMatchWinner,
   isPredictionCorrect,
   winnerCode,
 } from '@/lib/baseQuinielaDisplay'
 import { firstKickoffFromRoundMatches, hasRoundStarted } from '@/lib/baseQuinielaRound'
+import { sortLeaderboardEntries } from '@/lib/baseQuinielaWinners'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BasePrediction, BaseQuinielaRoundMatch, BaseRoundParticipant } from '@/types'
 
-const props = defineProps<{
-  roundId: string
-  roundMatches: BaseQuinielaRoundMatch[]
-  currentUserId?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    roundId: string
+    roundMatches: BaseQuinielaRoundMatch[]
+    currentUserId?: string
+    previousWinnerUserIds?: string[]
+  }>(),
+  {
+    previousWinnerUserIds: () => [],
+  },
+)
 
 const baseStore = useBaseQuinielaStore()
 const participants = ref<BaseRoundParticipant[]>([])
 const loading = ref(false)
 const error = ref('')
+
+const previousWinnerSet = computed(() => new Set(props.previousWinnerUserIds))
+
+function isPreviousWinner(userId: string): boolean {
+  return previousWinnerSet.value.has(userId)
+}
 
 const sortedMatches = computed(() =>
   [...props.roundMatches].sort((a, b) => a.position - b.position),
@@ -43,20 +58,8 @@ const predictionMap = computed(() => {
 })
 
 const competitors = computed(() => {
-  const leaderboardKeys = new Set(
-    baseStore.leaderboard.map((e) => `${e.user_id}:${e.entry_number}`),
-  )
-  const rows = participants.value.filter(
-    (p) =>
-      p.complete &&
-      (leaderboardKeys.size === 0 ||
-        leaderboardKeys.has(`${p.user_id}:${p.entry_number}`)),
-  )
-
-  return rows.sort((a, b) => {
-    if (b.correct_count !== a.correct_count) return b.correct_count - a.correct_count
-    return b.total_points - a.total_points
-  })
+  const rows = participants.value.filter((p) => p.complete)
+  return sortLeaderboardEntries(rows)
 })
 
 const myCorrectCount = computed(() => {
@@ -177,6 +180,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
       <p class="mb-3 text-xs text-slate-500">
         <template v-if="roundStarted">
           Compara tus picks L/E/V con los demás. Verde = acierto, rojo = fallo.
+          El chip indica si el depósito ya fue verificado (el pozo solo cuenta pagados).
           <span v-if="currentUserId"> Tu fila está resaltada.</span>
         </template>
         <template v-else>
@@ -268,19 +272,28 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                         player.user_id === currentUserId &&
                         player.entry_number === baseStore.currentEntryNumber,
                     }"
+                    :title="isPreviousWinner(player.user_id) ? 'Ganador de la jornada previa' : undefined"
                   >
-                    <img
-                      v-if="player.profiles?.avatar"
-                      :src="player.profiles.avatar"
-                      :alt="player.profiles.username ?? 'Jugador'"
-                      class="h-7 w-7 shrink-0 rounded-full border border-white/20"
-                    />
-                    <span
-                      v-else
-                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full theme-cell-pending text-xs font-semibold"
-                    >
-                      {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
-                    </span>
+                    <div class="relative shrink-0">
+                      <img
+                        v-if="player.profiles?.avatar"
+                        :src="player.profiles.avatar"
+                        :alt="player.profiles.username ?? 'Jugador'"
+                        class="h-7 w-7 shrink-0 rounded-full border border-white/20"
+                      />
+                      <span
+                        v-else
+                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full theme-cell-pending text-xs font-semibold"
+                      >
+                        {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
+                      </span>
+                      <Crown
+                        v-if="isPreviousWinner(player.user_id)"
+                        class="absolute -right-1 -top-1 h-3.5 w-3.5 text-amber-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]"
+                        fill="currentColor"
+                        aria-label="Ganador de la jornada previa"
+                      />
+                    </div>
                   </div>
                   <span
                     class="order-2 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
@@ -304,6 +317,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                         (tú)
                       </span>
                     </p>
+                    <PaymentStatusChip class="mt-0.5" :verified="player.verified" compact />
                     <p
                       v-if="rivalryLabel(player.user_id, player.entry_number, player.correct_count)"
                       class="mt-0.5 whitespace-nowrap text-[0.65rem] font-medium leading-tight text-amber-400/90"

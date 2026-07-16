@@ -8,6 +8,7 @@ import {
   BASE_QUINIELA_MATCHES_PER_ROUND,
   BASE_QUINIELA_POINTS_PER_HIT,
 } from '@/constants/base-quiniela-rules'
+import { winnerUserIdsFromEntries } from '@/lib/baseQuinielaWinners'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseRoundLeaderboardEntry } from '@/types'
@@ -19,6 +20,7 @@ const roundLoading = ref(false)
 const selectedRoundId = ref<string | null>(null)
 const participantCount = ref(0)
 const myLeaderboardEntry = ref<BaseRoundLeaderboardEntry | null>(null)
+const previousWinnerUserIds = ref<string[]>([])
 let loadSeq = 0
 
 const activeRoundId = computed(() => selectedRoundId.value ?? baseStore.activeRound?.id ?? null)
@@ -28,6 +30,14 @@ const selectedRound = computed(
     baseStore.rounds.find((r) => r.id === activeRoundId.value) ??
     (baseStore.currentRound?.id === activeRoundId.value ? baseStore.currentRound : null),
 )
+
+const previousRound = computed(() => {
+  const current = selectedRound.value
+  if (!current) return null
+  return (
+    baseStore.rounds.find((r) => r.round_number === current.round_number - 1) ?? null
+  )
+})
 
 const isRoundActive = computed(() => activeRoundId.value === baseStore.activeRound?.id)
 
@@ -47,6 +57,15 @@ const isRoundFinished = computed(
 )
 
 const leader = computed(() => baseStore.leaderboard[0] ?? null)
+
+const tiedLeaders = computed(() => {
+  if (!leader.value) return []
+  return baseStore.leaderboard.filter(
+    (e) =>
+      e.correct_count === leader.value!.correct_count &&
+      e.total_points === leader.value!.total_points,
+  )
+})
 
 const myRank = computed(() => {
   if (!auth.user) return null
@@ -70,10 +89,26 @@ const myDisplayedEntry = computed(
       : null),
 )
 
+async function loadPreviousWinners(seq: number) {
+  const prev = previousRound.value
+  if (!prev) {
+    if (seq === loadSeq) previousWinnerUserIds.value = []
+    return
+  }
+  try {
+    const winners = await baseStore.fetchRoundTiedWinners(prev.id)
+    if (seq !== loadSeq) return
+    previousWinnerUserIds.value = winnerUserIdsFromEntries(winners)
+  } catch {
+    if (seq === loadSeq) previousWinnerUserIds.value = []
+  }
+}
+
 async function loadRoundData(roundId: string) {
   const seq = ++loadSeq
   loadError.value = null
   roundLoading.value = true
+  previousWinnerUserIds.value = []
   try {
     await baseStore.fetchRound(roundId)
     if (seq !== loadSeq) return
@@ -84,6 +119,7 @@ async function loadRoundData(roundId: string) {
         ? baseStore.fetchMyLeaderboardEntry(roundId, auth.user.id)
         : Promise.resolve(null),
       baseStore.fetchRoundLeaderboard(roundId),
+      loadPreviousWinners(seq),
     ] as const)
     if (seq !== loadSeq) return
 
@@ -225,13 +261,21 @@ watch(activeRoundId, (roundId, prevRoundId) => {
         >
           <p class="flex items-center gap-1.5 text-xs text-slate-400">
             <Crown class="h-3.5 w-3.5" />
-            {{ isRoundFinished ? 'Ganador' : 'Líder' }}
+            {{
+              isRoundFinished
+                ? tiedLeaders.length > 1
+                  ? 'Ganadores'
+                  : 'Ganador'
+                : tiedLeaders.length > 1
+                  ? 'Líderes'
+                  : 'Líder'
+            }}
           </p>
           <p
-            v-if="leader"
+            v-if="tiedLeaders.length"
             class="mt-1 truncate text-sm font-bold text-mundial-accent sm:text-base"
           >
-            {{ leader.username ?? 'Anónimo' }}
+            {{ tiedLeaders.map((e) => e.username ?? 'Anónimo').join(', ') }}
           </p>
           <p v-else class="mt-1 text-sm text-slate-500">Sin datos aún</p>
           <p v-if="leader" class="mt-0.5 text-[0.65rem] text-slate-500">
@@ -277,6 +321,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
         :round-id="activeRoundId"
         :round-matches="baseStore.roundMatches"
         :loading="roundLoading"
+        :previous-winner-user-ids="previousWinnerUserIds"
       />
 
       <RouterLink

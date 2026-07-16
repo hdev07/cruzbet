@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Grid3x3 } from '@lucide/vue'
 import BaseRoundPredictionsMatrix from '@/components/ranking/BaseRoundPredictionsMatrix.vue'
+import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -83,7 +84,7 @@ const visibleLeaderboard = computed(() => {
     <template v-else>
       <p class="mb-4 text-xs text-slate-500">
         Solo participantes con {{ requiredMatches === 1 ? 'el partido marcado' : `los ${requiredMatches} partidos marcados` }}.
-        Orden: más aciertos, luego más puntos.
+        El ranking muestra a todos; el pozo solo cuenta depósitos verificados.
       </p>
 
       <p v-if="loading || !isLeaderboardReady" class="text-sm text-slate-400">
@@ -106,11 +107,12 @@ const visibleLeaderboard = computed(() => {
             'ring-1 ring-mundial-accent/50':
               player.user_id === auth.user?.id &&
               player.entry_number === baseStore.currentEntryNumber,
+            'opacity-80': !player.verified,
           }"
         >
           <span
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-            :class="index < 3 ? 'bg-mundial-accent text-mundial-dark' : 'theme-cell-pending text-slate-400'"
+            :class="index < 3 && player.verified ? 'bg-mundial-accent text-mundial-dark' : 'theme-cell-pending text-slate-400'"
           >
             {{ index + 1 }}
           </span>
@@ -128,24 +130,27 @@ const visibleLeaderboard = computed(() => {
             {{ player.username?.[0]?.toUpperCase() ?? '?' }}
           </span>
 
-          <span class="min-w-0 flex-1 truncate font-medium text-app-text">
-            {{ player.username ?? 'Anónimo' }}
-            <span
-              v-if="player.entry_number > 1"
-              class="ml-1 text-xs text-slate-500"
-            >
-              Q{{ player.entry_number }}
-            </span>
-            <span
-              v-if="
-                player.user_id === auth.user?.id &&
-                player.entry_number === baseStore.currentEntryNumber
-              "
-              class="ml-1 text-xs text-mundial-accent"
-            >
-              (tú)
-            </span>
-          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium text-app-text">
+              {{ player.username ?? 'Anónimo' }}
+              <span
+                v-if="player.entry_number > 1"
+                class="ml-1 text-xs text-slate-500"
+              >
+                Q{{ player.entry_number }}
+              </span>
+              <span
+                v-if="
+                  player.user_id === auth.user?.id &&
+                  player.entry_number === baseStore.currentEntryNumber
+                "
+                class="ml-1 text-xs text-mundial-accent"
+              >
+                (tú)
+              </span>
+            </p>
+            <PaymentStatusChip class="mt-1" :verified="player.verified" compact />
+          </div>
 
           <div class="text-right">
             <p class="text-lg font-bold tabular-nums text-mundial-accent">
