@@ -4,11 +4,11 @@ import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import { supabase } from '@/lib/supabase'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { triggerLiveSync } from '@/lib/liveSync'
+import { cardBadgeClass, cardTypeLabel, type CardType } from '@/lib/cardDisplay'
 import { goalTypeLabel, goalTypeShortLabel, normalizeGoalType, type GoalType } from '@/lib/goalDisplay'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchEvent } from '@/types'
 
-type CardType = 'yellow' | 'red' | 'second_yellow'
 const GOAL_TYPE_OPTIONS: GoalType[] = ['foot', 'penalty', 'header', 'free_kick', 'own_goal']
 type PendingConfirm = 'revertToScheduled' | 'reopenMatch' | 'finishMatch' | 'deleteEvent'
 
@@ -98,12 +98,6 @@ function formatEventTime(minute: number, second: number, extraTime = 0) {
   return `${minute}'`
 }
 
-function cardTypeLabel(type: unknown): string {
-  if (type === 'red') return 'Tarjeta roja'
-  if (type === 'second_yellow') return 'Segunda amarilla'
-  return 'Tarjeta amarilla'
-}
-
 function eventTypeLabel(event: MatchEvent): string {
   if (event.event_type === 'goal') {
     const tag = goalTypeShortLabel(event.metadata?.goal_type ?? event.metadata?.type)
@@ -124,12 +118,6 @@ function eventSourceBadgeClass(badge: string): string {
   if (badge === 'manual') return 'bg-white/10 text-slate-400'
   if (badge === 'espn') return 'bg-blue-500/15 text-blue-300'
   return 'bg-white/5 text-slate-500'
-}
-
-function cardTypeBadgeClass(type: unknown): string {
-  if (type === 'red') return 'bg-red-500/20 text-red-300'
-  if (type === 'second_yellow') return 'bg-amber-500/20 text-amber-300'
-  return 'bg-yellow-500/20 text-yellow-200'
 }
 
 function formatSyncTime(iso: string | null | undefined) {
@@ -601,7 +589,7 @@ async function finishMatch() {
                     :class="
                       event.event_type === 'goal'
                         ? 'bg-mundial-accent/20 text-mundial-accent'
-                        : cardTypeBadgeClass(event.metadata?.card_type)
+                        : cardBadgeClass(event.metadata?.card_type)
                     "
                   >
                     {{ eventTypeLabel(event) }}

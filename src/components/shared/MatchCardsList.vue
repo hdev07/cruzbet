@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { cardsForMatch, formatCardLine, normalizeCardType } from '@/lib/cardDisplay'
+import { cardSwatchClass, cardsForMatch, formatCardLine } from '@/lib/cardDisplay'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import type { Match, MatchEvent } from '@/types'
 
@@ -25,9 +25,7 @@ function isHomeCard(event: MatchEvent): boolean {
 }
 
 function cardIconClass(event: MatchEvent): string {
-  return normalizeCardType(event.metadata?.card_type) === 'red'
-    ? 'bg-red-500'
-    : 'bg-amber-400'
+  return cardSwatchClass(event.metadata?.card_type)
 }
 </script>
 
@@ -49,7 +47,7 @@ function cardIconClass(event: MatchEvent): string {
         :class="isHomeCard(event) ? 'flex-row' : 'flex-row-reverse text-right'"
       >
         <span
-          class="mt-1 h-3 w-2 shrink-0 rounded-sm"
+          class="mt-1 h-3 w-2 shrink-0 rounded-[1px]"
           :class="cardIconClass(event)"
         />
         <TeamFlag
