@@ -15,22 +15,22 @@ const router = createRouter({
     {
       path: '/',
       component: () => import('@/views/HomeView.vue'),
-      meta: { layout: 'mobile', title: 'Inicio' },
+      meta: { layout: 'mobile', title: 'Inicio', wide: true },
     },
     {
       path: '/jornadas',
       component: () => import('@/views/BaseQuinielaListView.vue'),
-      meta: { layout: 'mobile', title: 'Quiniela' },
+      meta: { layout: 'mobile', title: 'Quiniela', wide: true },
     },
     {
       path: '/jornadas/todas',
       component: () => import('@/views/BaseQuinielaAllRoundsView.vue'),
-      meta: { layout: 'mobile', title: 'Todas las jornadas' },
+      meta: { layout: 'mobile', title: 'Todas las jornadas', wide: true },
     },
     {
       path: '/jornadas/:id',
       component: () => import('@/views/BaseQuinielaRoundView.vue'),
-      meta: { layout: 'mobile', title: 'Jornada' },
+      meta: { layout: 'mobile', title: 'Jornada', wide: true },
     },
     {
       path: '/reglas',
@@ -54,7 +54,7 @@ const router = createRouter({
     {
       path: '/perfil',
       component: () => import('@/views/ProfileView.vue'),
-      meta: { layout: 'mobile', requiresAuth: true, title: 'Mi perfil' },
+      meta: { layout: 'mobile', requiresAuth: true, title: 'Mi perfil', wide: true },
     },
     {
       path: '/admin',
