@@ -245,16 +245,22 @@ const events = computed(() => (match.value ? matchStore.getEventsForMatch(match.
           </div>
         </div>
 
-        <p
+        <div
           v-if="match.venue || match.broadcast_channel"
-          class="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-center text-xs text-app-muted"
+          class="mt-4 flex flex-col items-center gap-1.5 text-center text-xs text-app-muted"
         >
           <span v-if="match.venue" class="inline-flex items-center gap-1">
             <MapPin class="h-3.5 w-3.5 shrink-0 opacity-70" />
             {{ formatMatchVenue(match.venue) }}
           </span>
-          <BroadcastBadge v-if="match.broadcast_channel" :channels="match.broadcast_channel" :max="3" size="md" />
-        </p>
+          <BroadcastBadge
+            v-if="match.broadcast_channel"
+            :channels="match.broadcast_channel"
+            :max="3"
+            size="md"
+            class="mt-1"
+          />
+        </div>
 
         <p
           v-if="halftime"

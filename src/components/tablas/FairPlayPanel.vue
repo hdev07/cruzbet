@@ -279,10 +279,10 @@ const {
 
       <div class="mt-3 flex flex-wrap gap-4 text-xs text-app-muted">
         <span class="inline-flex items-center gap-1.5">
-          <span class="h-2 w-2 rounded-full bg-mundial-warning" /> Amarillas
+          <span class="h-3 w-2 shrink-0 rounded-[1px] bg-mundial-warning" /> Amarillas
         </span>
         <span class="inline-flex items-center gap-1.5">
-          <span class="h-2 w-2 rounded-full bg-mundial-error" /> Rojas
+          <span class="h-3 w-2 shrink-0 rounded-[1px] bg-mundial-error" /> Rojas
         </span>
       </div>
     </section>
@@ -323,10 +323,10 @@ const {
 
       <div class="mt-3 flex flex-wrap gap-4 text-xs text-app-muted">
         <span class="inline-flex items-center gap-1.5">
-          <span class="h-2 w-2 rounded-full bg-mundial-warning" /> Amarillas
+          <span class="h-3 w-2 shrink-0 rounded-[1px] bg-mundial-warning" /> Amarillas
         </span>
         <span class="inline-flex items-center gap-1.5">
-          <span class="h-2 w-2 rounded-full bg-mundial-error" /> Rojas
+          <span class="h-3 w-2 shrink-0 rounded-[1px] bg-mundial-error" /> Rojas
         </span>
         <span class="inline-flex items-center gap-1.5">
           <span class="h-2 w-2 rounded-full bg-app-muted" /> Faltas

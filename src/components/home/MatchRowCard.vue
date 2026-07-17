@@ -158,7 +158,7 @@ const hasMeta = computed(
 
     <div
       v-if="hasMeta"
-      class="mt-2 flex items-center justify-between gap-3 border-t border-white/5 pt-2"
+      class="mt-2 flex flex-col items-start gap-1 border-t border-white/5 pt-2"
     >
       <span
         v-if="venueLabel"
@@ -168,8 +168,12 @@ const hasMeta = computed(
         <MapPin class="h-3 w-3 shrink-0 opacity-70" />
         <span class="min-w-0 truncate">{{ venueLabel }}</span>
       </span>
-      <span v-else class="flex-1" />
-      <BroadcastBadge v-if="match.broadcast_channel" :channels="match.broadcast_channel" :max="3" />
+      <BroadcastBadge
+        v-if="match.broadcast_channel"
+        :channels="match.broadcast_channel"
+        :max="3"
+        class="mt-1"
+      />
     </div>
   </div>
 </template>
