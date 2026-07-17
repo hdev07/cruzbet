@@ -1,14 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, onActivated, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { Table2 } from '@lucide/vue'
+import { BarChart3, Table2 } from '@lucide/vue'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import FairPlayPanel from '@/components/tablas/FairPlayPanel.vue'
 import GoleoTable from '@/components/tablas/GoleoTable.vue'
 import LoMejorDelTorneo from '@/components/tablas/LoMejorDelTorneo.vue'
 import MenoresTable from '@/components/tablas/MenoresTable.vue'
 import StandingsTable from '@/components/tablas/StandingsTable.vue'
-import { TABLAS_SECTIONS, type TablasSection } from '@/constants/tablas'
+import GoleoStatsPanel from '@/components/estadisticas/GoleoStatsPanel.vue'
+import EquiposStatsPanel from '@/components/estadisticas/EquiposStatsPanel.vue'
+import DisciplinaStatsPanel from '@/components/estadisticas/DisciplinaStatsPanel.vue'
+import {
+  ESTADISTICAS_SECTIONS,
+  TABLAS_SECTIONS,
+  TABLAS_TABS,
+  type EstadisticasSection,
+  type TablasSection,
+  type TablasTab,
+} from '@/constants/tablas'
 import { useTablasStore } from '@/stores/tablasStore'
 
 const store = useTablasStore()
@@ -24,7 +34,9 @@ const {
   highlights,
 } = storeToRefs(store)
 
+const activeTab = ref<TablasTab>('tablas')
 const activeSection = ref<TablasSection>('general')
+const activeStatsSection = ref<EstadisticasSection>('goleo')
 
 const selectedCompetition = computed(
   () => competitions.value.find((c) => c.id === selectedCompetitionId.value) ?? null,
@@ -55,6 +67,19 @@ const sectionHint = computed(() => {
   }
 })
 
+const statsHint = computed(() => {
+  switch (activeStatsSection.value) {
+    case 'goleo':
+      return 'Ranking gráfico de los máximos anotadores'
+    case 'equipos':
+      return 'Comparativa de ataque y defensa por equipo'
+    case 'disciplina':
+      return 'Tendencias de tarjetas y faltas del torneo'
+    default:
+      return ''
+  }
+})
+
 function refresh() {
   void store.fetchTablas()
 }
@@ -70,91 +95,157 @@ onActivated(refresh)
         Liga MX · Apertura 2026
       </p>
       <div class="mt-1 flex items-center gap-2">
-        <Table2 class="h-7 w-7 text-mundial-accent" :stroke-width="1.75" />
-        <h1 class="text-2xl font-bold lg:text-3xl">Tablas</h1>
+        <Table2 v-if="activeTab === 'tablas'" class="h-7 w-7 text-mundial-accent" :stroke-width="1.75" />
+        <BarChart3 v-else class="h-7 w-7 text-mundial-accent" :stroke-width="1.75" />
+        <h1 class="text-2xl font-bold lg:text-3xl">{{ activeTab === 'tablas' ? 'Tablas' : 'Estadísticas' }}</h1>
       </div>
       <p class="mt-2 max-w-2xl text-sm text-app-muted lg:text-base">
-        Tabla general, goleo, menores y fair play del torneo.
+        Tabla general, goleo, menores, fair play y estadísticas del torneo.
       </p>
     </header>
 
     <nav
-      class="theme-tab-bar mb-6 flex gap-1 overflow-x-auto app-scrollbar"
-      aria-label="Secciones de tablas"
+      class="theme-tab-bar mb-4 flex gap-1"
+      aria-label="Tablas o estadísticas"
     >
       <button
-        v-for="section in TABLAS_SECTIONS"
-        :key="section.id"
+        v-for="tab in TABLAS_TABS"
+        :key="tab.id"
         type="button"
-        class="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition"
+        class="flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition"
         :class="
-          activeSection === section.id
+          activeTab === tab.id
             ? 'bg-mundial-accent text-mundial-dark'
             : 'text-app-muted hover:bg-app-hover hover:text-app-text'
         "
-        @click="activeSection = section.id"
+        @click="activeTab = tab.id"
       >
-        {{ section.label }}
+        {{ tab.label }}
       </button>
     </nav>
 
-    <div
-      v-if="activeSection === 'general' && competitions.length > 1"
-      class="theme-tab-bar mb-4 flex gap-1 overflow-x-auto app-scrollbar"
-      aria-label="Torneo"
-    >
-      <button
-        v-for="competition in competitions"
-        :key="competition.id"
-        type="button"
-        class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
-        :class="
-          selectedCompetitionId === competition.id
-            ? 'bg-mundial-accent text-mundial-dark'
-            : 'text-app-muted hover:bg-app-hover hover:text-app-text'
-        "
-        @click="store.selectCompetition(competition.id)"
+    <template v-if="activeTab === 'tablas'">
+      <nav
+        class="theme-tab-bar mb-6 flex gap-1 overflow-x-auto app-scrollbar"
+        aria-label="Secciones de tablas"
       >
-        {{ competition.name }} · {{ competition.season }}
-      </button>
-    </div>
+        <button
+          v-for="section in TABLAS_SECTIONS"
+          :key="section.id"
+          type="button"
+          class="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition"
+          :class="
+            activeSection === section.id
+              ? 'bg-mundial-accent text-mundial-dark'
+              : 'text-app-muted hover:bg-app-hover hover:text-app-text'
+          "
+          @click="activeSection = section.id"
+        >
+          {{ section.label }}
+        </button>
+      </nav>
 
-    <p class="mb-4 text-sm text-app-muted">{{ sectionHint }}</p>
+      <div
+        v-if="activeSection === 'general' && competitions.length > 1"
+        class="theme-tab-bar mb-4 flex gap-1 overflow-x-auto app-scrollbar"
+        aria-label="Torneo"
+      >
+        <button
+          v-for="competition in competitions"
+          :key="competition.id"
+          type="button"
+          class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+          :class="
+            selectedCompetitionId === competition.id
+              ? 'bg-mundial-accent text-mundial-dark'
+              : 'text-app-muted hover:bg-app-hover hover:text-app-text'
+          "
+          @click="store.selectCompetition(competition.id)"
+        >
+          {{ competition.name }} · {{ competition.season }}
+        </button>
+      </div>
 
-    <div v-if="showSkeleton" class="space-y-8">
-      <DataSkeleton v-if="activeSection === 'general'" variant="highlights" />
-      <DataSkeleton
-        variant="table"
-        :rows="activeSection === 'goleo' ? 10 : 18"
-      />
-      <DataSkeleton
-        v-if="activeSection === 'fair-play'"
-        variant="cards"
-        :cards="2"
-      />
-    </div>
+      <p class="mb-4 text-sm text-app-muted">{{ sectionHint }}</p>
+
+      <div v-if="showSkeleton" class="space-y-8">
+        <DataSkeleton v-if="activeSection === 'general'" variant="highlights" />
+        <DataSkeleton
+          variant="table"
+          :rows="activeSection === 'goleo' ? 10 : 18"
+        />
+        <DataSkeleton
+          v-if="activeSection === 'fair-play'"
+          variant="cards"
+          :cards="2"
+        />
+      </div>
+
+      <template v-else>
+        <div v-show="activeSection === 'general'" class="space-y-8">
+          <LoMejorDelTorneo :items="highlights" />
+          <StandingsTable :rows="standings" title="Tabla General" />
+        </div>
+
+        <div v-show="activeSection === 'goleo'">
+          <GoleoTable :rows="scorers" />
+        </div>
+
+        <div v-show="activeSection === 'menores'">
+          <MenoresTable
+            :rows="menoresStandings"
+            :required-minutes="menoresRequiredMinutes"
+            :synced-at="menoresSyncedAt"
+          />
+        </div>
+
+        <div v-show="activeSection === 'fair-play'">
+          <FairPlayPanel />
+        </div>
+      </template>
+    </template>
 
     <template v-else>
-      <div v-show="activeSection === 'general'" class="space-y-8">
-        <LoMejorDelTorneo :items="highlights" />
-        <StandingsTable :rows="standings" title="Tabla General" />
+      <nav
+        class="theme-tab-bar mb-6 flex gap-1 overflow-x-auto app-scrollbar"
+        aria-label="Secciones de estadísticas"
+      >
+        <button
+          v-for="section in ESTADISTICAS_SECTIONS"
+          :key="section.id"
+          type="button"
+          class="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition"
+          :class="
+            activeStatsSection === section.id
+              ? 'bg-mundial-accent text-mundial-dark'
+              : 'text-app-muted hover:bg-app-hover hover:text-app-text'
+          "
+          @click="activeStatsSection = section.id"
+        >
+          {{ section.label }}
+        </button>
+      </nav>
+
+      <p class="mb-4 text-sm text-app-muted">{{ statsHint }}</p>
+
+      <div v-if="showSkeleton" class="space-y-6">
+        <DataSkeleton variant="cards" :cards="2" />
+        <DataSkeleton variant="cards" :cards="2" />
       </div>
 
-      <div v-show="activeSection === 'goleo'">
-        <GoleoTable :rows="scorers" />
-      </div>
+      <template v-else>
+        <div v-show="activeStatsSection === 'goleo'">
+          <GoleoStatsPanel />
+        </div>
 
-    <div v-show="activeSection === 'menores'">
-      <MenoresTable
-        :rows="menoresStandings"
-        :required-minutes="menoresRequiredMinutes"
-        :synced-at="menoresSyncedAt"
-      />
-    </div>
+        <div v-show="activeStatsSection === 'equipos'">
+          <EquiposStatsPanel />
+        </div>
 
-      <div v-show="activeSection === 'fair-play'">
-        <FairPlayPanel />
-      </div>
+        <div v-show="activeStatsSection === 'disciplina'">
+          <DisciplinaStatsPanel />
+        </div>
+      </template>
     </template>
   </div>
 </template>

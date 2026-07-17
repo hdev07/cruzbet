@@ -31,6 +31,13 @@ export const CARD_MINUTE_BUCKETS = [
   '>90',
 ] as const
 
+export type TablasTab = 'tablas' | 'estadisticas'
+
+export const TABLAS_TABS: { id: TablasTab; label: string }[] = [
+  { id: 'tablas', label: 'Tablas' },
+  { id: 'estadisticas', label: 'Estadísticas' },
+]
+
 export type TablasSection =
   | 'general'
   | 'goleo'
@@ -42,4 +49,12 @@ export const TABLAS_SECTIONS: { id: TablasSection; label: string }[] = [
   { id: 'goleo', label: 'Goleo' },
   { id: 'menores', label: 'Tabla de menores' },
   { id: 'fair-play', label: 'Fair Play' },
+]
+
+export type EstadisticasSection = 'goleo' | 'equipos' | 'disciplina'
+
+export const ESTADISTICAS_SECTIONS: { id: EstadisticasSection; label: string }[] = [
+  { id: 'goleo', label: 'Goleo' },
+  { id: 'equipos', label: 'Equipos' },
+  { id: 'disciplina', label: 'Disciplina' },
 ]
