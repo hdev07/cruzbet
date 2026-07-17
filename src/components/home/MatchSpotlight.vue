@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { MapPin, Radio } from '@lucide/vue'
 import BroadcastBadge from '@/components/shared/BroadcastBadge.vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
@@ -40,6 +40,11 @@ const props = withDefaults(
 )
 
 const matchStore = useMatchStore()
+const router = useRouter()
+
+function goToDetail() {
+  router.push(`/partido/${props.match.id}`)
+}
 
 const interrupted = computed(() => isMatchInterrupted(props.match))
 const interruptedLabel = computed(() =>
@@ -170,7 +175,9 @@ onUnmounted(() => {
 
 <template>
   <article
-    class="overflow-hidden rounded-2xl border theme-surface-gradient-via"
+    role="link"
+    tabindex="0"
+    class="cursor-pointer overflow-hidden rounded-2xl border theme-surface-gradient-via transition hover:border-mundial-accent/40"
     :class="
       interrupted
         ? 'border-amber-400/40 ring-1 ring-amber-400/30'
@@ -180,6 +187,9 @@ onUnmounted(() => {
             : 'border-mundial-green/40 ring-1 ring-mundial-green/25'
           : 'border-white/10'
     "
+    @click="goToDetail"
+    @keydown.enter.prevent="goToDetail"
+    @keydown.space.prevent="goToDetail"
   >
     <div class="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
       <div>
@@ -213,6 +223,7 @@ onUnmounted(() => {
           v-if="match.home_team?.code"
           :to="`/tablas/equipo/${match.home_team.code}`"
           class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center hover:text-mundial-accent"
+          @click.stop
         >
           <TeamFlag
             :src="match.home_team?.flag_url"
@@ -267,6 +278,7 @@ onUnmounted(() => {
           v-if="match.away_team?.code"
           :to="`/tablas/equipo/${match.away_team.code}`"
           class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center hover:text-mundial-accent"
+          @click.stop
         >
           <TeamFlag
             :src="match.away_team?.flag_url"

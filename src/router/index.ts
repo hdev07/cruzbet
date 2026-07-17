@@ -62,6 +62,11 @@ const router = createRouter({
       meta: { layout: 'mobile', title: 'Equipo', wide: true },
     },
     {
+      path: '/partido/:id',
+      component: () => import('@/views/MatchDetailView.vue'),
+      meta: { layout: 'mobile', title: 'Partido', wide: true },
+    },
+    {
       path: '/perfil',
       component: () => import('@/views/ProfileView.vue'),
       meta: { layout: 'mobile', requiresAuth: true, title: 'Mi perfil', wide: true },

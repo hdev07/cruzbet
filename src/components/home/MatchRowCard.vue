@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { MapPin, Radio } from '@lucide/vue'
 import BroadcastBadge from '@/components/shared/BroadcastBadge.vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
@@ -20,6 +20,12 @@ import type { Match } from '@/types'
 const props = defineProps<{
   match: Match
 }>()
+
+const router = useRouter()
+
+function goToDetail() {
+  router.push(`/partido/${props.match.id}`)
+}
 
 const isLive = computed(() => isEffectivelyLive(props.match))
 const halftime = computed(() => isMatchHalftime(props.match))
@@ -45,7 +51,9 @@ const hasMeta = computed(
 
 <template>
   <div
-    class="rounded-xl border px-3 py-2.5"
+    role="link"
+    tabindex="0"
+    class="cursor-pointer rounded-xl border px-3 py-2.5 transition hover:border-mundial-accent/40"
     :class="
       isLive
         ? 'border-mundial-green/35 bg-mundial-green/10'
@@ -53,6 +61,9 @@ const hasMeta = computed(
           ? 'border-white/8 bg-white/3 opacity-90'
           : 'border-white/10 bg-white/5'
     "
+    @click="goToDetail"
+    @keydown.enter.prevent="goToDetail"
+    @keydown.space.prevent="goToDetail"
   >
     <div class="flex items-center justify-between gap-2">
       <span class="min-w-0 truncate text-[11px] font-semibold uppercase tracking-wide text-app-muted">
@@ -73,6 +84,7 @@ const hasMeta = computed(
           v-if="match.home_team?.code"
           :to="`/tablas/equipo/${match.home_team.code}`"
           class="flex min-w-0 flex-1 items-center gap-2 hover:text-mundial-accent"
+          @click.stop
         >
           <TeamFlag
             :src="match.home_team?.flag_url"
@@ -107,6 +119,7 @@ const hasMeta = computed(
           v-if="match.away_team?.code"
           :to="`/tablas/equipo/${match.away_team.code}`"
           class="flex min-w-0 flex-1 items-center gap-2 hover:text-mundial-accent"
+          @click.stop
         >
           <TeamFlag
             :src="match.away_team?.flag_url"
