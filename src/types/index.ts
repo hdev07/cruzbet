@@ -73,6 +73,8 @@ export interface Match {
   phase: string | null
   match_date: string | null
   venue: string | null
+  /** Canal(es) de transmisión, códigos separados por coma (ej. "canal5,tudn,vix"). */
+  broadcast_channel?: string | null
   bracket_key?: string | null
   bracket_meta?: BracketMeta | null
   auto_sync_enabled?: boolean

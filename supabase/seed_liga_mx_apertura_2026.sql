@@ -222,10 +222,34 @@ with fixture_values (round_number, position, home_code, away_code, kickoff, venu
     (17, 9, 'QRO', 'NEC', timestamptz '2026-11-22 19:00:00-06', 'LA CORREGIDORA', true)
 ), competition as (
   select id from public.competitions where slug = 'liga-mx-apertura-2026'
+), team_broadcast (code, channels) as (
+  -- Canal por defecto del partido según los derechos de TV del equipo local
+  -- (prensa mexicana, Apertura 2026). Necaxa, Puebla, Tigres, FC Juárez, Atlante
+  -- y Toluca reparten sus partidos entre varias señales jornada a jornada: estos
+  -- valores son el caso más común y se pueden corregir por partido si hace falta.
+  values
+    ('AME', 'canal5,tudn'),
+    ('ATN', 'fox,azteca'),
+    ('ATS', 'canal5,tudn'),
+    ('ASL', 'espn,vix'),
+    ('TIJ', 'fox'),
+    ('CAZ', 'canal5,tudn'),
+    ('JUA', 'azteca,fox'),
+    ('QRO', 'fox'),
+    ('GDL', 'prime'),
+    ('LEO', 'fox'),
+    ('NEC', 'fox,azteca'),
+    ('PAC', 'fox'),
+    ('PUE', 'azteca,fox'),
+    ('MTY', 'canal5,tudn'),
+    ('SAN', 'canal5,tudn'),
+    ('TIG', 'azteca,fox'),
+    ('TOL', 'canal5,azteca'),
+    ('PUM', 'canal5,tudn')
 )
 insert into public.matches (
   id, competition_id, home_team_id, away_team_id, home_score, away_score,
-  status, phase, match_date, venue
+  status, phase, match_date, venue, broadcast_channel
 )
 select
   md5('liga-mx-apertura-2026-match-' || f.round_number || '-' || f.position)::uuid,
@@ -237,18 +261,21 @@ select
   'scheduled'::match_status,
   case when f.kickoff_confirmed then 'Jornada ' || f.round_number else 'Jornada ' || f.round_number || ' · horario por confirmar' end,
   f.kickoff,
-  f.venue
+  f.venue,
+  tb.channels
 from fixture_values f
 cross join competition c
 join public.teams home_team on home_team.code = f.home_code
 join public.teams away_team on away_team.code = f.away_code
+left join team_broadcast tb on tb.code = f.home_code
 on conflict (id) do update
 set competition_id = excluded.competition_id,
     home_team_id = excluded.home_team_id,
     away_team_id = excluded.away_team_id,
     phase = excluded.phase,
     match_date = excluded.match_date,
-    venue = excluded.venue;
+    venue = excluded.venue,
+    broadcast_channel = excluded.broadcast_channel;
 
 with positions (round_number, position) as (
   values
