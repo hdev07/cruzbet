@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { Radio } from '@lucide/vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
+import MatchCardsList from '@/components/shared/MatchCardsList.vue'
+import MatchGoalsList from '@/components/shared/MatchGoalsList.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import {
   formatLiveStatusLabel,
@@ -10,6 +12,7 @@ import {
 } from '@/lib/matchClock'
 import { formatKickoff } from '@/lib/matchRules'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import { useMatchStore } from '@/stores/matchStore'
 import type { Match } from '@/types'
 
 const props = withDefaults(
@@ -31,6 +34,8 @@ const props = withDefaults(
   },
 )
 
+const matchStore = useMatchStore()
+
 const delayed = computed(() => isMatchDelayed(props.match))
 const showScore = computed(
   () => props.isLive || props.isRecentlyFinished || props.match.status === 'finished',
@@ -51,6 +56,56 @@ const eyebrow = computed(() => {
   if (props.isLive) return 'En vivo'
   if (props.isRecentlyFinished || props.match.status === 'finished') return 'Último resultado'
   return 'Próximo partido'
+})
+
+const shouldLoadEvents = computed(
+  () =>
+    props.isLive ||
+    props.isRecentlyFinished ||
+    props.match.status === 'finished',
+)
+
+const showEventDetails = computed(
+  () => props.isLive || !!props.isRecentlyFinished,
+)
+
+const matchEvents = computed(() => matchStore.getEventsForMatch(props.match.id))
+
+let eventsTimer: ReturnType<typeof setInterval> | null = null
+
+function loadEvents() {
+  if (shouldLoadEvents.value) {
+    void matchStore.fetchEvents(props.match.id)
+  }
+}
+
+onMounted(() => {
+  loadEvents()
+  if (props.isLive) {
+    eventsTimer = setInterval(loadEvents, 30_000)
+  }
+})
+
+watch(shouldLoadEvents, (load) => {
+  if (load) void matchStore.fetchEvents(props.match.id)
+})
+
+watch(
+  () => props.isLive,
+  (live) => {
+    if (eventsTimer) {
+      clearInterval(eventsTimer)
+      eventsTimer = null
+    }
+    if (live) {
+      eventsTimer = setInterval(loadEvents, 30_000)
+      loadEvents()
+    }
+  },
+)
+
+onUnmounted(() => {
+  if (eventsTimer) clearInterval(eventsTimer)
 })
 </script>
 
@@ -135,5 +190,16 @@ const eyebrow = computed(() => {
         {{ match.venue }}
       </p>
     </div>
+
+    <MatchGoalsList
+      v-if="showEventDetails"
+      :match="match"
+      :events="matchEvents"
+    />
+    <MatchCardsList
+      v-if="showEventDetails"
+      :match="match"
+      :events="matchEvents"
+    />
   </article>
 </template>
