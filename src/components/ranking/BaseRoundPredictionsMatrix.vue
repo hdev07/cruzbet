@@ -208,17 +208,6 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
     </div>
 
     <template v-else>
-      <p v-if="!hideIntro" class="mb-3 text-xs text-slate-500">
-        <template v-if="roundStarted">
-          Verde = acierto, ámbar = acierto provisional en vivo (p. ej. empate hasta que cambie el marcador), rojo = fallo.
-          <span v-if="currentUserId"> Tus quinielas están resaltadas.</span>
-        </template>
-        <template v-else>
-          Los picks de los demás se revelan al empezar el primer partido.
-          <span v-if="currentUserId"> Tus quinielas están resaltadas.</span>
-        </template>
-      </p>
-
       <div class="theme-table-wrap" :class="{ 'overflow-visible border-0 bg-transparent': exportLayout }">
         <table class="theme-table text-sm" :class="exportLayout ? 'min-w-max' : 'min-w-[48rem]'">
           <thead>
@@ -247,18 +236,18 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     :src="teamCrestUrl(match.match.home_team?.code) ?? match.match.home_team?.flag_url"
                     :code="match.match.home_team?.code"
                     :alt="teamDisplayName(match.match.home_team, 'Local')"
-                    size="sm"
+                    size="md"
                     eager
-                    img-class="!h-2.5 !w-2.5 shrink-0 rounded-sm object-contain"
+                    img-class="!h-3 !w-3 shrink-0 rounded-sm object-contain"
                   />
                   <span class="text-[0.4rem] text-slate-600">·</span>
                   <TeamFlag
                     :src="teamCrestUrl(match.match.away_team?.code) ?? match.match.away_team?.flag_url"
                     :code="match.match.away_team?.code"
                     :alt="teamDisplayName(match.match.away_team, 'Visitante')"
-                    size="sm"
+                    size="md"
                     eager
-                    img-class="!h-2.5 !w-2.5 shrink-0 rounded-sm object-contain"
+                    img-class="!h-3 !w-3 shrink-0 rounded-sm object-contain"
                   />
                 </div>
                 <span

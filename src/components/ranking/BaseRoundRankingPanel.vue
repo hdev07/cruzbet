@@ -53,7 +53,6 @@ const visibleRanks = computed(() => {
     <div
       v-if="!standingsOnly"
       class="theme-tab-bar mb-4 flex gap-1"
-      :class="compact ? '' : 'lg:max-w-md'"
     >
       <button
         type="button"
