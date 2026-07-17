@@ -4,8 +4,11 @@ import {
   canonicalTeamName,
   eventsMatchScore,
   findEspnEvent,
+  isHalftimeStatus,
+  normalizeEspnClock,
   normalizeEspnEvents,
   normalizeEspnPlay,
+  normalizeEspnStatusDetail,
   type EspnEvent,
 } from './espn-provider.js'
 
@@ -19,6 +22,74 @@ describe('reloj ESPN', () => {
       minute: 45,
       extra_time: 2,
     })
+  })
+
+  it('detecta el entretiempo aunque ESPN conserve el último agregado', () => {
+    const status = {
+      type: {
+        state: 'in',
+        name: 'STATUS_HALFTIME',
+        description: 'Halftime',
+        detail: "45'+4'",
+      },
+      displayClock: "45'+4'",
+    }
+
+    expect(isHalftimeStatus(status)).toBe(true)
+    expect(normalizeEspnClock(status)).toBe('HT')
+  })
+
+  it('conserva el tiempo agregado durante el primer tiempo', () => {
+    const status = {
+      type: {
+        state: 'in',
+        name: 'STATUS_FIRST_HALF',
+        description: 'First Half',
+        detail: "45'+4'",
+        shortDetail: "45'+4'",
+      },
+      displayClock: "45'+4'",
+    }
+
+    expect(isHalftimeStatus(status)).toBe(false)
+    expect(normalizeEspnClock(status)).toBe("45+4'")
+  })
+
+  it('mapea estatus interrumpidos de ESPN', () => {
+    expect(
+      normalizeEspnStatusDetail({
+        type: { state: 'pre', name: 'STATUS_DELAYED', description: 'Delayed' },
+      }),
+    ).toBe('delayed')
+    expect(
+      normalizeEspnStatusDetail({
+        type: {
+          state: 'pre',
+          name: 'STATUS_POSTPONED',
+          description: 'Postponed',
+        },
+      }),
+    ).toBe('postponed')
+    expect(
+      normalizeEspnStatusDetail({
+        type: {
+          state: 'in',
+          name: 'STATUS_SUSPENDED',
+          description: 'Suspended',
+          detail: "67'",
+        },
+        displayClock: "67'",
+      }),
+    ).toBe('suspended')
+    expect(
+      normalizeEspnStatusDetail({
+        type: {
+          state: 'post',
+          name: 'STATUS_CANCELED',
+          description: 'Canceled',
+        },
+      }),
+    ).toBe('canceled')
   })
 })
 

@@ -34,7 +34,7 @@ interface EspnCompetitor {
   team: EspnTeam
 }
 
-interface EspnStatus {
+export interface EspnStatus {
   type: {
     state?: string
     completed?: boolean
@@ -168,8 +168,8 @@ function mapStatus(status: EspnStatus): MatchStatus {
   return 'scheduled'
 }
 
-function mapStatusDetail(status: EspnStatus): string | null {
-  const text = [
+function espnStatusText(status: EspnStatus): string {
+  return [
     status.type.name,
     status.type.description,
     status.type.detail,
@@ -177,12 +177,57 @@ function mapStatusDetail(status: EspnStatus): string | null {
   ]
     .filter(Boolean)
     .join(' ')
+}
 
-  if (/delay|retras/i.test(text)) return 'delayed'
-  if (/postpon|pospuest/i.test(text)) return 'postponed'
-  if (/suspend/i.test(text)) return 'suspended'
-  if (/cancel/i.test(text)) return 'canceled'
+/**
+ * Solo el nombre/descripción oficial de ESPN (no detail/shortDetail:
+ * ahí suele quedar el último reloj, p. ej. 45'+4', y no indica HT).
+ */
+export function isHalftimeStatus(status: EspnStatus): boolean {
+  const text = [status.type.name, status.type.description]
+    .filter(Boolean)
+    .join(' ')
+
+  return (
+    /STATUS_HALFTIME/i.test(text) ||
+    /(?:^|[^a-z])(?:half[\s_-]?time|halftime|entretiempo|medio tiempo)(?:[^a-z]|$)/i.test(
+      text,
+    )
+  )
+}
+
+export function normalizeEspnStatusDetail(
+  status: EspnStatus,
+): 'delayed' | 'postponed' | 'suspended' | 'canceled' | null {
+  const text = espnStatusText(status)
+  const name = status.type.name ?? ''
+
+  if (/STATUS_DELAYED|STATUS_RAIN_DELAY/i.test(name) || /delay|retras/i.test(text)) {
+    return 'delayed'
+  }
+  if (/STATUS_POSTPONED/i.test(name) || /postpon|pospuest/i.test(text)) {
+    return 'postponed'
+  }
+  if (
+    /STATUS_SUSPENDED|STATUS_ABANDONED/i.test(name) ||
+    /suspend|abandon/i.test(text)
+  ) {
+    return 'suspended'
+  }
+  if (
+    /STATUS_CANCELED|STATUS_CANCELLED/i.test(name) ||
+    /cancel/i.test(text)
+  ) {
+    return 'canceled'
+  }
   return null
+}
+
+export function normalizeEspnClock(status: EspnStatus): string | null {
+  // Tiempo agregado del 1T (45+N') se conserva hasta el cambio oficial a HT.
+  if (isHalftimeStatus(status)) return 'HT'
+  if (mapStatus(status) === 'finished') return 'FT'
+  return formatClockDisplay(status.displayClock ?? '')
 }
 
 function playType(play: EspnPlay): string {
@@ -378,6 +423,7 @@ async function buildSnapshot(
 
   const status = mapStatus(competition.status)
   const displayClock = competition.status.displayClock ?? ''
+  const clock = normalizeEspnClock(competition.status)
   const homeScore = parseScore(home.score)
   const awayScore = parseScore(away.score)
   const normalizedEvents = normalizeEspnEvents(
@@ -391,13 +437,12 @@ async function buildSnapshot(
     external_event_id: event.id,
     scheduled_at: competition.date ?? event.date ?? null,
     status,
-    status_detail: mapStatusDetail(competition.status),
+    status_detail: normalizeEspnStatusDetail(competition.status),
     current_minute: currentMinuteFromClock(
-      displayClock,
+      clock ?? displayClock,
       status === 'finished',
     ),
-    clock:
-      status === 'finished' ? 'FT' : formatClockDisplay(displayClock),
+    clock,
     home_score: homeScore,
     away_score: awayScore,
     events_complete:

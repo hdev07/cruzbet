@@ -11,6 +11,16 @@ export function isMatchDelayed(match: Pick<Match, 'live_status_detail'>): boolea
   return match.live_status_detail === 'delayed'
 }
 
+export function isMatchHalftime(match: Pick<Match, 'live_clock_display'>): boolean {
+  return match.live_clock_display === 'HT'
+}
+
+export function isMatchInterrupted(
+  match: Pick<Match, 'live_status_detail'>,
+): boolean {
+  return Boolean(match.live_status_detail)
+}
+
 export function formatScheduledStatusLabel(
   match: Pick<Match, 'live_status_detail'>,
 ): string | null {
@@ -49,10 +59,21 @@ export function formatLiveStatusLabel(
   const detailLabel = match.live_status_detail
     ? LIVE_STATUS_DETAIL_LABELS[match.live_status_detail]
     : null
+
+  // Retrasado / pospuesto / cancelado: priorizar el estatus, sin reloj engañoso.
+  if (
+    match.live_status_detail === 'delayed' ||
+    match.live_status_detail === 'postponed' ||
+    match.live_status_detail === 'canceled'
+  ) {
+    return detailLabel!
+  }
+
   const clock = formatMatchClock(match)
 
-  if (detailLabel) {
-    return clock ? `${detailLabel} · ${clock}` : detailLabel
+  // Suspendido: estatus + último minuto conocido.
+  if (match.live_status_detail === 'suspended') {
+    return clock ? `${detailLabel} · ${clock}` : detailLabel!
   }
 
   return clock ? `EN VIVO · ${clock}` : 'EN VIVO'
