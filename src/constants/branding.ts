@@ -4,6 +4,8 @@ export const APP_DESCRIPTION =
   'Marca L, E o V en cada jornada de Liga MX.'
 export const APP_URL = 'https://cruzbet.devifly.dev'
 export const ACTIVE_COMPETITION_SLUG = 'liga-mx-apertura-2026'
+/** Competencias archivadas que ya no se muestran en la app (siguen intactas en la base). */
+export const HIDDEN_COMPETITION_SLUGS = ['mundial-2026']
 export const DEVIFLY_NAME = 'Devifly'
 export const DEVIFLY_URL = 'https://devifly.dev'
 export const APP_LOCALE = 'es_MX'

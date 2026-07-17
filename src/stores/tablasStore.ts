@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { HIDDEN_COMPETITION_SLUGS } from '@/constants/branding'
 import {
   CARD_MINUTE_BUCKETS,
   LIGA_MX_CLUBS,
@@ -343,7 +344,7 @@ export const useTablasStore = defineStore('tablas', () => {
       )
       .order('created_at', { ascending: true })
 
-    const rows = data ?? []
+    const rows = (data ?? []).filter((row) => !HIDDEN_COMPETITION_SLUGS.includes(row.slug))
     competitions.value = rows.map((row) => ({
       id: row.id,
       slug: row.slug,

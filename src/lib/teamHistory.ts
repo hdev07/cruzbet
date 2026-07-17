@@ -85,7 +85,7 @@ export async function fetchTeamHistory(teamCode: string): Promise<TeamHistory | 
     .from('matches')
     .select(MATCH_SELECT)
     .or(`home_team_id.eq.${teamRow.id},away_team_id.eq.${teamRow.id}`)
-    .order('match_date', { ascending: false })
+    .order('match_date', { ascending: true })
 
   const matches = (data ?? []) as unknown as MatchWithCompetition[]
 
