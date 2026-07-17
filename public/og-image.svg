@@ -1,12 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
-  <rect width="1200" height="630" fill="#071426"/>
-  <circle cx="600" cy="260" r="120" fill="#F5B942" opacity="0.12"/>
-  <circle cx="600" cy="260" r="80" stroke="#F5B942" stroke-width="6" fill="none"/>
-  <path d="M600 196 L624 244 L600 228 L576 244 Z" fill="#F5B942"/>
-  <path d="M600 324 L576 276 L600 292 L624 276 Z" fill="#F5B942"/>
-  <path d="M536 260 L584 236 L568 260 L584 284 Z" fill="#F5B942"/>
-  <path d="M664 260 L616 284 L632 260 L616 236 Z" fill="#F5B942"/>
-  <text x="600" y="420" text-anchor="middle" fill="#F8FAFC" font-family="system-ui,sans-serif" font-size="96" font-weight="800" letter-spacing="-2">CruzBet</text>
-  <text x="600" y="490" text-anchor="middle" fill="#A9B8C8" font-family="system-ui,sans-serif" font-size="36" font-weight="500">Quiniela Liga MX</text>
-  <text x="600" y="560" text-anchor="middle" fill="#29455F" font-family="system-ui,sans-serif" font-size="24">cruzbet.devifly.dev</text>
+  <defs>
+    <radialGradient id="glow-teal" cx="90%" cy="10%" r="35%">
+      <stop offset="0%" stop-color="#00C3B4" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#00C3B4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow-purple" cx="10%" cy="90%" r="40%">
+      <stop offset="0%" stop-color="#765CE0" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#765CE0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="banner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#222222"/>
+      <stop offset="50%" stop-color="#173b38"/>
+      <stop offset="100%" stop-color="#00a99d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#banner)"/>
+  <rect width="1200" height="630" fill="url(#glow-teal)"/>
+  <rect width="1200" height="630" fill="url(#glow-purple)"/>
+  <circle cx="600" cy="260" r="120" fill="#00C3B4" opacity="0.14"/>
+  <circle cx="600" cy="260" r="80" stroke="#00C3B4" stroke-width="6" fill="none"/>
+  <path d="M600 196 L624 244 L600 228 L576 244 Z" fill="#00C3B4"/>
+  <path d="M600 324 L576 276 L600 292 L624 276 Z" fill="#00C3B4"/>
+  <path d="M536 260 L584 236 L568 260 L584 284 Z" fill="#765CE0"/>
+  <path d="M664 260 L616 284 L632 260 L616 236 Z" fill="#765CE0"/>
+  <text x="600" y="420" text-anchor="middle" fill="#F8F8FB" font-family="system-ui,sans-serif" font-size="96" font-weight="800" letter-spacing="-2">CruzBet</text>
+  <text x="600" y="490" text-anchor="middle" fill="#B8B8C2" font-family="system-ui,sans-serif" font-size="36" font-weight="500">Quiniela Liga MX</text>
+  <text x="600" y="560" text-anchor="middle" fill="#85858F" font-family="system-ui,sans-serif" font-size="24">cruzbet.devifly.dev</text>
 </svg>

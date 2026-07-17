@@ -117,11 +117,11 @@ async function exportTableImage() {
 
       <div
         ref="exportRoot"
-        class="admin-share-export mx-auto w-max max-w-none rounded-2xl border border-white/10 bg-[#071426] p-4 text-slate-100 shadow-xl"
+        class="admin-share-export mx-auto w-max max-w-none rounded-2xl border border-white/10 bg-[#151515] p-4 text-slate-100 shadow-xl"
       >
         <header class="mb-4 flex items-end justify-between gap-4 border-b border-white/10 pb-3">
           <div class="min-w-0">
-            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#f5b942]">
+            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#00c3b4]">
               {{ APP_NAME }}
             </p>
             <h3 class="mt-1 text-lg font-bold leading-tight text-white">

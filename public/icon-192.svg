@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" fill="none">
-  <rect width="192" height="192" rx="40" fill="#071426"/>
-  <circle cx="96" cy="88" r="52" fill="#F5B942" opacity="0.15"/>
-  <circle cx="96" cy="88" r="36" stroke="#F5B942" stroke-width="4" fill="none"/>
-  <path d="M96 56 L108 80 L96 72 L84 80 Z" fill="#F5B942"/>
-  <path d="M96 120 L84 96 L96 104 L108 96 Z" fill="#F5B942"/>
-  <path d="M64 88 L88 76 L80 88 L88 100 Z" fill="#F5B942"/>
-  <path d="M128 88 L104 100 L112 88 L104 76 Z" fill="#F5B942"/>
-  <text x="96" y="162" text-anchor="middle" fill="#F5B942" font-family="system-ui,sans-serif" font-size="28" font-weight="800" letter-spacing="-1">CB</text>
+  <rect width="192" height="192" rx="40" fill="#151515"/>
+  <circle cx="96" cy="88" r="52" fill="#00C3B4" opacity="0.18"/>
+  <circle cx="96" cy="88" r="36" stroke="#00C3B4" stroke-width="4" fill="none"/>
+  <path d="M96 56 L108 80 L96 72 L84 80 Z" fill="#00C3B4"/>
+  <path d="M96 120 L84 96 L96 104 L108 96 Z" fill="#00C3B4"/>
+  <path d="M64 88 L88 76 L80 88 L88 100 Z" fill="#765CE0"/>
+  <path d="M128 88 L104 100 L112 88 L104 76 Z" fill="#765CE0"/>
+  <text x="96" y="162" text-anchor="middle" fill="#00C3B4" font-family="system-ui,sans-serif" font-size="28" font-weight="800" letter-spacing="-1">CB</text>
 </svg>

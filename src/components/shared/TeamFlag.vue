@@ -9,12 +9,15 @@ const props = withDefaults(
     alt: string
     imgClass?: string
     size?: 'sm' | 'md' | 'lg'
+    /** Carga inmediata (export PNG / cabeceras visibles). */
+    eager?: boolean
   }>(),
   {
     src: null,
     code: null,
     imgClass: '',
     size: 'md',
+    eager: false,
   },
 )
 
@@ -51,7 +54,7 @@ watch(
     :src="resolvedSrc"
     :alt="alt"
     :class="[sizeClass, 'shrink-0 object-contain', imgClass]"
-    loading="lazy"
+    :loading="eager ? 'eager' : 'lazy'"
     decoding="async"
     @error="failed = true"
   />

@@ -4,15 +4,18 @@ import { Crown } from '@lucide/vue'
 import {
   actualMatchWinner,
   isPredictionCorrect,
+  isProvisionalPredictionCorrect,
+  provisionalMatchWinner,
   winnerCode,
 } from '@/lib/baseQuinielaDisplay'
+import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { firstKickoffFromRoundMatches, hasRoundStarted } from '@/lib/baseQuinielaRound'
 import {
   compareBaseRoundRank,
   countLiveProvisionalHits,
   denseRankNumbers,
 } from '@/lib/baseQuinielaStats'
-import { teamDisplayName } from '@/lib/teamDisplay'
+import { teamCrestUrl, teamDisplayName } from '@/lib/teamDisplay'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -127,7 +130,7 @@ function canShowPlayerPicks(userId: string, _entryNumber?: number): boolean {
 function cellClass(userId: string, entryNumber: number, match: BaseQuinielaRoundMatch): string {
   const pick = getPick(userId, entryNumber, match.match_id)
   const base =
-    'mx-auto flex h-8 w-8 items-center justify-center rounded text-xs font-bold tabular-nums'
+    'mx-auto flex h-7 w-7 items-center justify-center rounded text-xs font-bold tabular-nums'
 
   if (!pick) return `${base} theme-cell-idle text-slate-600`
 
@@ -135,11 +138,22 @@ function cellClass(userId: string, entryNumber: number, match: BaseQuinielaRound
     return `${base} theme-cell-idle text-slate-500`
   }
 
-  if (!roundStarted.value || !match.match || match.match.status !== 'finished') {
+  const matchData = match.match
+  if (!matchData || matchData.status === 'scheduled') {
     return `${base} theme-cell-pending text-slate-300`
   }
 
-  const correct = isPredictionCorrect(pick.predicted_winner, match.match)
+  if (matchData.status !== 'finished') {
+    if (isProvisionalPredictionCorrect(pick.predicted_winner, matchData)) {
+      return `${base} border border-amber-500/35 bg-amber-500/20 text-amber-300`
+    }
+    if (isEffectivelyLive(matchData) && provisionalMatchWinner(matchData) != null) {
+      return `${base} bg-red-500/15 text-red-400`
+    }
+    return `${base} theme-cell-pending text-slate-300`
+  }
+
+  const correct = isPredictionCorrect(pick.predicted_winner, matchData)
   if (correct === true) return `${base} bg-mundial-green/25 text-mundial-green`
   if (correct === false) return `${base} bg-red-500/15 text-red-400`
   return `${base} theme-cell-pending text-slate-300`
@@ -196,7 +210,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
     <template v-else>
       <p v-if="!hideIntro" class="mb-3 text-xs text-slate-500">
         <template v-if="roundStarted">
-          Verde = acierto, rojo = fallo.
+          Verde = acierto, ámbar = acierto provisional en vivo (p. ej. empate hasta que cambie el marcador), rojo = fallo.
           <span v-if="currentUserId"> Tus quinielas están resaltadas.</span>
         </template>
         <template v-else>
@@ -221,39 +235,41 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
               <th
                 v-for="match in sortedMatches"
                 :key="`head-${match.match_id}`"
-                class="min-w-[4.25rem] border border-white/10 px-1.5 py-2 text-center sm:min-w-[4.75rem]"
+                class="w-11 min-w-11 border border-white/10 px-0.5 py-1.5 text-center sm:w-12 sm:min-w-12"
                 :title="matchTooltip(match)"
               >
-                <span class="block font-bold tabular-nums text-slate-300">{{ match.position }}</span>
+                <span class="block text-[0.65rem] font-bold tabular-nums text-slate-300">{{ match.position }}</span>
                 <div
                   v-if="match.match"
-                  class="mx-auto mt-1 flex items-center justify-center gap-1"
+                  class="mx-auto mt-0.5 flex items-center justify-center gap-0.5"
                 >
                   <TeamFlag
-                    :src="match.match.home_team?.flag_url"
+                    :src="teamCrestUrl(match.match.home_team?.code) ?? match.match.home_team?.flag_url"
                     :code="match.match.home_team?.code"
                     :alt="teamDisplayName(match.match.home_team, 'Local')"
                     size="sm"
-                    img-class="h-4 w-4 shrink-0 rounded-sm object-contain"
+                    eager
+                    img-class="!h-2.5 !w-2.5 shrink-0 rounded-sm object-contain"
                   />
-                  <span class="text-[0.5rem] text-slate-600">·</span>
+                  <span class="text-[0.4rem] text-slate-600">·</span>
                   <TeamFlag
-                    :src="match.match.away_team?.flag_url"
+                    :src="teamCrestUrl(match.match.away_team?.code) ?? match.match.away_team?.flag_url"
                     :code="match.match.away_team?.code"
                     :alt="teamDisplayName(match.match.away_team, 'Visitante')"
                     size="sm"
-                    img-class="h-4 w-4 shrink-0 rounded-sm object-contain"
+                    eager
+                    img-class="!h-2.5 !w-2.5 shrink-0 rounded-sm object-contain"
                   />
                 </div>
                 <span
                   v-if="roundStarted && match.match && match.match.status !== 'scheduled'"
-                  class="mt-0.5 block text-[0.65rem] font-semibold tabular-nums text-mundial-accent"
+                  class="mt-0.5 block text-[0.6rem] font-semibold tabular-nums text-mundial-accent"
                 >
                   {{ match.match.home_score }}-{{ match.match.away_score }}
                 </span>
                 <span
                   v-if="roundStarted && match.match && actualMatchWinner(match.match)"
-                  class="mt-0.5 block text-[0.65rem] font-bold text-mundial-green"
+                  class="mt-0.5 block text-[0.6rem] font-bold text-mundial-green"
                 >
                   {{ winnerCode(actualMatchWinner(match.match)!) }}
                 </span>
@@ -265,7 +281,11 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
             <tr
               v-for="(player, index) in competitors"
               :key="`${player.user_id}-${player.entry_number}`"
-              :class="isMyRow(player.user_id) ? 'theme-table-row-mine' : 'theme-table-row'"
+              :class="[
+                isMyRow(player.user_id) ? 'theme-table-row-mine' : 'theme-table-row',
+                !player.verified && !isMyRow(player.user_id) ? 'opacity-90' : '',
+                !player.verified ? 'bg-amber-500/[0.03]' : '',
+              ]"
             >
               <td
                 class="border border-white/10 px-3 py-2"
@@ -316,7 +336,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   <span
                     class="order-2 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
                     :class="
-                      (competitorRanks[index] ?? index + 1) <= 3
+                      (competitorRanks[index] ?? index + 1) <= 3 && player.verified
                         ? 'bg-mundial-accent text-white'
                         : 'theme-cell-pending text-slate-400'
                     "
@@ -353,7 +373,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
               <td
                 v-for="match in sortedMatches"
                 :key="`${player.user_id}-${player.entry_number}-${match.match_id}`"
-                class="border border-white/10 px-1 py-1 text-center align-middle"
+                class="border border-white/10 px-0.5 py-1 text-center align-middle"
               >
                 <span
                   v-if="getPick(player.user_id, player.entry_number, match.match_id)"
@@ -394,6 +414,10 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
         <span class="inline-flex items-center gap-1">
           <span class="h-3 w-3 rounded bg-mundial-green/25" />
           Acierto
+        </span>
+        <span class="inline-flex items-center gap-1">
+          <span class="h-3 w-3 rounded border border-amber-500/35 bg-amber-500/20" />
+          Provisional (en vivo)
         </span>
         <span class="inline-flex items-center gap-1">
           <span class="h-3 w-3 rounded bg-red-500/15" />

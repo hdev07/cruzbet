@@ -7,12 +7,12 @@ export const ACTIVE_COMPETITION_SLUG = 'liga-mx-apertura-2026'
 export const DEVIFLY_NAME = 'Devifly'
 export const DEVIFLY_URL = 'https://devifly.dev'
 export const APP_LOCALE = 'es_MX'
-export const THEME_COLOR = '#071426'
-export const ACCENT_COLOR = '#F5B942'
-export const GOLD_COLOR = '#FFD76A'
-export const SECONDARY_COLOR = '#16B877'
-export const ERROR_COLOR = '#EF5B5B'
-export const WARNING_COLOR = '#F59E42'
+export const THEME_COLOR = '#151515'
+export const ACCENT_COLOR = '#00C3B4'
+export const GOLD_COLOR = '#4327AB'
+export const SECONDARY_COLOR = '#765CE0'
+export const ERROR_COLOR = '#E05268'
+export const WARNING_COLOR = '#F4B740'
 
 export const APP_TITLE = `${APP_NAME} — ${APP_TAGLINE}`
 

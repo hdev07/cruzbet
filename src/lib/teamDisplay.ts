@@ -51,11 +51,13 @@ export function teamCrestUrl(code: string | null | undefined): string | null {
   return CREST_BY_CODE[code.toUpperCase()] ?? `/teams/${code.toLowerCase()}.png`
 }
 
-/** Usa `flag_url` si existe; si no, el escudo local por código. */
+/** Usa escudo local por código si existe; si no, `flag_url` externo. */
 export function resolveTeamCrest(
   team: (Pick<Team, 'code' | 'flag_url'> | null | undefined),
 ): string | null {
   if (!team) return null
+  const local = teamCrestUrl(team.code)
+  if (local && CREST_BY_CODE[team.code?.toUpperCase() ?? '']) return local
   if (team.flag_url) return team.flag_url
-  return teamCrestUrl(team.code)
+  return local
 }
