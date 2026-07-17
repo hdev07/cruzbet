@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Radio } from '@lucide/vue'
+import { MapPin, Radio } from '@lucide/vue'
 import BroadcastBadge from '@/components/shared/BroadcastBadge.vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
@@ -38,96 +38,97 @@ const interruptedShort = computed(() => {
   return LIVE_STATUS_DETAIL_LABELS[detail].slice(0, 3)
 })
 const venueLabel = computed(() => formatMatchVenue(props.match.venue))
+const hasMeta = computed(
+  () => Boolean(venueLabel.value || props.match.broadcast_channel),
+)
 </script>
 
 <template>
   <div
-    class="flex items-center gap-3 rounded-xl border px-3 py-2.5"
+    class="rounded-xl border px-3 py-2.5"
     :class="
       isLive
         ? 'border-mundial-green/35 bg-mundial-green/10'
         : isFinished
-          ? 'border-white/8 bg-white/[0.03] opacity-90'
+          ? 'border-white/8 bg-white/3 opacity-90'
           : 'border-white/10 bg-white/5'
     "
   >
-    <div class="w-14 shrink-0 text-center">
-      <p
-        class="text-[10px] font-semibold uppercase leading-none text-app-muted"
-      >
-        {{ formatMatchDate(match) }}
-      </p>
-      <p
-        class="mt-1 text-xs font-semibold tabular-nums"
-        :class="
-          interrupted
-            ? 'text-amber-400'
-            : isLive
-              ? halftime
-                ? 'text-mundial-accent'
-                : 'text-mundial-green'
-              : 'text-app-muted'
-        "
-      >
-        <template v-if="halftime">HT</template>
-        <template v-else-if="interruptedShort">{{ interruptedShort }}</template>
-        <template v-else-if="isLive">
-          <span class="inline-flex items-center justify-center gap-0.5">
-            <Radio class="h-3 w-3" />
+    <div class="flex items-center gap-3">
+      <div class="w-14 shrink-0 text-center">
+        <p class="text-[10px] font-semibold uppercase leading-none text-app-muted">
+          {{ formatMatchDate(match) }}
+        </p>
+        <p
+          class="mt-1 text-xs font-semibold tabular-nums"
+          :class="
+            interrupted
+              ? 'text-amber-400'
+              : isLive
+                ? halftime
+                  ? 'text-mundial-accent'
+                  : 'text-mundial-green'
+                : 'text-app-muted'
+          "
+        >
+          <template v-if="halftime">HT</template>
+          <template v-else-if="interruptedShort">{{ interruptedShort }}</template>
+          <template v-else-if="isLive">
+            <span class="inline-flex items-center justify-center gap-0.5">
+              <Radio class="h-3 w-3" />
+            </span>
+          </template>
+          <template v-else>
+            {{ isFinished ? 'FT' : formatMatchTime(match) }}
+          </template>
+        </p>
+      </div>
+
+      <div class="min-w-0 flex-1 space-y-1">
+        <div class="flex items-center gap-2">
+          <TeamFlag
+            :src="match.home_team?.flag_url"
+            :code="match.home_team?.code"
+            :alt="teamDisplayName(match.home_team, 'Local')"
+            size="sm"
+          />
+          <span class="min-w-0 flex-1 truncate text-sm font-medium">
+            {{ teamDisplayName(match.home_team, 'Local') }}
           </span>
-        </template>
-        <template v-else>
-          {{ isFinished ? 'FT' : formatMatchTime(match) }}
-        </template>
-      </p>
-    </div>
-
-    <div class="min-w-0 flex-1 space-y-1">
-      <div class="flex items-center gap-2">
-        <TeamFlag
-          :src="match.home_team?.flag_url"
-          :code="match.home_team?.code"
-          :alt="teamDisplayName(match.home_team, 'Local')"
-          size="sm"
+          <span
+            v-if="showScore"
+            class="w-5 text-right text-sm font-bold tabular-nums"
+          >
+            {{ match.home_score }}
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <TeamFlag
+            :src="match.away_team?.flag_url"
+            :code="match.away_team?.code"
+            :alt="teamDisplayName(match.away_team, 'Visitante')"
+            size="sm"
+          />
+          <span class="min-w-0 flex-1 truncate text-sm font-medium">
+            {{ teamDisplayName(match.away_team, 'Visitante') }}
+          </span>
+          <span
+            v-if="showScore"
+            class="w-5 text-right text-sm font-bold tabular-nums"
+          >
+            {{ match.away_score }}
+          </span>
+        </div>
+        <LiveMatchPulse
+          v-if="isLive && !halftime && !interrupted"
+          compact
+          class="live-pulse-under-score live-pulse-under-score--compact mx-0! mt-1! w-16!"
         />
-        <span class="min-w-0 flex-1 truncate text-sm font-medium">
-          {{ teamDisplayName(match.home_team, 'Local') }}
-        </span>
-        <span
-          v-if="showScore"
-          class="w-5 text-right text-sm font-bold tabular-nums"
-        >
-          {{ match.home_score }}
-        </span>
       </div>
-      <div class="flex items-center gap-2">
-        <TeamFlag
-          :src="match.away_team?.flag_url"
-          :code="match.away_team?.code"
-          :alt="teamDisplayName(match.away_team, 'Visitante')"
-          size="sm"
-        />
-        <span class="min-w-0 flex-1 truncate text-sm font-medium">
-          {{ teamDisplayName(match.away_team, 'Visitante') }}
-        </span>
-        <span
-          v-if="showScore"
-          class="w-5 text-right text-sm font-bold tabular-nums"
-        >
-          {{ match.away_score }}
-        </span>
-      </div>
-      <LiveMatchPulse v-if="isLive && !halftime && !interrupted" compact class="live-pulse-under-score live-pulse-under-score--compact !mx-0 !mt-1 !w-16" />
-      <p v-if="venueLabel || match.broadcast_channel" class="flex items-center gap-1 truncate text-[11px] text-app-muted sm:hidden">
-        <BroadcastBadge :channels="match.broadcast_channel" :max="1" />
-        <span class="truncate">{{ venueLabel }}</span>
-      </p>
-    </div>
 
-    <div class="hidden w-36 shrink-0 text-right sm:block">
       <p
         v-if="statusText"
-        class="text-[11px] font-medium"
+        class="hidden w-16 shrink-0 text-right text-[11px] font-medium sm:block"
         :class="
           interrupted
             ? 'text-amber-400'
@@ -138,10 +139,22 @@ const venueLabel = computed(() => formatMatchVenue(props.match.venue))
       >
         {{ statusText }}
       </p>
-      <p v-if="venueLabel || match.broadcast_channel" class="mt-0.5 flex items-center justify-end gap-1 truncate text-[11px] text-app-muted">
-        <span class="truncate" :title="venueLabel">{{ venueLabel }}</span>
-        <BroadcastBadge :channels="match.broadcast_channel" :max="2" />
-      </p>
+    </div>
+
+    <div
+      v-if="hasMeta"
+      class="mt-2 flex items-center justify-between gap-3 border-t border-white/5 pt-2 pl-15"
+    >
+      <span
+        v-if="venueLabel"
+        class="flex min-w-0 items-center gap-1 text-[11px] text-app-muted"
+        :title="venueLabel"
+      >
+        <MapPin class="h-3 w-3 shrink-0 opacity-70" />
+        <span class="min-w-0 truncate">{{ venueLabel }}</span>
+      </span>
+      <span v-else class="flex-1" />
+      <BroadcastBadge v-if="match.broadcast_channel" :channels="match.broadcast_channel" :max="3" />
     </div>
   </div>
 </template>

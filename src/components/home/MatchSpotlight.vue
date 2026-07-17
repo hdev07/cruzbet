@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'
-import { Radio } from '@lucide/vue'
+import { MapPin, Radio } from '@lucide/vue'
 import BroadcastBadge from '@/components/shared/BroadcastBadge.vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
 import MatchCardsList from '@/components/shared/MatchCardsList.vue'
@@ -14,6 +14,7 @@ import {
   LIVE_STATUS_DETAIL_LABELS,
 } from '@/lib/matchClock'
 import { formatKickoff } from '@/lib/matchRules'
+import { formatMatchVenue } from '@/lib/matchVenue'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match } from '@/types'
@@ -207,10 +208,13 @@ onUnmounted(() => {
 
       <p
         v-if="match.venue || match.broadcast_channel"
-        class="mt-3 flex items-center justify-center gap-2 text-center text-xs text-app-muted"
+        class="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-center text-xs text-app-muted"
       >
-        <span v-if="match.venue">{{ match.venue }}</span>
-        <BroadcastBadge :channels="match.broadcast_channel" :max="3" />
+        <span v-if="match.venue" class="inline-flex items-center gap-1">
+          <MapPin class="h-3.5 w-3.5 shrink-0 opacity-70" />
+          {{ formatMatchVenue(match.venue) }}
+        </span>
+        <BroadcastBadge v-if="match.broadcast_channel" :channels="match.broadcast_channel" :max="3" size="md" />
       </p>
       <p
         v-if="halftime"
