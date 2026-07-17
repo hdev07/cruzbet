@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import {
   Check,
   ChevronRight,
+  ClipboardList,
   Grid3x3,
   Info,
   LogOut,
@@ -322,6 +323,17 @@ async function handleLogout() {
         <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
           <Shield class="h-4 w-4 text-slate-400" />
           Panel de admin
+        </span>
+        <ChevronRight class="h-4 w-4 text-slate-500" />
+      </RouterLink>
+
+      <RouterLink
+        to="/reglas"
+        class="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10"
+      >
+        <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
+          <ClipboardList class="h-4 w-4 text-slate-400" />
+          Reglas y pagos
         </span>
         <ChevronRight class="h-4 w-4 text-slate-500" />
       </RouterLink>

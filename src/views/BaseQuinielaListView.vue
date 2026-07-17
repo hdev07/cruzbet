@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ChevronRight, Medal, Table2, Target } from '@lucide/vue'
+import PaymentInfoCard from '@/components/shared/PaymentInfoCard.vue'
 import { BASE_QUINIELA_LOGIC } from '@/constants/base-quiniela-rules'
 import { QUINIELA_SUMMARY } from '@/constants/nav'
 import { resolveUpcomingBaseRounds } from '@/lib/baseQuinielaRound'
@@ -108,7 +109,15 @@ const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
           {{ step }}
         </li>
       </ol>
+      <RouterLink
+        to="/reglas"
+        class="mt-3 inline-flex text-xs font-semibold text-mundial-green hover:underline"
+      >
+        Ver reglas completas
+      </RouterLink>
     </section>
+
+    <PaymentInfoCard class="mb-6" />
 
     <div
       v-if="!auth.isLoggedIn"

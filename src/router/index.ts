@@ -33,6 +33,11 @@ const router = createRouter({
       meta: { layout: 'mobile', title: 'Jornada' },
     },
     {
+      path: '/reglas',
+      component: () => import('@/views/base/BaseRulesView.vue'),
+      meta: { layout: 'mobile', title: 'Reglas y pagos' },
+    },
+    {
       path: '/resultados',
       component: () => import('@/views/base/BaseRankingView.vue'),
       meta: { layout: 'mobile', title: 'Resultados', wide: true },

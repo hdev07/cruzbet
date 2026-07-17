@@ -1,3 +1,4 @@
+import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
 import type { Component } from 'vue'
 import { CalendarDays, Grid3x3, Medal, Table2, User } from '@lucide/vue'
 
@@ -23,6 +24,7 @@ export const MAIN_NAV: NavItem[] = [
 ]
 
 export const QUINIELA_SUMMARY = {
+  entryLabel: `$${BASE_ENTRY_FEE_MXN} MXN por quiniela`,
   tagline: 'Marca L, E o V en cada partido de la jornada',
   features: [
     'L = gana el local · E = empate · V = gana el visitante',

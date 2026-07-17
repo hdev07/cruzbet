@@ -3,6 +3,25 @@ export const BASE_QUINIELA_POINTS_PER_HIT = 1
 export const BASE_QUINIELA_MIN_ACTIVE_ROUND = 1
 /** Cuota por quiniela / jornada (MXN). */
 export const BASE_ENTRY_FEE_MXN = 50
+
+/** Datos bancarios para depósito (misma cuenta que antes). */
+export const BASE_PAYMENT_INFO = {
+  beneficiary: 'Hector Alejandro Cruz Solis',
+  bank: 'Banco Azteca',
+  accountNumber: '95461681853442',
+  accountNumberDisplay: '9546 1681 8534 42',
+  clabe: '127180016818534429',
+  clabeDisplay: '1271 8001 6818 534429',
+  amountLabel: `$${BASE_ENTRY_FEE_MXN} MXN por quiniela`,
+  concept: 'Quiniela — escribe tu usuario y el número de jornada',
+} as const
+
+export const BASE_PAYMENT_NOTES = [
+  `La cuota es de $${BASE_ENTRY_FEE_MXN} MXN por cada quiniela que juegues en una jornada.`,
+  'Realiza el depósito o transferencia antes de guardar tu quiniela.',
+  'En el concepto o referencia escribe tu nombre de usuario para identificar el pago.',
+] as const
+
 /** Hasta este # de depósitos verificados la comisión es la baja. */
 export const ADMIN_FEE_SMALL_GROUP_MAX = 20
 /** Comisión admin con ≤ ADMIN_FEE_SMALL_GROUP_MAX verificados (0–1). */

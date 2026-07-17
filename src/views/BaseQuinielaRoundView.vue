@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { ArrowLeft, Medal } from '@lucide/vue'
+import { ArrowLeft, Medal, Wallet } from '@lucide/vue'
 import BaseQuinielaEntrySelector from '@/components/predictions/BaseQuinielaEntrySelector.vue'
 import BaseQuinielaGrid from '@/components/predictions/BaseQuinielaGrid.vue'
+import PaymentInfoCard from '@/components/shared/PaymentInfoCard.vue'
 import {
+  BASE_ENTRY_FEE_MXN,
   BASE_QUINIELA_MATCHES_PER_ROUND,
 } from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
@@ -62,9 +64,27 @@ watch(roundId, loadRound)
       <div class="mb-6">
         <h1 class="text-2xl font-bold lg:text-3xl">{{ baseStore.currentRound.title }}</h1>
         <p class="mt-1 text-sm text-slate-400">
-          {{ matchCount }} partidos · Marca L, E o V antes del kickoff
+          ${{ BASE_ENTRY_FEE_MXN }} MXN · {{ matchCount }} partidos · Marca L, E o V antes del kickoff
         </p>
       </div>
+
+      <details class="group mb-6 rounded-xl border border-white/10 bg-white/5 open:pb-0">
+        <summary
+          class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-mundial-green marker:content-none [&::-webkit-details-marker]:hidden"
+        >
+          <Wallet class="h-4 w-4 shrink-0" />
+          Datos de pago — ${{ BASE_ENTRY_FEE_MXN }} MXN
+          <span class="ml-auto text-xs font-normal text-slate-500 group-open:hidden">
+            Ver cuenta / CLABE
+          </span>
+          <span class="ml-auto hidden text-xs font-normal text-slate-500 group-open:inline">
+            Ocultar
+          </span>
+        </summary>
+        <div class="border-t border-white/10 px-4 pb-4 pt-3">
+          <PaymentInfoCard :framed="false" :show-notes="true" title="" />
+        </div>
+      </details>
 
       <div
         v-if="auth.isLoggedIn"
