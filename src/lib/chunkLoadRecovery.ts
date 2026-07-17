@@ -10,7 +10,9 @@ export function isStaleChunkLoadError(error: unknown): boolean {
   )
 }
 
+/** Recarga una vez si hay chunks viejos; no hace nada si ya se intentó o no hay red. */
 export function reloadForStaleChunks(): boolean {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return false
   if (sessionStorage.getItem(RELOAD_FLAG)) return false
   sessionStorage.setItem(RELOAD_FLAG, '1')
   window.location.reload()

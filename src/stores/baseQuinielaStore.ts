@@ -13,6 +13,7 @@ import { getOfficialLeaderboardEntries, getTiedFirstPlaceEntries, sortLeaderboar
 import { compareBaseRoundRank } from '@/lib/baseQuinielaStats'
 import { ACTIVE_COMPETITION_SLUG } from '@/constants/branding'
 import { isMatchOpenForPredictions, teamsPendingReason } from '@/lib/matchRules'
+import { friendlyLoadError, readCache, writeCache } from '@/lib/offlineCache'
 import { supabase } from '@/lib/supabase'
 import type {
   BasePrediction,
@@ -28,6 +29,23 @@ import type {
 } from '@/types'
 
 const MATCH_SELECT = '*, home_team:teams!home_team_id(*), away_team:teams!away_team_id(*)'
+const ROUNDS_CACHE_KEY = 'base-rounds-v1'
+const ROUND_DETAIL_CACHE_PREFIX = 'base-round-detail-v1:'
+
+type RoundsCache = {
+  competitionId: string | null
+  rounds: BaseQuinielaRound[]
+  roundFirstKickoff: Record<string, number | null>
+}
+
+type RoundDetailCache = {
+  round: BaseQuinielaRound
+  roundMatches: BaseQuinielaRoundMatch[]
+}
+
+function loadRoundsCache(): RoundsCache | null {
+  return readCache<RoundsCache>(ROUNDS_CACHE_KEY)
+}
 
 function buildEntrySummaries(
   predictions: BasePrediction[],
@@ -65,10 +83,13 @@ function buildEntrySummaries(
 }
 
 export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
-  const rounds = ref<BaseQuinielaRound[]>([])
-  const roundFirstKickoff = ref<Record<string, number | null>>({})
+  const cachedRounds = loadRoundsCache()
+  const rounds = ref<BaseQuinielaRound[]>(cachedRounds?.rounds ?? [])
+  const roundFirstKickoff = ref<Record<string, number | null>>(
+    cachedRounds?.roundFirstKickoff ?? {},
+  )
   const currentRound = ref<BaseQuinielaRound | null>(null)
-  const activeCompetitionId = ref<string | null>(null)
+  const activeCompetitionId = ref<string | null>(cachedRounds?.competitionId ?? null)
 
   const activeRound = computed(() =>
     resolveActiveBaseRound(rounds.value, roundFirstKickoff.value),
@@ -107,72 +128,103 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   }
 
   async function fetchRounds() {
-    const competitionId = await fetchActiveCompetitionId()
-    loading.value = true
-    const [roundsResult, kickoffsResult] = await Promise.all([
-      supabase
-        .from('base_quiniela_rounds')
-        .select('*')
-        .eq('competition_id', competitionId)
-        .order('round_number', { ascending: true }),
-      supabase
-        .from('base_quiniela_round_matches')
-        .select('round_id, match:matches!inner(match_date, competition_id)')
-        .eq('match.competition_id', competitionId),
-    ])
+    loading.value = rounds.value.length === 0
+    try {
+      const competitionId = await fetchActiveCompetitionId()
+      const [roundsResult, kickoffsResult] = await Promise.all([
+        supabase
+          .from('base_quiniela_rounds')
+          .select('*')
+          .eq('competition_id', competitionId)
+          .order('round_number', { ascending: true }),
+        supabase
+          .from('base_quiniela_round_matches')
+          .select('round_id, match:matches!inner(match_date, competition_id)')
+          .eq('match.competition_id', competitionId),
+      ])
 
-    if (!roundsResult.error && roundsResult.data) {
-      rounds.value = roundsResult.data as BaseQuinielaRound[]
+      if (!roundsResult.error && roundsResult.data) {
+        rounds.value = roundsResult.data as BaseQuinielaRound[]
+      }
+
+      if (!kickoffsResult.error && kickoffsResult.data) {
+        roundFirstKickoff.value = buildFirstKickoffByRoundId(
+          kickoffsResult.data as unknown as {
+            round_id: string
+            match: { match_date: string | null } | null
+          }[],
+        )
+      }
+
+      if (rounds.value.length) {
+        writeCache<RoundsCache>(ROUNDS_CACHE_KEY, {
+          competitionId,
+          rounds: rounds.value,
+          roundFirstKickoff: roundFirstKickoff.value,
+        })
+      }
+    } catch (err) {
+      const fallback = loadRoundsCache()
+      if (fallback?.rounds.length) {
+        rounds.value = fallback.rounds
+        roundFirstKickoff.value = fallback.roundFirstKickoff
+        if (fallback.competitionId) activeCompetitionId.value = fallback.competitionId
+        return
+      }
+      throw new Error(friendlyLoadError(err, 'No se pudieron cargar las jornadas'))
+    } finally {
+      loading.value = false
     }
-
-    if (!kickoffsResult.error && kickoffsResult.data) {
-      roundFirstKickoff.value = buildFirstKickoffByRoundId(
-        kickoffsResult.data as unknown as {
-          round_id: string
-          match: { match_date: string | null } | null
-        }[],
-      )
-    }
-
-    loading.value = false
   }
 
   async function fetchRound(roundId: string) {
-    const competitionId = await fetchActiveCompetitionId()
     loading.value = true
-    const { data: round, error: roundErr } = await supabase
-      .from('base_quiniela_rounds')
-      .select('*')
-      .eq('id', roundId)
-      .eq('competition_id', competitionId)
-      .single()
+    try {
+      const competitionId = await fetchActiveCompetitionId()
+      const { data: round, error: roundErr } = await supabase
+        .from('base_quiniela_rounds')
+        .select('*')
+        .eq('id', roundId)
+        .eq('competition_id', competitionId)
+        .single()
 
-    if (roundErr || !round) {
+      if (roundErr || !round) {
+        throw roundErr ?? new Error('Jornada no encontrada')
+      }
+
+      currentRound.value = round as BaseQuinielaRound
+
+      const { data: links, error: linksErr } = await supabase
+        .from('base_quiniela_round_matches')
+        .select(`id, round_id, match_id, position, match:matches(${MATCH_SELECT})`)
+        .eq('round_id', roundId)
+        .order('position', { ascending: true })
+
+      if (linksErr) throw linksErr
+
+      roundMatches.value = (links ?? []).map((row) => ({
+        id: row.id,
+        round_id: row.round_id,
+        match_id: row.match_id,
+        position: row.position,
+        match: row.match as unknown as Match,
+      }))
+
+      writeCache<RoundDetailCache>(`${ROUND_DETAIL_CACHE_PREFIX}${roundId}`, {
+        round: currentRound.value,
+        roundMatches: roundMatches.value,
+      })
+    } catch (err) {
+      const fallback = readCache<RoundDetailCache>(`${ROUND_DETAIL_CACHE_PREFIX}${roundId}`)
+      if (fallback?.round) {
+        currentRound.value = fallback.round
+        roundMatches.value = fallback.roundMatches
+        return
+      }
+      throw new Error(friendlyLoadError(err, 'No se pudo cargar la jornada'))
+    } finally {
       loading.value = false
-      throw roundErr ?? new Error('Jornada no encontrada')
     }
-
-    currentRound.value = round as BaseQuinielaRound
-
-    const { data: links, error: linksErr } = await supabase
-      .from('base_quiniela_round_matches')
-      .select(`id, round_id, match_id, position, match:matches(${MATCH_SELECT})`)
-      .eq('round_id', roundId)
-      .order('position', { ascending: true })
-
-    if (linksErr) {
-      loading.value = false
-      throw linksErr
-    }
-
-    roundMatches.value = (links ?? []).map((row) => ({
-      id: row.id,
-      round_id: row.round_id,
-      match_id: row.match_id,
-      position: row.position,
-      match: row.match as unknown as Match,
-    }))
-    loading.value = false
   }
 
   async function fetchMyPredictions(roundId: string, userId: string, entryNumber = currentEntryNumber.value) {

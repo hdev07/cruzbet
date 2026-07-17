@@ -9,6 +9,7 @@ import {
 } from '@/constants/base-quiniela-rules'
 import { formatMxn } from '@/lib/formatMoney'
 import { getOfficialLeaderboardEntries, getTiedFirstPlaceEntries, winnerUserIdsFromEntries } from '@/lib/baseQuinielaWinners'
+import { friendlyLoadError } from '@/lib/offlineCache'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseRoundLeaderboardEntry } from '@/types'
@@ -134,7 +135,7 @@ async function loadRoundData(roundId: string) {
     }
   } catch (err) {
     if (seq !== loadSeq) return
-    loadError.value = err instanceof Error ? err.message : 'No se pudieron cargar los resultados'
+    loadError.value = friendlyLoadError(err, 'No se pudieron cargar los resultados')
   } finally {
     if (seq === loadSeq) roundLoading.value = false
   }
@@ -152,7 +153,7 @@ onMounted(async () => {
       await loadRoundData(activeRoundId.value)
     }
   } catch (err) {
-    loadError.value = err instanceof Error ? err.message : 'No se pudieron cargar los resultados'
+    loadError.value = friendlyLoadError(err, 'No se pudieron cargar los resultados')
   }
 })
 

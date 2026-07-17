@@ -3,10 +3,11 @@ import { computed } from 'vue'
 import { Radio } from '@lucide/vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
+import { formatMatchVenue } from '@/lib/matchVenue'
 import { formatLiveStatusLabel, formatScheduledStatusLabel } from '@/lib/matchClock'
 import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { teamDisplayName } from '@/lib/teamDisplay'
-import { formatMatchTime } from '@/lib/weekendCalendar'
+import { formatMatchDate, formatMatchTime } from '@/lib/weekendCalendar'
 import type { Match } from '@/types'
 
 const props = defineProps<{
@@ -20,8 +21,9 @@ const showScore = computed(() => isLive.value || isFinished.value)
 const statusText = computed(() => {
   if (isLive.value) return formatLiveStatusLabel(props.match)
   if (isFinished.value) return 'Final'
-  return formatScheduledStatusLabel(props.match) ?? formatMatchTime(props.match)
+  return formatScheduledStatusLabel(props.match)
 })
+const venueLabel = computed(() => formatMatchVenue(props.match.venue))
 </script>
 
 <template>
@@ -35,9 +37,14 @@ const statusText = computed(() => {
           : 'border-white/10 bg-white/5'
     "
   >
-    <div class="w-12 shrink-0 text-center">
+    <div class="w-14 shrink-0 text-center">
       <p
-        class="text-xs font-semibold tabular-nums"
+        class="text-[10px] font-semibold uppercase leading-none text-app-muted"
+      >
+        {{ formatMatchDate(match) }}
+      </p>
+      <p
+        class="mt-1 text-xs font-semibold tabular-nums"
         :class="isLive ? 'text-mundial-green' : 'text-app-muted'"
       >
         <template v-if="isLive">
@@ -87,13 +94,22 @@ const statusText = computed(() => {
         </span>
       </div>
       <LiveMatchPulse v-if="isLive" compact class="live-pulse-under-score live-pulse-under-score--compact !mx-0 !mt-1 !w-16" />
+      <p v-if="venueLabel" class="truncate text-[11px] text-app-muted sm:hidden">
+        {{ venueLabel }}
+      </p>
     </div>
 
-    <p
-      class="hidden w-20 shrink-0 text-right text-[11px] font-medium sm:block"
-      :class="isLive ? 'text-mundial-green' : 'text-app-muted'"
-    >
-      {{ statusText }}
-    </p>
+    <div class="hidden w-36 shrink-0 text-right sm:block">
+      <p
+        v-if="statusText"
+        class="text-[11px] font-medium"
+        :class="isLive ? 'text-mundial-green' : 'text-app-muted'"
+      >
+        {{ statusText }}
+      </p>
+      <p v-if="venueLabel" class="mt-0.5 truncate text-[11px] text-app-muted" :title="venueLabel">
+        {{ venueLabel }}
+      </p>
+    </div>
   </div>
 </template>

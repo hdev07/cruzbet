@@ -9,6 +9,7 @@ import {
   BASE_ENTRY_FEE_MXN,
   BASE_QUINIELA_MATCHES_PER_ROUND,
 } from '@/constants/base-quiniela-rules'
+import { friendlyLoadError } from '@/lib/offlineCache'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 
@@ -34,7 +35,7 @@ async function loadRound() {
       await baseStore.fetchMyPredictions(roundId.value, auth.user.id)
     }
   } catch (err) {
-    loadError.value = err instanceof Error ? err.message : 'No se pudo cargar la jornada'
+    loadError.value = friendlyLoadError(err, 'No se pudo cargar la jornada')
   }
 }
 

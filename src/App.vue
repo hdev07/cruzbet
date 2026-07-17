@@ -3,6 +3,7 @@ import { RouterView } from 'vue-router'
 import { usePageMeta } from '@/composables/usePageMeta'
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppUpdateBanner from '@/components/shared/AppUpdateBanner.vue'
+import OfflineBanner from '@/components/shared/OfflineBanner.vue'
 
 usePageMeta()
 </script>
@@ -14,5 +15,6 @@ usePageMeta()
     </AppLayout>
     <component :is="Component" v-else />
   </RouterView>
+  <OfflineBanner />
   <AppUpdateBanner />
 </template>

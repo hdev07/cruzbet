@@ -182,3 +182,12 @@ export function formatMatchTime(match: Pick<Match, 'match_date'>, timeZone = MX_
     minute: '2-digit',
   })
 }
+
+export function formatMatchDate(match: Pick<Match, 'match_date'>, timeZone = MX_TIME_ZONE): string {
+  if (!match.match_date) return 'Fecha por definir'
+  return new Date(match.match_date).toLocaleDateString('es-MX', {
+    timeZone,
+    day: 'numeric',
+    month: 'short',
+  }).replace('.', '')
+}

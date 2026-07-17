@@ -8,17 +8,29 @@ import {
   pickNextScheduledMatch,
   pickSpotlightMatches,
 } from '@/lib/matchLifecycle'
+import { readCache, writeCache } from '@/lib/offlineCache'
 import { supabase } from '@/lib/supabase'
 import { buildWeekendCalendar } from '@/lib/weekendCalendar'
 import type { Match, MatchEvent } from '@/types'
 
 const MATCH_SELECT = '*, home_team:teams!home_team_id(*), away_team:teams!away_team_id(*)'
 const EVENT_SELECT = '*, players(name, number), teams(name, code, flag_url)'
+const MATCHES_CACHE_KEY = 'matches-v1'
+
+type MatchesCache = {
+  competitionId: string | null
+  matches: Match[]
+}
+
+function loadMatchesCache(): MatchesCache | null {
+  return readCache<MatchesCache>(MATCHES_CACHE_KEY)
+}
 
 export const useMatchStore = defineStore('match', () => {
-  const matches = ref<Match[]>([])
+  const cached = loadMatchesCache()
+  const matches = ref<Match[]>(cached?.matches ?? [])
   const loading = ref(false)
-  const activeCompetitionId = ref<string | null>(null)
+  const activeCompetitionId = ref<string | null>(cached?.competitionId ?? null)
   const lastFetchedAt = ref<number | null>(null)
   const eventsByMatchId = ref<Record<string, MatchEvent[]>>({})
   const eventsFetchedFor = ref<Set<string>>(new Set())
@@ -176,6 +188,10 @@ export const useMatchStore = defineStore('match', () => {
       if (!error && data) {
         matches.value = data as Match[]
         lastFetchedAt.value = Date.now()
+        writeCache<MatchesCache>(MATCHES_CACHE_KEY, {
+          competitionId,
+          matches: matches.value,
+        })
 
         const eventMatchIds = matches.value
           .filter((m) => isEffectivelyLive(m) || isRecentlyFinished(m))
@@ -183,6 +199,18 @@ export const useMatchStore = defineStore('match', () => {
         if (eventMatchIds.length) {
           void fetchEventsForMatches(eventMatchIds, { force: options?.force })
         }
+      } else if (!matches.value.length) {
+        const fallback = loadMatchesCache()
+        if (fallback?.matches.length) {
+          matches.value = fallback.matches
+          if (fallback.competitionId) activeCompetitionId.value = fallback.competitionId
+        }
+      }
+    } catch {
+      const fallback = loadMatchesCache()
+      if (fallback?.matches.length) {
+        matches.value = fallback.matches
+        if (fallback.competitionId) activeCompetitionId.value = fallback.competitionId
       }
     } finally {
       loading.value = false
