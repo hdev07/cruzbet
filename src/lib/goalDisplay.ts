@@ -47,7 +47,7 @@ export function formatGoalScorer(event: MatchEvent, match: Match): string {
 export function formatGoalLine(event: MatchEvent, match: Match): string {
   const scorer = formatGoalScorer(event, match)
   const time = formatGoalEventTime(event.minute, event.extra_time ?? 0, event.event_second ?? 0)
-  const typeTag = goalTypeShortLabel(event.metadata?.type)
+  const typeTag = goalTypeShortLabel(event.metadata?.goal_type ?? event.metadata?.type)
   const parts = [time, scorer]
   if (typeTag) parts.push(`(${typeTag})`)
   return parts.join(' · ')

@@ -1,3 +1,11 @@
+export type CompetitionOption = {
+  id: string
+  slug: string
+  name: string
+  season: string
+  isActive: boolean
+}
+
 export type StandingRow = {
   position: number
   teamCode: string

@@ -4,10 +4,12 @@ import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import { supabase } from '@/lib/supabase'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { triggerLiveSync } from '@/lib/liveSync'
+import { goalTypeLabel, goalTypeShortLabel, normalizeGoalType, type GoalType } from '@/lib/goalDisplay'
 import { useMatchStore } from '@/stores/matchStore'
 import type { Match, MatchEvent } from '@/types'
 
 type CardType = 'yellow' | 'red' | 'second_yellow'
+const GOAL_TYPE_OPTIONS: GoalType[] = ['foot', 'penalty', 'header', 'free_kick', 'own_goal']
 type PendingConfirm = 'revertToScheduled' | 'reopenMatch' | 'finishMatch' | 'deleteEvent'
 
 const MANAGEABLE_EVENT_TYPES = new Set(['goal', 'card'])
@@ -26,6 +28,7 @@ const goalTeamId = ref('')
 const goalMinute = ref(1)
 const goalSecond = ref(0)
 const goalExtraTime = ref(0)
+const goalType = ref<GoalType>('foot')
 const cardTeamId = ref('')
 const cardMinute = ref(1)
 const cardSecond = ref(0)
@@ -40,6 +43,8 @@ const editMinute = ref(1)
 const editSecond = ref(0)
 const editExtraTime = ref(0)
 const editTeamId = ref('')
+const editGoalType = ref<GoalType>('foot')
+const editGoalMetadata = ref<Record<string, unknown>>({})
 const autoSyncEnabled = ref(true)
 const pendingConfirm = ref<PendingConfirm | null>(null)
 const pendingDeleteEvent = ref<MatchEvent | null>(null)
@@ -100,7 +105,10 @@ function cardTypeLabel(type: unknown): string {
 }
 
 function eventTypeLabel(event: MatchEvent): string {
-  if (event.event_type === 'goal') return 'Gol'
+  if (event.event_type === 'goal') {
+    const tag = goalTypeShortLabel(event.metadata?.goal_type ?? event.metadata?.type)
+    return tag ? `Gol (${tag})` : 'Gol'
+  }
   if (event.event_type === 'card') return cardTypeLabel(event.metadata?.card_type)
   return event.event_type
 }
@@ -142,6 +150,7 @@ function syncForm(match: Match) {
   goalSecond.value = 0
   goalExtraTime.value = 0
   goalTeamId.value = match.home_team_id ?? ''
+  goalType.value = 'foot'
   cardMinute.value = nextMinute
   cardSecond.value = 0
   cardExtraTime.value = 0
@@ -388,7 +397,7 @@ async function registerGoal() {
     extra_time: goalExtraTime.value,
     event_second: goalSecond.value,
     source: 'manual',
-    metadata: { type: 'foot', source: 'manual' },
+    metadata: { goal_type: goalType.value, source: 'manual' },
   })
   saving.value = false
   if (err) {
@@ -428,6 +437,8 @@ function startEditGoal(event: MatchEvent) {
   editSecond.value = event.event_second ?? 0
   editExtraTime.value = event.extra_time ?? 0
   editTeamId.value = event.team_id ?? props.match.home_team_id ?? ''
+  editGoalType.value = normalizeGoalType(event.metadata?.goal_type ?? event.metadata?.type)
+  editGoalMetadata.value = event.metadata ?? {}
 }
 
 function cancelEditGoal() {
@@ -445,6 +456,7 @@ async function saveEditGoal() {
       extra_time: editExtraTime.value,
       event_second: editSecond.value,
       team_id: editTeamId.value,
+      metadata: { ...editGoalMetadata.value, goal_type: editGoalType.value, type: undefined },
     })
     .eq('id', editingEventId.value)
   saving.value = false
@@ -556,6 +568,14 @@ async function finishMatch() {
                 Segundos
                 <input v-model.number="editSecond" type="number" min="0" max="59" :class="inputClass" />
               </label>
+              <label class="block text-xs">
+                Tipo de gol
+                <select v-model="editGoalType" :class="inputClass">
+                  <option v-for="opt in GOAL_TYPE_OPTIONS" :key="opt" :value="opt">
+                    {{ goalTypeLabel(opt) }}
+                  </option>
+                </select>
+              </label>
             </div>
             <div class="mt-3 flex gap-2">
               <button
@@ -648,6 +668,14 @@ async function finishMatch() {
           <label class="block text-xs">
             Segundos
             <input v-model.number="goalSecond" type="number" min="0" max="59" :class="inputClass" />
+          </label>
+          <label class="block text-xs">
+            Tipo de gol
+            <select v-model="goalType" :class="inputClass">
+              <option v-for="opt in GOAL_TYPE_OPTIONS" :key="opt" :value="opt">
+                {{ goalTypeLabel(opt) }}
+              </option>
+            </select>
           </label>
         </div>
         <p class="text-[11px] text-slate-500">

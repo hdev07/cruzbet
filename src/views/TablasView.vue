@@ -19,10 +19,16 @@ const {
   menoresStandings,
   menoresRequiredMinutes,
   menoresSyncedAt,
+  competitions,
+  selectedCompetitionId,
   highlights,
 } = storeToRefs(store)
 
 const activeSection = ref<TablasSection>('general')
+
+const selectedCompetition = computed(
+  () => competitions.value.find((c) => c.id === selectedCompetitionId.value) ?? null,
+)
 
 /** Solo skeleton en la primera carga; si ya hay datos, el refresh no oculta la tabla. */
 const showSkeleton = computed(
@@ -36,7 +42,10 @@ const showSkeleton = computed(
 const sectionHint = computed(() => {
   switch (activeSection.value) {
     case 'general':
-      return 'Posiciones oficiales del Apertura 2026 (incluye partidos en vivo)'
+      if (!selectedCompetition.value) return 'Posiciones oficiales del torneo'
+      return `Posiciones oficiales de ${selectedCompetition.value.name} ${selectedCompetition.value.season}${
+        selectedCompetition.value.isActive ? ' (incluye partidos en vivo)' : ''
+      }`
     case 'goleo':
       return 'Máximos anotadores del torneo'
     case 'menores':
@@ -88,6 +97,27 @@ onActivated(refresh)
         {{ section.label }}
       </button>
     </nav>
+
+    <div
+      v-if="activeSection === 'general' && competitions.length > 1"
+      class="theme-tab-bar mb-4 flex gap-1 overflow-x-auto app-scrollbar"
+      aria-label="Torneo"
+    >
+      <button
+        v-for="competition in competitions"
+        :key="competition.id"
+        type="button"
+        class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+        :class="
+          selectedCompetitionId === competition.id
+            ? 'bg-mundial-accent text-mundial-dark'
+            : 'text-app-muted hover:bg-app-hover hover:text-app-text'
+        "
+        @click="store.selectCompetition(competition.id)"
+      >
+        {{ competition.name }} · {{ competition.season }}
+      </button>
+    </div>
 
     <p class="mb-4 text-sm text-app-muted">{{ sectionHint }}</p>
 
