@@ -104,22 +104,11 @@ export default defineConfig(({ mode }) => ({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
-          // GET de Supabase: red primero con timeout corto; si falla, usa caché del SW.
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            method: 'GET',
-            options: {
-              cacheName: 'supabase-get-cache',
-              networkTimeoutSeconds: 4,
-              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 6 },
-              cacheableResponse: { statuses: [200] },
-            },
-          },
+          // Nunca cachear la API de Supabase: NetworkFirst sin timeout
+          // cuelga el splash en datos móviles lentos / flaky.
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkOnly',
-            method: 'POST',
           },
         ],
       },
