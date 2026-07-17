@@ -65,12 +65,8 @@ function formatDate(match: Match) {
 
 <template>
   <aside
-    class="flex min-h-0 flex-col"
-    :class="
-      mobileFullScreen
-        ? 'h-full rounded-none border-0'
-        : 'theme-card h-full'
-    "
+    class="admin-shell min-h-0"
+    :class="mobileFullScreen ? 'admin-shell--flat h-full' : 'h-full'"
   >
     <header class="admin-panel-header space-y-3">
       <div>
@@ -84,7 +80,7 @@ function formatDate(match: Match) {
         v-model="search"
         type="search"
         placeholder="Buscar equipo..."
-        class="theme-field w-full rounded-lg px-3 py-2.5 text-sm"
+        class="theme-field w-full rounded-xl px-3 py-2.5 text-sm"
       />
 
       <div class="theme-tab-bar flex flex-wrap gap-1">
@@ -113,12 +109,8 @@ function formatDate(match: Match) {
       <li v-for="match in filteredMatches" :key="match.id" class="admin-list-item">
         <button
           type="button"
-          class="w-full rounded-xl border p-3 text-left transition"
-          :class="
-            selectedMatchId === match.id
-              ? 'border-mundial-accent bg-mundial-accent/10 ring-1 ring-mundial-accent/50'
-              : 'theme-card hover:border-mundial-accent/40'
-          "
+          class="admin-list-btn"
+          :class="{ 'is-selected': selectedMatchId === match.id }"
           @click="selectMatch(match.id)"
         >
           <div class="mb-2 flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide text-slate-500">

@@ -46,7 +46,7 @@ function formatDate() {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-1 flex-col gap-4">
+  <div class="admin-stack min-h-0 flex-1">
     <header class="theme-card shrink-0 p-4">
       <div class="flex flex-wrap items-center justify-center gap-2 text-center">
         <TeamFlag

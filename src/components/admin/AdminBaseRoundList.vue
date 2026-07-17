@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { Users } from '@lucide/vue'
 import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
-import type { BaseQuinielaRound } from '@/types'
 
 const selectedRoundId = defineModel<string>({ required: true })
 
@@ -44,12 +43,8 @@ function selectRound(roundId: string) {
 
 <template>
   <aside
-    class="flex min-h-0 flex-col"
-    :class="
-      mobileFullScreen
-        ? 'h-full rounded-none border-0'
-        : 'theme-card h-full'
-    "
+    class="admin-shell min-h-0"
+    :class="mobileFullScreen ? 'admin-shell--flat h-full' : 'h-full'"
   >
     <header class="admin-panel-header space-y-3">
       <div>
@@ -63,7 +58,7 @@ function selectRound(roundId: string) {
         v-model="search"
         type="search"
         placeholder="Buscar jornada..."
-        class="theme-field w-full rounded-lg px-3 py-2.5 text-sm"
+        class="theme-field w-full rounded-xl px-3 py-2.5 text-sm"
       />
 
       <label class="flex cursor-pointer items-center gap-2 text-xs text-slate-400">
@@ -88,12 +83,8 @@ function selectRound(roundId: string) {
       <li v-for="round in filteredRounds" :key="round.id" class="admin-list-item">
         <button
           type="button"
-          class="w-full rounded-xl border p-3 text-left transition"
-          :class="
-            selectedRoundId === round.id
-              ? 'border-mundial-accent bg-mundial-accent/10 ring-1 ring-mundial-accent/50'
-              : 'theme-card hover:border-mundial-accent/40'
-          "
+          class="admin-list-btn"
+          :class="{ 'is-selected': selectedRoundId === round.id }"
           @click="selectRound(round.id)"
         >
           <div class="flex items-center gap-3">

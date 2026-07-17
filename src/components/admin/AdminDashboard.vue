@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
+  ArrowRight,
   CalendarDays,
   CheckCircle2,
   CircleDashed,
@@ -28,6 +29,11 @@ export type AdminPaymentStats = {
   poolBreakdown?: RoundPoolBreakdown
 }
 
+export type AdminNavigateTarget =
+  | { tab: 'jornadas'; focus?: 'pending' | 'users' }
+  | { tab: 'partidos'; focus?: 'live' | 'today' }
+  | { tab: 'sync' }
+
 const props = defineProps<{
   activeRoundId: string | null
   paymentStats: AdminPaymentStats | null
@@ -37,12 +43,24 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  navigate: [tab: 'jornadas' | 'partidos' | 'sync']
+  navigate: [target: AdminNavigateTarget]
 }>()
 
 const pool = computed(() => props.paymentStats?.poolBreakdown ?? null)
 
-const statCards = computed(() => {
+type StatCard = {
+  key: string
+  label: string
+  value: string | number
+  icon: typeof Users
+  accent: boolean
+  accentClass?: string
+  raw?: boolean
+  hint: string
+  target: AdminNavigateTarget | null
+}
+
+const statCards = computed<StatCard[]>(() => {
   const stats = props.paymentStats
   return [
     {
@@ -51,6 +69,8 @@ const statCards = computed(() => {
       value: stats?.total ?? 0,
       icon: Users,
       accent: false,
+      hint: 'Abrir jornadas y usuarios',
+      target: { tab: 'jornadas', focus: 'users' },
     },
     {
       key: 'submitted',
@@ -58,6 +78,8 @@ const statCards = computed(() => {
       value: stats?.submitted ?? 0,
       icon: ClipboardCheck,
       accent: false,
+      hint: 'Ver quinielas de la jornada',
+      target: { tab: 'jornadas', focus: 'users' },
     },
     {
       key: 'verified',
@@ -66,6 +88,8 @@ const statCards = computed(() => {
       icon: CheckCircle2,
       accent: true,
       accentClass: 'text-mundial-green',
+      hint: 'Ir a verificación de pagos',
+      target: { tab: 'jornadas', focus: 'users' },
     },
     {
       key: 'pending',
@@ -74,6 +98,8 @@ const statCards = computed(() => {
       icon: CircleDashed,
       accent: true,
       accentClass: 'text-amber-300',
+      hint: 'Revisar pendientes de pago',
+      target: { tab: 'jornadas', focus: 'pending' },
     },
     {
       key: 'pool',
@@ -83,6 +109,8 @@ const statCards = computed(() => {
       accent: true,
       accentClass: 'text-mundial-accent',
       raw: true,
+      hint: 'Detalle de pozo y usuarios',
+      target: { tab: 'jornadas', focus: 'users' },
     },
     {
       key: 'live',
@@ -91,6 +119,8 @@ const statCards = computed(() => {
       icon: Radio,
       accent: props.liveMatchCount > 0,
       accentClass: 'text-mundial-green',
+      hint: 'Controlar partidos en vivo',
+      target: { tab: 'partidos', focus: 'live' },
     },
     {
       key: 'today',
@@ -98,13 +128,44 @@ const statCards = computed(() => {
       value: props.scheduledTodayCount,
       icon: CalendarDays,
       accent: false,
+      hint: 'Ver partidos de hoy',
+      target: { tab: 'partidos', focus: 'today' },
     },
   ]
 })
 
-function formatValue(card: (typeof statCards.value)[number]) {
+const shortcuts = computed(() => [
+  {
+    key: 'jornadas',
+    title: 'Jornadas',
+    description: 'Usuarios, pagos y tabla para compartir',
+    target: { tab: 'jornadas', focus: 'users' } as AdminNavigateTarget,
+  },
+  {
+    key: 'partidos',
+    title: 'Partidos',
+    description: 'Marcador manual, eventos y sync por partido',
+    target: {
+      tab: 'partidos',
+      focus: props.liveMatchCount > 0 ? 'live' : undefined,
+    } as AdminNavigateTarget,
+  },
+  {
+    key: 'sync',
+    title: 'Sync ESPN',
+    description: 'Forzar sync global o pausar automático',
+    target: { tab: 'sync' } as AdminNavigateTarget,
+  },
+])
+
+function formatValue(card: StatCard) {
   if (card.raw) return card.value
   return typeof card.value === 'number' ? card.value.toLocaleString('es-MX') : card.value
+}
+
+function onCardClick(card: StatCard) {
+  if (!card.target) return
+  emit('navigate', card.target)
 }
 </script>
 
@@ -113,10 +174,10 @@ function formatValue(card: (typeof statCards.value)[number]) {
     <header class="space-y-1">
       <h2 class="text-lg font-semibold text-app-text">Resumen</h2>
       <p v-if="activeRoundId" class="text-xs text-slate-400">
-        Estadísticas de la jornada activa
+        Toca una tarjeta para abrir jornadas, partidos o sync
       </p>
       <p v-else class="text-xs text-slate-500">
-        Selecciona una jornada activa para ver depósitos y participación
+        Activa una jornada para ver depósitos y participación
       </p>
     </header>
 
@@ -128,14 +189,17 @@ function formatValue(card: (typeof statCards.value)[number]) {
     </div>
 
     <template v-else>
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <button
           v-for="card in statCards"
           :key="card.key"
-          class="theme-card rounded-xl p-4"
+          type="button"
+          class="admin-stat-card group"
           :class="{
             'border-mundial-green/30 bg-mundial-green/5': card.key === 'live' && liveMatchCount > 0,
           }"
+          :disabled="!card.target"
+          @click="onCardClick(card)"
         >
           <div class="flex items-start justify-between gap-2">
             <p class="text-xs font-medium uppercase tracking-wider text-slate-400">
@@ -153,12 +217,18 @@ function formatValue(card: (typeof statCards.value)[number]) {
           >
             {{ formatValue(card) }}
           </p>
-        </article>
+          <p
+            class="mt-2 flex items-center gap-1 text-[11px] text-slate-500 transition group-hover:text-mundial-accent"
+          >
+            {{ card.hint }}
+            <ArrowRight class="h-3 w-3 opacity-0 transition group-hover:opacity-100" />
+          </p>
+        </button>
       </div>
 
       <div
         v-if="pool && pool.verifiedCount > 0"
-        class="rounded-xl border border-mundial-accent/25 bg-mundial-accent/10 px-4 py-3 text-xs text-slate-300"
+        class="theme-card border-mundial-accent/25 bg-mundial-accent/10 px-4 py-3 text-xs text-slate-300"
       >
         <p>
           Recaudado {{ formatMxn(pool.gross) }} · comisión {{ pool.feePercent }}%
@@ -172,39 +242,33 @@ function formatValue(card: (typeof statCards.value)[number]) {
 
       <div
         v-if="paymentStats && paymentStats.incomplete > 0"
-        class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200"
+        class="theme-card border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200"
       >
         {{ paymentStats.incomplete.toLocaleString('es-MX') }}
         {{ paymentStats.incomplete === 1 ? 'quiniela incompleta' : 'quinielas incompletas' }}
         sin enviar.
       </div>
 
-      <div class="flex flex-wrap gap-2">
+      <div class="grid gap-3 sm:grid-cols-3">
         <button
+          v-for="item in shortcuts"
+          :key="item.key"
           type="button"
-          class="theme-card rounded-xl px-4 py-2.5 text-sm font-medium text-app-text transition hover:border-mundial-accent/40 hover:text-mundial-accent"
-          @click="emit('navigate', 'jornadas')"
+          class="admin-stat-card"
+          @click="emit('navigate', item.target)"
         >
-          Ver pendientes de pago
-        </button>
-        <button
-          type="button"
-          class="theme-card rounded-xl px-4 py-2.5 text-sm font-medium text-app-text transition hover:border-mundial-green/40 hover:text-mundial-green"
-          :class="{ 'border-mundial-green/30 bg-mundial-green/5': liveMatchCount > 0 }"
-          @click="emit('navigate', 'partidos')"
-        >
-          Partidos en vivo
-          <span v-if="liveMatchCount > 0" class="ml-1 tabular-nums text-mundial-green">
-            ({{ liveMatchCount }})
-          </span>
-        </button>
-        <button
-          type="button"
-          class="theme-card inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium text-app-text transition hover:border-mundial-accent/40 hover:text-mundial-accent"
-          @click="emit('navigate', 'sync')"
-        >
-          <RefreshCw class="h-4 w-4" />
-          Sync ESPN
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-semibold text-app-text">{{ item.title }}</p>
+            <component
+              :is="item.key === 'sync' ? RefreshCw : item.key === 'partidos' ? Radio : CalendarDays"
+              class="h-4 w-4 text-mundial-accent"
+            />
+          </div>
+          <p class="mt-1 text-xs text-slate-400">{{ item.description }}</p>
+          <p class="mt-3 inline-flex items-center gap-1 text-xs font-medium text-mundial-accent">
+            Abrir
+            <ArrowRight class="h-3.5 w-3.5" />
+          </p>
         </button>
       </div>
 

@@ -23,14 +23,15 @@ import type {
   PredictedWinner,
 } from '@/types'
 
+type PaymentFilter = 'all' | 'verified' | 'pending'
+type SortKey = 'username' | 'points' | 'predictions' | 'status'
+
 const props = defineProps<{
   round: BaseQuinielaRound
   roundMatches: BaseQuinielaRoundMatch[]
   mobile?: boolean
+  focusFilter?: PaymentFilter
 }>()
-
-type PaymentFilter = 'all' | 'verified' | 'pending'
-type SortKey = 'username' | 'points' | 'predictions' | 'status'
 
 const baseStore = useBaseQuinielaStore()
 const participants = ref<BaseRoundParticipant[]>([])
@@ -41,9 +42,16 @@ const savingPickKey = ref<string | null>(null)
 const resetTarget = ref<BaseRoundParticipant | null>(null)
 const error = ref('')
 const userSearch = ref('')
-const paymentFilter = ref<PaymentFilter>('all')
+const paymentFilter = ref<PaymentFilter>(props.focusFilter ?? 'all')
 const sortKey = ref<SortKey>('username')
 const expandedKey = ref<string | null>(null)
+
+watch(
+  () => props.focusFilter,
+  (value) => {
+    if (value) paymentFilter.value = value
+  },
+)
 
 function participantKey(participant: BaseRoundParticipant): string {
   return `${participant.user_id}:${participant.entry_number}`
@@ -240,12 +248,8 @@ const sortedRoundMatches = computed(() =>
 
 <template>
   <section
-    class="flex min-h-0 flex-col overflow-hidden"
-    :class="
-      mobile
-        ? 'h-full rounded-none border-0 bg-transparent'
-        : 'theme-card h-full'
-    "
+    class="admin-shell min-h-0"
+    :class="mobile ? 'admin-shell--flat h-full' : 'h-full'"
   >
     <header class="admin-panel-header space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-3">

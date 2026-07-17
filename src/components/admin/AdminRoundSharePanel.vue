@@ -76,12 +76,8 @@ async function exportTableImage() {
 
 <template>
   <section
-    class="flex min-h-0 flex-col overflow-hidden"
-    :class="
-      mobile
-        ? 'h-full rounded-none border-0 bg-transparent'
-        : 'theme-card h-full'
-    "
+    class="admin-shell min-h-0"
+    :class="mobile ? 'admin-shell--flat h-full' : 'h-full'"
   >
     <header class="admin-panel-header space-y-3">
       <div class="flex flex-wrap items-start justify-between gap-3">

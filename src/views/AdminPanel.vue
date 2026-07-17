@@ -12,7 +12,10 @@ import {
 import AdminBasePaymentVerification from '@/components/admin/AdminBasePaymentVerification.vue'
 import AdminBaseRoundList from '@/components/admin/AdminBaseRoundList.vue'
 import AdminDashboard from '@/components/admin/AdminDashboard.vue'
-import type { AdminPaymentStats } from '@/components/admin/AdminDashboard.vue'
+import type {
+  AdminNavigateTarget,
+  AdminPaymentStats,
+} from '@/components/admin/AdminDashboard.vue'
 import AdminLiveSyncPanel from '@/components/admin/AdminLiveSyncPanel.vue'
 import AdminMatchDetail from '@/components/admin/AdminMatchDetail.vue'
 import AdminMatchList from '@/components/admin/AdminMatchList.vue'
@@ -39,6 +42,7 @@ const paymentStats = ref<AdminPaymentStats | null>(null)
 const statsLoading = ref(false)
 const mobileScreen = ref<MobileScreen>('list')
 const jornadaDetailTab = ref<JornadaDetailTab>('users')
+const jornadaPaymentFilter = ref<'all' | 'verified' | 'pending'>('all')
 
 const selectedMatch = computed(() =>
   matchStore.matches.find((m) => m.id === selectedMatchId.value),
@@ -148,12 +152,48 @@ function switchTab(tab: AdminTab) {
   adminTab.value = tab
   mobileScreen.value = 'list'
   if (tab === 'partidos') autoSelectFirstMatch()
-  if (tab === 'jornadas') autoSelectFirstRound()
+  if (tab === 'jornadas') {
+    autoSelectFirstRound()
+    jornadaPaymentFilter.value = 'all'
+  }
   if (tab === 'resumen') void loadPaymentStats()
 }
 
-function onDashboardNavigate(tab: 'jornadas' | 'partidos' | 'sync') {
-  switchTab(tab)
+function onDashboardNavigate(target: AdminNavigateTarget) {
+  adminTab.value = target.tab
+  mobileScreen.value = 'list'
+
+  if (target.tab === 'partidos') {
+    autoSelectFirstMatch()
+    if (target.focus === 'live') {
+      statusFilter.value = 'live'
+      const live = matchStore.matches.find((m) => m.status === 'live')
+      if (live) {
+        selectedMatchId.value = live.id
+        mobileScreen.value = 'detail'
+      }
+    } else if (target.focus === 'today') {
+      statusFilter.value = 'scheduled'
+    } else {
+      statusFilter.value = 'all'
+    }
+  }
+
+  if (target.tab === 'jornadas') {
+    onlyWithParticipants.value = true
+    jornadaPaymentFilter.value = target.focus === 'pending' ? 'pending' : 'all'
+    autoSelectFirstRound()
+    if (selectedRoundId.value) {
+      jornadaDetailTab.value = 'users'
+      if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+        mobileScreen.value = 'detail'
+      }
+    }
+  }
+
+  if (target.tab === 'sync') {
+    /* panel único, sin detalle */
+  }
 }
 
 onMounted(async () => {
@@ -335,6 +375,7 @@ watch(activeRoundId, async (id) => {
                 v-if="jornadaDetailTab === 'users'"
                 :round="selectedRound"
                 :round-matches="baseStore.roundMatches"
+                :focus-filter="jornadaPaymentFilter"
               />
               <AdminRoundSharePanel
                 v-else
@@ -391,6 +432,7 @@ watch(activeRoundId, async (id) => {
             class="min-h-0 flex-1"
             :round="selectedRound"
             :round-matches="baseStore.roundMatches"
+            :focus-filter="jornadaPaymentFilter"
             mobile
           />
           <AdminRoundSharePanel
