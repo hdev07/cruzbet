@@ -13,7 +13,6 @@ import { firstKickoffFromRoundMatches, hasRoundStarted } from '@/lib/baseQuiniel
 import {
   compareBaseRoundRank,
   countLiveProvisionalHits,
-  denseRankNumbers,
 } from '@/lib/baseQuinielaStats'
 import { teamCrestUrl, teamDisplayName } from '@/lib/teamDisplay'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
@@ -70,7 +69,7 @@ const predictionMap = computed(() => {
   return map
 })
 
-/** Orden: puntos → acierto en vivo (provisional) → nombre. Empatados en puntos comparten #. */
+/** Orden: puntos → acierto en vivo → nombre. Posición 1…N (el nombre desempata el premio). */
 const competitors = computed(() => {
   const rows = participants.value.filter((p) => p.complete)
   return [...rows].sort((a, b) =>
@@ -80,8 +79,6 @@ const competitors = computed(() => {
     }),
   )
 })
-
-const competitorRanks = computed(() => denseRankNumbers(competitors.value))
 
 function isMyRow(userId: string, _entryNumber?: number): boolean {
   return Boolean(props.currentUserId && userId === props.currentUserId)
@@ -324,13 +321,9 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                   </div>
                   <span
                     class="order-2 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
-                    :class="
-                      (competitorRanks[index] ?? index + 1) <= 3 && player.verified
-                        ? 'bg-mundial-accent text-white'
-                        : 'theme-cell-pending text-slate-400'
-                    "
+                    :class="index < 3 ? 'bg-mundial-accent text-white' : 'theme-cell-pending text-slate-400'"
                   >
-                    {{ competitorRanks[index] ?? index + 1 }}
+                    {{ index + 1 }}
                   </span>
                   <div class="order-3 min-w-0 max-w-[7.5rem] flex-1 md:max-w-[11rem]">
                     <p

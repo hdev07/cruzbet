@@ -35,7 +35,7 @@ export type CompareBaseRoundRankOptions = {
 
 /**
  * Orden tabla comparativa: puntos/aciertos ↓ → acierto en vivo ↓ → nombre ↑ → quiniela ↑.
- * El número de posición se asigna aparte con denseRankNumbers (empatados comparten lugar).
+ * La posición es 1…N según ese orden: si empatan en puntos, el nombre decide quién es 1º y quién 2º.
  */
 export function compareBaseRoundRank(
   a: BaseRoundRankRow,
@@ -72,35 +72,6 @@ export function countLiveProvisionalHits(
     if (isProvisionalPredictionCorrect(predicted, match)) hits += 1
   }
   return hits
-}
-
-/**
- * Posiciones densas por puntos/aciertos (1,1,2…): mismos puntos → mismo número.
- * `entries` debe ir ya ordenado (p. ej. con compareBaseRoundRank).
- */
-export function denseRankNumbers(
-  entries: readonly { correct_count: number; total_points: number }[],
-): number[] {
-  const ranks: number[] = []
-  let rank = 0
-  let prevKey: string | null = null
-  for (const entry of entries) {
-    const key = `${entry.correct_count}:${entry.total_points}`
-    if (key !== prevKey) {
-      rank += 1
-      prevKey = key
-    }
-    ranks.push(rank)
-  }
-  return ranks
-}
-
-export function denseRankAt(
-  entries: readonly { correct_count: number; total_points: number }[],
-  index: number,
-): number | null {
-  if (index < 0 || index >= entries.length) return null
-  return denseRankNumbers(entries)[index] ?? null
 }
 
 export interface BasePredictionSummary {
@@ -161,7 +132,7 @@ export function getLeaderboardNeighbors(
     return { position: null, above: null, me: null, below: null }
   }
   return {
-    position: denseRankAt(leaderboard, idx),
+    position: idx + 1,
     above: idx > 0 ? leaderboard[idx - 1]! : null,
     me: leaderboard[idx]!,
     below: idx < leaderboard.length - 1 ? leaderboard[idx + 1]! : null,

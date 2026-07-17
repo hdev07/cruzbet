@@ -1,16 +1,39 @@
-import { compareBaseRoundRank } from '@/lib/baseQuinielaStats'
+import { compareBaseRoundRank, rankDisplayName } from '@/lib/baseQuinielaStats'
 
-/** Entradas empatadas en el primer lugar (mismos aciertos y puntos). */
+/**
+ * Primer lugar oficial tras el orden (puntos → nombre).
+ * Si empatan en puntos, el nombre ya desempató: solo comparte pozo quien
+ * quedó igual también en nombre (caso extremo); si no, hay un solo 1º.
+ */
 export function getTiedFirstPlaceEntries<
-  T extends { correct_count: number; total_points: number },
+  T extends {
+    correct_count: number
+    total_points: number
+    user_id?: string
+    entry_number?: number
+    username?: string | null
+    profiles?: { username?: string | null }
+  },
 >(entries: T[]): T[] {
   if (!entries.length) return []
   const top = entries[0]!
-  return entries.filter(
-    (entry) =>
+  const topName = rankDisplayName({
+    ...top,
+    user_id: top.user_id ?? '',
+    entry_number: top.entry_number ?? 0,
+  })
+  return entries.filter((entry) => {
+    const name = rankDisplayName({
+      ...entry,
+      user_id: entry.user_id ?? '',
+      entry_number: entry.entry_number ?? 0,
+    })
+    return (
       entry.correct_count === top.correct_count &&
-      entry.total_points === top.total_points,
-  )
+      entry.total_points === top.total_points &&
+      name.localeCompare(topName, 'es', { sensitivity: 'base' }) === 0
+    )
+  })
 }
 
 /** Solo depósitos verificados cuentan para pozo / ganador oficial. */
@@ -21,7 +44,15 @@ export function getOfficialLeaderboardEntries<
 }
 
 export function winnerUserIdsFromEntries(
-  entries: { user_id: string; correct_count: number; total_points: number; verified?: boolean }[],
+  entries: {
+    user_id: string
+    correct_count: number
+    total_points: number
+    verified?: boolean
+    username?: string | null
+    profiles?: { username?: string | null }
+    entry_number?: number
+  }[],
 ): string[] {
   const official = getOfficialLeaderboardEntries(entries)
   return [...new Set(getTiedFirstPlaceEntries(official).map((entry) => entry.user_id))]

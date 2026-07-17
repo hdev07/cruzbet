@@ -1,5 +1,4 @@
 import { execSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'
@@ -14,8 +13,25 @@ import {
   THEME_COLOR,
 } from './src/constants/branding'
 
-const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
-  version: string
+// Version scheme: 1.2.<commits since the liga-mx -> main merge>.
+// Requires full git history at build time (Vercel: enable VERCEL_DEEP_CLONE=true),
+// otherwise falls back to 1.2.000 instead of failing the build.
+const VERSION_MAJOR_MINOR = '1.2'
+const VERSION_BASE_COMMIT = '00a992fbd73e7e2e12abaafb28cbccfcbc9e238b'
+
+function commitsSinceBase(): number {
+  try {
+    return parseInt(
+      execSync(`git rev-list --count --first-parent ${VERSION_BASE_COMMIT}..HEAD`).toString().trim(),
+      10,
+    )
+  } catch {
+    return 0
+  }
+}
+
+function appVersion(): string {
+  return `${VERSION_MAJOR_MINOR}.${String(commitsSinceBase()).padStart(3, '0')}`
 }
 
 function shortCommitHash(): string {
@@ -28,7 +44,7 @@ function shortCommitHash(): string {
 
 export default defineConfig(({ mode }) => ({
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(appVersion()),
     __APP_COMMIT__: JSON.stringify(shortCommitHash()),
     __APP_BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },

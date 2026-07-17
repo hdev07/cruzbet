@@ -8,8 +8,7 @@ import {
   computeRoundPool,
 } from '@/constants/base-quiniela-rules'
 import { formatMxn } from '@/lib/formatMoney'
-import { getOfficialLeaderboardEntries, winnerUserIdsFromEntries } from '@/lib/baseQuinielaWinners'
-import { denseRankAt } from '@/lib/baseQuinielaStats'
+import { getOfficialLeaderboardEntries, getTiedFirstPlaceEntries, winnerUserIdsFromEntries } from '@/lib/baseQuinielaWinners'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import type { BaseRoundLeaderboardEntry } from '@/types'
@@ -63,12 +62,7 @@ const leader = computed(() => {
 
 const tiedLeaders = computed(() => {
   if (!leader.value) return []
-  const official = getOfficialLeaderboardEntries(baseStore.leaderboard)
-  return official.filter(
-    (e) =>
-      e.correct_count === leader.value!.correct_count &&
-      e.total_points === leader.value!.total_points,
-  )
+  return getTiedFirstPlaceEntries(getOfficialLeaderboardEntries(baseStore.leaderboard))
 })
 
 const poolBreakdown = computed(() => {
@@ -83,7 +77,7 @@ const myRank = computed(() => {
       e.user_id === auth.user!.id &&
       e.entry_number === baseStore.currentEntryNumber,
   )
-  return denseRankAt(baseStore.leaderboard, index)
+  return index >= 0 ? index + 1 : null
 })
 
 const myDisplayedEntry = computed(
