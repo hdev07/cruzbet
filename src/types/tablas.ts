@@ -12,6 +12,22 @@ export type StandingRow = {
   points: number
 }
 
+/** Regla de menores Liga MX (minutos oficiales). */
+export type MenoresStandingRow = {
+  position: number
+  teamCode: string
+  teamName: string
+  playersAccumulated: number
+  minutesAccumulated: number
+  minutesToRegulation: number
+  minutesRemaining: number
+  fulfilled: boolean
+  minutes2003: number
+  minutes2004: number
+  minutes2005: number
+  minutes2006Plus: number
+}
+
 export type ScorerRow = {
   position: number
   playerName: string

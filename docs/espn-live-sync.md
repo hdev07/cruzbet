@@ -3,6 +3,10 @@
 La app obtiene marcador, estado, reloj, goles, tarjetas, sustituciones y
 revisiones VAR desde ESPN. El navegador nunca recibe la llave `service_role`.
 
+Para la **tabla de menores** (Regla de Menores) ver
+[`docs/ligamx-menores-sync.md`](./ligamx-menores-sync.md): esa info no viene
+de ESPN y se sincroniza desde ligamx.net.
+
 ## Preparación
 
 1. Ejecutar en Supabase:

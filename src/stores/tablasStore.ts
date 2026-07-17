@@ -13,6 +13,7 @@ import type {
   CardMinuteBucket,
   CardTotals,
   FairPlayClubRow,
+  MenoresStandingRow,
   ScorerRow,
   StandingRow,
   TournamentHighlight,
@@ -165,7 +166,9 @@ export const useTablasStore = defineStore('tablas', () => {
   const selectedClubCode = ref<string | 'all'>('all')
 
   const standings = ref<StandingRow[]>(emptyStandings())
-  const menoresStandings = ref<StandingRow[]>(emptyStandings())
+  const menoresStandings = ref<MenoresStandingRow[]>([])
+  const menoresRequiredMinutes = ref<number | null>(1170)
+  const menoresSyncedAt = ref<string | null>(null)
 
   const rawCardEvents = ref<CardEventRow[]>([])
   const rawGoalEvents = ref<GoalEventRow[]>([])
@@ -374,26 +377,37 @@ export const useTablasStore = defineStore('tablas', () => {
     try {
       const { data: competition, error: competitionError } = await supabase
         .from('competitions')
-        .select('id')
+        .select(
+          'id, menores_required_minutes, menores_synced_at, menores_footnote',
+        )
         .eq('slug', ACTIVE_COMPETITION_SLUG)
         .eq('is_active', true)
         .single()
 
       if (competitionError || !competition) {
         standings.value = emptyStandings()
+        menoresStandings.value = []
         return
       }
       const competitionId = competition.id
+      menoresRequiredMinutes.value = competition.menores_required_minutes ?? 1170
+      menoresSyncedAt.value = competition.menores_synced_at ?? null
 
-      const [{ data: teams }, { data: matches }] = await Promise.all([
-        supabase.from('teams').select('id, code, name'),
-        supabase
-          .from('matches')
-          .select(
-            'id, status, current_minute, home_score, away_score, home_team_id, away_team_id',
-          )
-          .eq('competition_id', competitionId),
-      ])
+      const [{ data: teams }, { data: matches }, { data: menoresRows }] =
+        await Promise.all([
+          supabase.from('teams').select('id, code, name'),
+          supabase
+            .from('matches')
+            .select(
+              'id, status, current_minute, home_score, away_score, home_team_id, away_team_id',
+            )
+            .eq('competition_id', competitionId),
+          supabase
+            .from('menores_standings')
+            .select('*')
+            .eq('competition_id', competitionId)
+            .order('position', { ascending: true }),
+        ])
 
       const teamMap = new Map(
         (teams ?? []).map((t) => [
@@ -405,8 +419,20 @@ export const useTablasStore = defineStore('tablas', () => {
       const matchIds = matchList.map((m) => m.id)
 
       standings.value = buildStandings(matchList, teamMap)
-      // Sin datos de categoría menores aún.
-      menoresStandings.value = emptyStandings()
+      menoresStandings.value = (menoresRows ?? []).map((row) => ({
+        position: row.position,
+        teamCode: row.team_code,
+        teamName: row.team_name,
+        playersAccumulated: row.players_accumulated,
+        minutesAccumulated: row.minutes_accumulated,
+        minutesToRegulation: row.minutes_to_regulation,
+        minutesRemaining: row.minutes_remaining,
+        fulfilled: row.fulfilled,
+        minutes2003: row.minutes_2003,
+        minutes2004: row.minutes_2004,
+        minutes2005: row.minutes_2005,
+        minutes2006Plus: row.minutes_2006_plus,
+      }))
 
       const jornadaByMatch = new Map<string, number>()
       if (matchIds.length) {
@@ -489,6 +515,8 @@ export const useTablasStore = defineStore('tablas', () => {
     standings,
     scorers,
     menoresStandings,
+    menoresRequiredMinutes,
+    menoresSyncedAt,
     fairPlayTable,
     minuteBuckets,
     jornadaBuckets,

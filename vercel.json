@@ -2,8 +2,17 @@
   "functions": {
     "api/sync-live.ts": {
       "maxDuration": 60
+    },
+    "api/sync-menores.ts": {
+      "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/sync-menores",
+      "schedule": "0 14 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!api/|assets/).*)",

@@ -2,9 +2,11 @@
 import { computed, onMounted, onActivated, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Table2 } from '@lucide/vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import FairPlayPanel from '@/components/tablas/FairPlayPanel.vue'
 import GoleoTable from '@/components/tablas/GoleoTable.vue'
 import LoMejorDelTorneo from '@/components/tablas/LoMejorDelTorneo.vue'
+import MenoresTable from '@/components/tablas/MenoresTable.vue'
 import StandingsTable from '@/components/tablas/StandingsTable.vue'
 import { TABLAS_SECTIONS, type TablasSection } from '@/constants/tablas'
 import { useTablasStore } from '@/stores/tablasStore'
@@ -15,10 +17,21 @@ const {
   standings,
   scorers,
   menoresStandings,
+  menoresRequiredMinutes,
+  menoresSyncedAt,
   highlights,
 } = storeToRefs(store)
 
 const activeSection = ref<TablasSection>('general')
+
+/** Solo skeleton en la primera carga; si ya hay datos, el refresh no oculta la tabla. */
+const showSkeleton = computed(
+  () =>
+    loading.value &&
+    !scorers.value.length &&
+    !menoresStandings.value.length &&
+    standings.value.every((row) => row.played === 0),
+)
 
 const sectionHint = computed(() => {
   switch (activeSection.value) {
@@ -27,7 +40,7 @@ const sectionHint = computed(() => {
     case 'goleo':
       return 'Máximos anotadores del torneo'
     case 'menores':
-      return 'Tabla de posiciones de menores'
+      return 'Regla de menores: minutos oficiales publicados por Liga MX'
     case 'fair-play':
       return 'Disciplina, tarjetas y faltas del torneo'
   }
@@ -78,23 +91,40 @@ onActivated(refresh)
 
     <p class="mb-4 text-sm text-app-muted">{{ sectionHint }}</p>
 
-    <p v-if="loading" class="mb-4 text-sm text-app-muted">Cargando tablas…</p>
-
-    <div v-show="activeSection === 'general'" class="space-y-8">
-      <LoMejorDelTorneo :items="highlights" />
-      <StandingsTable :rows="standings" title="Tabla General" />
+    <div v-if="showSkeleton" class="space-y-8">
+      <DataSkeleton v-if="activeSection === 'general'" variant="highlights" />
+      <DataSkeleton
+        variant="table"
+        :rows="activeSection === 'goleo' ? 10 : 18"
+      />
+      <DataSkeleton
+        v-if="activeSection === 'fair-play'"
+        variant="cards"
+        :cards="2"
+      />
     </div>
 
-    <div v-show="activeSection === 'goleo'">
-      <GoleoTable :rows="scorers" />
-    </div>
+    <template v-else>
+      <div v-show="activeSection === 'general'" class="space-y-8">
+        <LoMejorDelTorneo :items="highlights" />
+        <StandingsTable :rows="standings" title="Tabla General" />
+      </div>
+
+      <div v-show="activeSection === 'goleo'">
+        <GoleoTable :rows="scorers" />
+      </div>
 
     <div v-show="activeSection === 'menores'">
-      <StandingsTable :rows="menoresStandings" title="Tabla de menores" />
+      <MenoresTable
+        :rows="menoresStandings"
+        :required-minutes="menoresRequiredMinutes"
+        :synced-at="menoresSyncedAt"
+      />
     </div>
 
-    <div v-show="activeSection === 'fair-play'">
-      <FairPlayPanel />
-    </div>
+      <div v-show="activeSection === 'fair-play'">
+        <FairPlayPanel />
+      </div>
+    </template>
   </div>
 </template>
