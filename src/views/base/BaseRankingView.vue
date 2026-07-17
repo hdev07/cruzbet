@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ChevronRight, Crown, PiggyBank, Target } from '@lucide/vue'
 import BaseRoundRankingPanel from '@/components/ranking/BaseRoundRankingPanel.vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import {
   BASE_QUINIELA_MATCHES_PER_ROUND,
   computeRoundPool,
@@ -200,9 +201,10 @@ watch(activeRoundId, (roundId, prevRoundId) => {
       </div>
     </div>
 
-    <p v-if="baseStore.loading && !baseStore.rounds.length" class="text-slate-400">
-      Cargando resultados...
-    </p>
+    <div v-if="baseStore.loading && !baseStore.rounds.length" class="space-y-5">
+      <DataSkeleton variant="cards" :cards="4" />
+      <DataSkeleton variant="matrix" :rows="6" />
+    </div>
 
     <p v-else-if="loadError" class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
       {{ loadError }}
@@ -302,15 +304,8 @@ watch(activeRoundId, (roundId, prevRoundId) => {
         </div>
       </div>
 
-      <div
-        v-else-if="activeRoundId && roundLoading"
-        class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
-      >
-        <div
-          v-for="n in 4"
-          :key="n"
-          class="h-[5.5rem] animate-pulse rounded-xl border border-white/10 bg-white/5"
-        />
+      <div v-else-if="activeRoundId && roundLoading" class="mb-5">
+        <DataSkeleton variant="cards" :cards="4" />
       </div>
 
       <BaseRoundRankingPanel

@@ -9,6 +9,7 @@ import {
   Search,
 } from '@lucide/vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import { BASE_ENTRY_FEE_MXN, computeRoundPool } from '@/constants/base-quiniela-rules'
 import { formatMxn } from '@/lib/formatMoney'
 import { BASE_WINNER_OPTIONS, winnerCode } from '@/lib/baseQuinielaDisplay'
@@ -323,10 +324,9 @@ const sortedRoundMatches = computed(() =>
 
     <!-- Vista móvil: tarjetas -->
     <div v-if="mobile" class="app-scrollbar admin-panel-body">
-      <p v-if="loading" class="flex items-center gap-2 py-6 text-sm text-slate-400">
-        <Loader2 class="h-4 w-4 animate-spin" />
-        Cargando...
-      </p>
+      <div v-if="loading" class="py-2">
+        <DataSkeleton variant="list" :rows="5" />
+      </div>
 
       <p v-else-if="!participants.length" class="admin-empty">
         Nadie ha registrado predicciones en esta jornada.
@@ -464,10 +464,9 @@ const sortedRoundMatches = computed(() =>
       </div>
 
       <div class="app-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-        <p v-if="loading" class="flex items-center gap-2 px-4 py-6 text-sm text-slate-400">
-          <Loader2 class="h-4 w-4 animate-spin" />
-          Cargando...
-        </p>
+        <div v-if="loading" class="px-4 py-3">
+          <DataSkeleton variant="table" :rows="8" />
+        </div>
 
         <p v-else-if="!participants.length" class="admin-empty">
           Nadie ha registrado predicciones en esta jornada.

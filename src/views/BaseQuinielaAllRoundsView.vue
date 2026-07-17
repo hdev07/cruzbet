@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ArrowLeft, ChevronRight } from '@lucide/vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 
@@ -45,7 +46,11 @@ const roundCount = computed(() => baseStore.rounds.length)
       </RouterLink>
     </div>
 
-    <p v-if="baseStore.loading" class="text-slate-400">Cargando jornadas...</p>
+    <DataSkeleton
+      v-if="baseStore.loading && !baseStore.rounds.length"
+      variant="rounds"
+      :rows="6"
+    />
 
     <div
       v-else-if="!roundCount"

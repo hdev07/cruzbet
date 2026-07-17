@@ -4,6 +4,8 @@ import { RouterLink } from 'vue-router'
 import { ChevronRight, Grid3x3 } from '@lucide/vue'
 import MatchRowCard from '@/components/home/MatchRowCard.vue'
 import MatchSpotlight from '@/components/home/MatchSpotlight.vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
+import SkeletonBone from '@/components/shared/SkeletonBone.vue'
 import { useMatchLifecycleClock } from '@/composables/useMatchLifecycleClock'
 import { JORNADAS_PATH } from '@/constants/nav'
 import {
@@ -66,8 +68,9 @@ const loading = computed(() => matchStore.loading && !matchStore.matches.length)
 <template>
   <section class="space-y-4" aria-label="Encuentros en vivo y próximos">
     <div v-if="loading" class="overflow-hidden rounded-2xl border border-white/10 p-6">
-      <div class="mb-4 h-5 w-32 animate-pulse rounded-lg bg-white/10" />
-      <div class="h-44 animate-pulse rounded-2xl bg-white/5" />
+      <SkeletonBone class="mb-4 h-5 w-32" />
+      <SkeletonBone class="mb-4 h-44 w-full rounded-2xl bg-white/5" />
+      <DataSkeleton variant="list" :rows="2" />
     </div>
 
     <template v-else-if="hasMatchContent">

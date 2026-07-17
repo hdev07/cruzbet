@@ -7,7 +7,6 @@ import {
   CircleDashed,
   ClipboardCheck,
   DollarSign,
-  Loader2,
   Radio,
   RefreshCw,
   Users,
@@ -17,6 +16,7 @@ import {
   BASE_ENTRY_FEE_MXN,
   type RoundPoolBreakdown,
 } from '@/constants/base-quiniela-rules'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import { formatMxn } from '@/lib/formatMoney'
 
 export type AdminPaymentStats = {
@@ -181,11 +181,8 @@ function onCardClick(card: StatCard) {
       </p>
     </header>
 
-    <div
-      v-if="loading"
-      class="theme-card flex flex-1 items-center justify-center py-16"
-    >
-      <Loader2 class="h-6 w-6 animate-spin text-mundial-accent" />
+    <div v-if="loading" class="space-y-4">
+      <DataSkeleton variant="cards" :cards="4" />
     </div>
 
     <template v-else>

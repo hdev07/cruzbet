@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MatchRowCard from '@/components/home/MatchRowCard.vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import type { CalendarDay } from '@/lib/weekendCalendar'
 
 defineProps<{
@@ -20,10 +21,8 @@ defineProps<{
       </p>
     </div>
 
-    <div v-if="loading" class="space-y-4 p-4 sm:p-5">
-      <div class="h-6 w-40 animate-pulse rounded-lg bg-white/10" />
-      <div class="h-16 animate-pulse rounded-xl bg-white/5" />
-      <div class="h-16 animate-pulse rounded-xl bg-white/5" />
+    <div v-if="loading" class="p-4 sm:p-5">
+      <DataSkeleton variant="list" :rows="3" />
     </div>
 
     <div v-else-if="!days.length" class="p-8 text-center text-sm text-app-muted">

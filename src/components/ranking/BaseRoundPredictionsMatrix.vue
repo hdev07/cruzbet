@@ -15,6 +15,7 @@ import {
   countLiveProvisionalHits,
 } from '@/lib/baseQuinielaStats'
 import { teamCrestUrl, teamDisplayName } from '@/lib/teamDisplay'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -191,7 +192,7 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
 
 <template>
   <div>
-    <p v-if="loading" class="text-sm text-slate-400">Cargando pronósticos...</p>
+    <DataSkeleton v-if="loading" variant="matrix" :rows="6" />
 
     <p v-else-if="error" class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
       {{ error }}

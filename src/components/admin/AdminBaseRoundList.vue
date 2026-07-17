@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Users } from '@lucide/vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 
@@ -72,8 +73,8 @@ function selectRound(roundId: string) {
     </header>
 
     <ul class="app-scrollbar admin-list">
-      <li v-if="baseStore.loading && !baseStore.rounds.length" class="admin-empty">
-        Cargando jornadas...
+      <li v-if="baseStore.loading && !baseStore.rounds.length" class="px-3 py-3">
+        <DataSkeleton variant="list" :rows="5" />
       </li>
 
       <li v-else-if="!filteredRounds.length" class="admin-empty">

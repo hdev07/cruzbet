@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import BaseRoundPredictionsMatrix from '@/components/ranking/BaseRoundPredictionsMatrix.vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
@@ -66,8 +67,14 @@ const visibleLeaderboard = computed(() => {
       </button>
     </div>
 
+    <DataSkeleton
+      v-if="activeTab === 'predictions' && !standingsOnly && loading"
+      variant="matrix"
+      :rows="6"
+    />
+
     <BaseRoundPredictionsMatrix
-      v-if="activeTab === 'predictions' && !standingsOnly"
+      v-else-if="activeTab === 'predictions' && !standingsOnly"
       :round-id="roundId"
       :round-matches="roundMatches"
       :current-user-id="auth.user?.id"
@@ -80,9 +87,11 @@ const visibleLeaderboard = computed(() => {
         El pozo solo cuenta depósitos verificados.
       </p>
 
-      <p v-if="loading || !isLeaderboardReady" class="text-sm text-slate-400">
-        Cargando posiciones...
-      </p>
+      <DataSkeleton
+        v-if="loading || !isLeaderboardReady"
+        variant="list"
+        :rows="6"
+      />
 
       <div
         v-else-if="!baseStore.leaderboard.length"

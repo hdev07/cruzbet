@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ChevronRight, Medal, Table2, Target } from '@lucide/vue'
 import PaymentInfoCard from '@/components/shared/PaymentInfoCard.vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import { BASE_QUINIELA_LOGIC } from '@/constants/base-quiniela-rules'
 import { QUINIELA_SUMMARY } from '@/constants/nav'
 import { resolveUpcomingBaseRounds } from '@/lib/baseQuinielaRound'
@@ -135,9 +136,9 @@ const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
       </RouterLink>
     </div>
 
-    <p v-if="baseStore.loading && !baseStore.rounds.length" class="text-slate-400">
-      Cargando jornadas...
-    </p>
+    <div v-if="baseStore.loading && !baseStore.rounds.length" class="mb-6">
+      <DataSkeleton variant="rounds" :rows="2" />
+    </div>
 
     <div
       v-else-if="!activeRound"

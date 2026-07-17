@@ -16,6 +16,7 @@ import {
   Shield,
 } from '@lucide/vue'
 import { JORNADAS_PATH } from '@/constants/nav'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import { usePwaStore } from '@/stores/pwaStore'
@@ -242,7 +243,7 @@ async function handleLogout() {
         Tu desempeño
       </p>
 
-      <p v-if="loadingStats" class="text-sm text-slate-400">Cargando estadísticas...</p>
+      <DataSkeleton v-if="loadingStats" variant="profile" />
       <p v-else-if="statsError" class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
         {{ statsError }}
       </p>

@@ -5,6 +5,8 @@ import { ArrowLeft, Medal, Wallet } from '@lucide/vue'
 import BaseQuinielaEntrySelector from '@/components/predictions/BaseQuinielaEntrySelector.vue'
 import BaseQuinielaGrid from '@/components/predictions/BaseQuinielaGrid.vue'
 import PaymentInfoCard from '@/components/shared/PaymentInfoCard.vue'
+import DataSkeleton from '@/components/shared/DataSkeleton.vue'
+import SkeletonBone from '@/components/shared/SkeletonBone.vue'
 import {
   BASE_ENTRY_FEE_MXN,
   BASE_QUINIELA_MATCHES_PER_ROUND,
@@ -53,9 +55,14 @@ watch(roundId, loadRound)
       Quiniela
     </RouterLink>
 
-    <p v-if="baseStore.loading && !baseStore.currentRound" class="text-slate-400">
-      Cargando jornada...
-    </p>
+    <div v-if="baseStore.loading && !baseStore.currentRound" class="space-y-4">
+      <div class="space-y-2">
+        <SkeletonBone class="h-8 w-48" />
+        <SkeletonBone class="h-4 w-64 bg-white/5" />
+      </div>
+      <DataSkeleton variant="cards" :cards="2" />
+      <DataSkeleton variant="match-grid" :rows="5" />
+    </div>
 
     <p v-else-if="loadError" class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
       {{ loadError }}
