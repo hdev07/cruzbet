@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Radio } from '@lucide/vue'
+import BroadcastBadge from '@/components/shared/BroadcastBadge.vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { formatMatchVenue } from '@/lib/matchVenue'
-import { formatLiveStatusLabel, formatScheduledStatusLabel } from '@/lib/matchClock'
+import {
+  formatLiveStatusLabel,
+  formatScheduledStatusLabel,
+  isMatchHalftime,
+  isMatchInterrupted,
+  LIVE_STATUS_DETAIL_LABELS,
+} from '@/lib/matchClock'
 import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { teamDisplayName } from '@/lib/teamDisplay'
 import { formatMatchDate, formatMatchTime } from '@/lib/weekendCalendar'
@@ -15,13 +22,20 @@ const props = defineProps<{
 }>()
 
 const isLive = computed(() => isEffectivelyLive(props.match))
+const halftime = computed(() => isMatchHalftime(props.match))
+const interrupted = computed(() => isMatchInterrupted(props.match))
 const isFinished = computed(() => props.match.status === 'finished')
 const showScore = computed(() => isLive.value || isFinished.value)
 
 const statusText = computed(() => {
-  if (isLive.value) return formatLiveStatusLabel(props.match)
+  if (isLive.value || interrupted.value) return formatLiveStatusLabel(props.match)
   if (isFinished.value) return 'Final'
   return formatScheduledStatusLabel(props.match)
+})
+const interruptedShort = computed(() => {
+  const detail = props.match.live_status_detail
+  if (!detail) return null
+  return LIVE_STATUS_DETAIL_LABELS[detail].slice(0, 3)
 })
 const venueLabel = computed(() => formatMatchVenue(props.match.venue))
 </script>
@@ -45,9 +59,19 @@ const venueLabel = computed(() => formatMatchVenue(props.match.venue))
       </p>
       <p
         class="mt-1 text-xs font-semibold tabular-nums"
-        :class="isLive ? 'text-mundial-green' : 'text-app-muted'"
+        :class="
+          interrupted
+            ? 'text-amber-400'
+            : isLive
+              ? halftime
+                ? 'text-mundial-accent'
+                : 'text-mundial-green'
+              : 'text-app-muted'
+        "
       >
-        <template v-if="isLive">
+        <template v-if="halftime">HT</template>
+        <template v-else-if="interruptedShort">{{ interruptedShort }}</template>
+        <template v-else-if="isLive">
           <span class="inline-flex items-center justify-center gap-0.5">
             <Radio class="h-3 w-3" />
           </span>
@@ -93,9 +117,10 @@ const venueLabel = computed(() => formatMatchVenue(props.match.venue))
           {{ match.away_score }}
         </span>
       </div>
-      <LiveMatchPulse v-if="isLive" compact class="live-pulse-under-score live-pulse-under-score--compact !mx-0 !mt-1 !w-16" />
-      <p v-if="venueLabel" class="truncate text-[11px] text-app-muted sm:hidden">
-        {{ venueLabel }}
+      <LiveMatchPulse v-if="isLive && !halftime && !interrupted" compact class="live-pulse-under-score live-pulse-under-score--compact !mx-0 !mt-1 !w-16" />
+      <p v-if="venueLabel || match.broadcast_channel" class="flex items-center gap-1 truncate text-[11px] text-app-muted sm:hidden">
+        <BroadcastBadge :channels="match.broadcast_channel" :max="1" />
+        <span class="truncate">{{ venueLabel }}</span>
       </p>
     </div>
 
@@ -103,12 +128,19 @@ const venueLabel = computed(() => formatMatchVenue(props.match.venue))
       <p
         v-if="statusText"
         class="text-[11px] font-medium"
-        :class="isLive ? 'text-mundial-green' : 'text-app-muted'"
+        :class="
+          interrupted
+            ? 'text-amber-400'
+            : isLive
+              ? 'text-mundial-green'
+              : 'text-app-muted'
+        "
       >
         {{ statusText }}
       </p>
-      <p v-if="venueLabel" class="mt-0.5 truncate text-[11px] text-app-muted" :title="venueLabel">
-        {{ venueLabel }}
+      <p v-if="venueLabel || match.broadcast_channel" class="mt-0.5 flex items-center justify-end gap-1 truncate text-[11px] text-app-muted">
+        <span class="truncate" :title="venueLabel">{{ venueLabel }}</span>
+        <BroadcastBadge :channels="match.broadcast_channel" :max="2" />
       </p>
     </div>
   </div>
