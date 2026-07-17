@@ -107,6 +107,7 @@ export const useTablasStore = defineStore('tablas', () => {
   const rawCardEvents = ref<CardEventRow[]>([])
   const rawGoalEvents = ref<GoalEventRow[]>([])
   const rawMatchesMeta = ref<{ jornada: number | null; minutesPlayed: number }[]>([])
+  const foulsByJornada = ref<Map<number, number>>(new Map())
 
   const fairPlayTable = computed<FairPlayClubRow[]>(() => {
     const byTeam = new Map<string, { yellow: number; red: number }>()
@@ -168,7 +169,11 @@ export const useTablasStore = defineStore('tablas', () => {
       if (event.cardType === 'yellow' || event.cardType === 'second_yellow') yellow += 1
       if (event.cardType === 'red' || event.cardType === 'second_yellow') red += 1
     }
-    return { yellow, red, fouls: 0 }
+    const fouls =
+      selectedJornada.value === 'torneo'
+        ? Array.from(foulsByJornada.value.values()).reduce((sum, n) => sum + n, 0)
+        : (foulsByJornada.value.get(selectedJornada.value) ?? 0)
+    return { yellow, red, fouls }
   })
 
   const minuteBuckets = computed<CardMinuteBucket[]>(() => {
@@ -193,6 +198,9 @@ export const useTablasStore = defineStore('tablas', () => {
       if (!bucket) continue
       if (event.cardType === 'yellow' || event.cardType === 'second_yellow') bucket.yellow += 1
       if (event.cardType === 'red' || event.cardType === 'second_yellow') bucket.red += 1
+    }
+    for (const bucket of buckets) {
+      bucket.fouls = foulsByJornada.value.get(bucket.jornada) ?? 0
     }
     return buckets
   })
@@ -383,10 +391,11 @@ export const useTablasStore = defineStore('tablas', () => {
       if (!competitionId) {
         standings.value = emptyStandings()
         menoresStandings.value = []
+        foulsByJornada.value = new Map()
         return
       }
 
-      const [teamMap, { data: matches }, { data: menoresRows }] =
+      const [teamMap, { data: matches }, { data: menoresRows }, { data: faltasRows }] =
         await Promise.all([
           ensureTeamMap(),
           supabase
@@ -400,7 +409,15 @@ export const useTablasStore = defineStore('tablas', () => {
             .select('*')
             .eq('competition_id', competitionId)
             .order('position', { ascending: true }),
+          supabase
+            .from('faltas_jornada')
+            .select('jornada, fouls')
+            .eq('competition_id', competitionId),
         ])
+
+      foulsByJornada.value = new Map(
+        (faltasRows ?? []).map((row) => [row.jornada, row.fouls]),
+      )
 
       const matchList = (matches ?? []) as MatchStandingSource[]
       const matchIds = matchList.map((m) => m.id)

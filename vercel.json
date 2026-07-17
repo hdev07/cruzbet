@@ -5,11 +5,18 @@
     },
     "api/sync-menores.ts": {
       "maxDuration": 30
+    },
+    "api/sync-faltas.ts": {
+      "maxDuration": 30
     }
   },
   "crons": [
     {
       "path": "/api/sync-menores",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/sync-faltas",
       "schedule": "0 14 * * *"
     }
   ],
