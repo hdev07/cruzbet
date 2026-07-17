@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onActivated, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Table2 } from '@lucide/vue'
 import FairPlayPanel from '@/components/tablas/FairPlayPanel.vue'
@@ -23,7 +23,7 @@ const activeSection = ref<TablasSection>('general')
 const sectionHint = computed(() => {
   switch (activeSection.value) {
     case 'general':
-      return 'Posiciones oficiales del Apertura 2026'
+      return 'Posiciones oficiales del Apertura 2026 (incluye partidos en vivo)'
     case 'goleo':
       return 'Máximos anotadores del torneo'
     case 'menores':
@@ -33,9 +33,12 @@ const sectionHint = computed(() => {
   }
 })
 
-onMounted(() => {
+function refresh() {
   void store.fetchTablas()
-})
+}
+
+onMounted(refresh)
+onActivated(refresh)
 </script>
 
 <template>

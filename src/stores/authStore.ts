@@ -55,7 +55,9 @@ export const useAuthStore = defineStore('auth', () => {
       if (error) console.error('Error al restaurar sesión:', error.message)
 
       user.value = data.session?.user ?? null
-      if (user.value) await fetchProfile(user.value.id)
+      // No bloquear el arranque: en redes móviles lentas await fetchProfile
+      // deja la app en el splash sin montar.
+      if (user.value) void fetchProfile(user.value.id)
 
       if (oauthCallback && data.session) {
         cleanupOAuthUrl()

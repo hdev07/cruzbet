@@ -104,13 +104,11 @@ export default defineConfig(({ mode }) => ({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          // Nunca cachear la API de Supabase: NetworkFirst sin timeout
+          // cuelga el splash en datos móviles lentos / flaky.
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 300 },
-            },
+            handler: 'NetworkOnly',
           },
         ],
       },

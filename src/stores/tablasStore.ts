@@ -6,6 +6,7 @@ import {
   LIGA_MX_CLUBS,
   TOTAL_JORNADAS,
 } from '@/constants/tablas'
+import { teamNameFromCode } from '@/lib/teamDisplay'
 import { supabase } from '@/lib/supabase'
 import type {
   CardJornadaBucket,
@@ -31,10 +32,35 @@ type GoalEventRow = {
   playerName: string
 }
 
+type MatchStandingSource = {
+  id: string
+  status: string
+  current_minute: number | null
+  home_score: number
+  away_score: number
+  home_team_id: string
+  away_team_id: string
+}
+
+type TeamStats = {
+  teamCode: string
+  teamName: string
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  goalsFor: number
+  goalsAgainst: number
+}
+
 function minuteBucketLabel(minute: number, extraTime: number): string {
   if (minute > 90 || (minute === 90 && extraTime > 0)) return '>90'
   const index = Math.min(Math.ceil(Math.max(minute, 1) / 15), 6)
   return CARD_MINUTE_BUCKETS[index - 1] ?? '>90'
+}
+
+function clubName(code: string, fallback?: string): string {
+  return teamNameFromCode(code) ?? fallback ?? code
 }
 
 function emptyStandings(): StandingRow[] {
@@ -68,6 +94,69 @@ function emptyJornadaBuckets(): CardJornadaBucket[] {
     red: 0,
     fouls: 0,
   }))
+}
+
+function applyMatchResult(
+  stats: TeamStats,
+  goalsFor: number,
+  goalsAgainst: number,
+): void {
+  stats.played += 1
+  stats.goalsFor += goalsFor
+  stats.goalsAgainst += goalsAgainst
+  if (goalsFor > goalsAgainst) stats.won += 1
+  else if (goalsFor < goalsAgainst) stats.lost += 1
+  else stats.drawn += 1
+}
+
+/** Tabla general Liga MX: pts → DG → GF → nombre. Incluye partidos en vivo (provisional). */
+function buildStandings(
+  matches: MatchStandingSource[],
+  teamMap: Map<string, { code: string; name: string }>,
+): StandingRow[] {
+  const byCode = new Map<string, TeamStats>()
+  for (const club of LIGA_MX_CLUBS) {
+    byCode.set(club.code, {
+      teamCode: club.code,
+      teamName: club.name,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+    })
+  }
+
+  for (const match of matches) {
+    if (match.status !== 'finished' && match.status !== 'live') continue
+    const home = teamMap.get(match.home_team_id)
+    const away = teamMap.get(match.away_team_id)
+    if (!home || !away) continue
+
+    const homeStats = byCode.get(home.code)
+    const awayStats = byCode.get(away.code)
+    if (!homeStats || !awayStats) continue
+
+    applyMatchResult(homeStats, match.home_score, match.away_score)
+    applyMatchResult(awayStats, match.away_score, match.home_score)
+  }
+
+  return Array.from(byCode.values())
+    .map((row) => ({
+      ...row,
+      goalDiff: row.goalsFor - row.goalsAgainst,
+      points: row.won * 3 + row.drawn,
+      position: 0,
+    }))
+    .sort(
+      (a, b) =>
+        b.points - a.points ||
+        b.goalDiff - a.goalDiff ||
+        b.goalsFor - a.goalsFor ||
+        a.teamName.localeCompare(b.teamName, 'es'),
+    )
+    .map((row, index) => ({ ...row, position: index + 1 }))
 }
 
 export const useTablasStore = defineStore('tablas', () => {
@@ -183,50 +272,65 @@ export const useTablasStore = defineStore('tablas', () => {
 
   const staffCards = ref({ yellow: 0, red: 0 })
 
-  const highlights = computed<TournamentHighlight[]>(() => [
-    {
-      title: 'Lo Mejor del Torneo',
-      subtitle: 'Goleador',
-      value: 0,
-      unit: 'Goles',
-      secondaryLabel: 'Anota Cada',
-      secondaryValue: 0,
-      secondaryUnit: 'Minutos',
-      entityName: 'Por definir',
-      entityKind: 'player',
-      teamCode: null,
-    },
-    {
-      title: 'Ofensiva',
-      subtitle: 'Goles a Favor',
-      value: 0,
-      unit: 'Goles',
-      entityName: 'Por definir',
-      entityKind: 'club',
-      teamCode: null,
-    },
-    {
-      title: 'Defensiva',
-      subtitle: 'Goles en Contra',
-      value: 0,
-      unit: 'Goles',
-      entityName: 'Por definir',
-      entityKind: 'club',
-      teamCode: null,
-    },
-    {
-      title: 'Fair play',
-      subtitle: 'Disciplina',
-      value: 0,
-      unit: 'Amarillas',
-      secondaryLabel: 'Rojas',
-      secondaryValue: 0,
-      secondaryUnit: 'Tarjetas',
-      entityName: 'Torneo',
-      entityKind: 'generic',
-      teamCode: null,
-    },
-  ])
+  const highlights = computed<TournamentHighlight[]>(() => {
+    const topScorer = scorers.value[0]
+    const bestAttack = [...standings.value].sort(
+      (a, b) => b.goalsFor - a.goalsFor || b.points - a.points,
+    )[0]
+    const bestDefense =
+      [...standings.value]
+        .filter((row) => row.played > 0)
+        .sort((a, b) => a.goalsAgainst - b.goalsAgainst || b.points - a.points)[0] ??
+      standings.value[0]
+    const fairest = fairPlayTable.value[0]
+    const totalMinutes = rawMatchesMeta.value.reduce((sum, m) => sum + m.minutesPlayed, 0)
+
+    return [
+      {
+        title: 'Lo Mejor del Torneo',
+        subtitle: 'Goleador',
+        value: topScorer?.goals ?? 0,
+        unit: 'Goles',
+        secondaryLabel: 'Anota Cada',
+        secondaryValue:
+          topScorer && topScorer.goals > 0 ? Math.round(totalMinutes / topScorer.goals) : 0,
+        secondaryUnit: 'Minutos',
+        entityName: topScorer?.playerName ?? 'Por definir',
+        entityKind: 'player',
+        teamCode: topScorer?.teamCode ?? null,
+      },
+      {
+        title: 'Ofensiva',
+        subtitle: 'Goles a Favor',
+        value: bestAttack?.goalsFor ?? 0,
+        unit: 'Goles',
+        entityName: bestAttack?.teamName ?? 'Por definir',
+        entityKind: 'club',
+        teamCode: bestAttack?.teamCode ?? null,
+      },
+      {
+        title: 'Defensiva',
+        subtitle: 'Goles en Contra',
+        value: bestDefense?.goalsAgainst ?? 0,
+        unit: 'Goles',
+        entityName: bestDefense?.teamName ?? 'Por definir',
+        entityKind: 'club',
+        teamCode: bestDefense?.teamCode ?? null,
+      },
+      {
+        title: 'Fair play',
+        subtitle: 'Disciplina',
+        value: fairest?.yellow ?? 0,
+        unit: 'Amarillas',
+        secondaryLabel: 'Rojas',
+        secondaryValue: fairest?.red ?? 0,
+        secondaryUnit: 'Tarjetas',
+        entityName: fairest?.teamName ?? 'Torneo',
+        entityKind: 'club',
+        teamCode: fairest?.teamCode ?? null,
+      },
+    ]
+  })
 
   const jornadaOptions = computed(() => [
     { value: 'torneo' as const, label: 'Torneo' },
@@ -275,20 +379,34 @@ export const useTablasStore = defineStore('tablas', () => {
         .eq('is_active', true)
         .single()
 
-      if (competitionError || !competition) return
+      if (competitionError || !competition) {
+        standings.value = emptyStandings()
+        return
+      }
       const competitionId = competition.id
 
       const [{ data: teams }, { data: matches }] = await Promise.all([
         supabase.from('teams').select('id, code, name'),
         supabase
           .from('matches')
-          .select('id, status, current_minute')
+          .select(
+            'id, status, current_minute, home_score, away_score, home_team_id, away_team_id',
+          )
           .eq('competition_id', competitionId),
       ])
 
-      const teamMap = new Map((teams ?? []).map((t) => [t.id, { code: t.code, name: t.name }]))
-      const matchList = matches ?? []
+      const teamMap = new Map(
+        (teams ?? []).map((t) => [
+          t.id,
+          { code: t.code, name: clubName(t.code, t.name) },
+        ]),
+      )
+      const matchList = (matches ?? []) as MatchStandingSource[]
       const matchIds = matchList.map((m) => m.id)
+
+      standings.value = buildStandings(matchList, teamMap)
+      // Sin datos de categoría menores aún.
+      menoresStandings.value = emptyStandings()
 
       const jornadaByMatch = new Map<string, number>()
       if (matchIds.length) {
@@ -316,35 +434,45 @@ export const useTablasStore = defineStore('tablas', () => {
         return
       }
 
-      const { data: events } = await supabase
-        .from('match_events')
-        .select('match_id, team_id, event_type, minute, extra_time, metadata')
-        .in('match_id', matchIds)
-        .in('event_type', ['goal', 'card'])
-
+      // Paginar eventos: PostgREST limita por defecto a 1000 filas.
       const cardEvents: CardEventRow[] = []
       const goalEvents: GoalEventRow[] = []
+      const pageSize = 1000
+      for (let from = 0; ; from += pageSize) {
+        const { data: events, error: eventsError } = await supabase
+          .from('match_events')
+          .select('match_id, team_id, event_type, minute, extra_time, metadata')
+          .in('match_id', matchIds)
+          .in('event_type', ['goal', 'card'])
+          .range(from, from + pageSize - 1)
 
-      for (const event of events ?? []) {
-        const team = event.team_id ? teamMap.get(event.team_id) : undefined
-        if (!team) continue
-        const metadata = (event.metadata ?? {}) as Record<string, unknown>
+        if (eventsError) break
+        const page = events ?? []
+        for (const event of page) {
+          const team = event.team_id ? teamMap.get(event.team_id) : undefined
+          if (!team) continue
+          const metadata = (event.metadata ?? {}) as Record<string, unknown>
 
-        if (event.event_type === 'card') {
-          cardEvents.push({
-            teamCode: team.code,
-            cardType: typeof metadata.card_type === 'string' ? metadata.card_type : 'yellow',
-            minute: event.minute,
-            extraTime: event.extra_time ?? 0,
-            jornada: jornadaByMatch.get(event.match_id) ?? null,
-          })
-        } else if (event.event_type === 'goal') {
-          goalEvents.push({
-            teamCode: team.code,
-            teamName: team.name,
-            playerName: typeof metadata.player === 'string' && metadata.player ? metadata.player : 'Autogol',
-          })
+          if (event.event_type === 'card') {
+            cardEvents.push({
+              teamCode: team.code,
+              cardType: typeof metadata.card_type === 'string' ? metadata.card_type : 'yellow',
+              minute: event.minute,
+              extraTime: event.extra_time ?? 0,
+              jornada: jornadaByMatch.get(event.match_id) ?? null,
+            })
+          } else if (event.event_type === 'goal') {
+            goalEvents.push({
+              teamCode: team.code,
+              teamName: team.name,
+              playerName:
+                typeof metadata.player === 'string' && metadata.player
+                  ? metadata.player
+                  : 'Autogol',
+            })
+          }
         }
+        if (page.length < pageSize) break
       }
 
       rawCardEvents.value = cardEvents
