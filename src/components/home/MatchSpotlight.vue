@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import { MapPin, Radio } from '@lucide/vue'
 import BroadcastBadge from '@/components/shared/BroadcastBadge.vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
@@ -160,7 +161,23 @@ onUnmounted(() => {
 
     <div class="px-4 py-5 sm:px-6 sm:py-6">
       <div class="flex items-center justify-between gap-3 sm:gap-6">
-        <div class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
+        <RouterLink
+          v-if="match.home_team?.code"
+          :to="`/tablas/equipo/${match.home_team.code}`"
+          class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center hover:text-mundial-accent"
+        >
+          <TeamFlag
+            :src="match.home_team?.flag_url"
+            :code="match.home_team?.code"
+            :alt="teamDisplayName(match.home_team, 'Local')"
+            size="lg"
+            img-class="h-12 w-12 sm:h-14 sm:w-14"
+          />
+          <span class="w-full truncate text-sm font-semibold sm:text-base">
+            {{ teamDisplayName(match.home_team, 'Local') }}
+          </span>
+        </RouterLink>
+        <div v-else class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
           <TeamFlag
             :src="match.home_team?.flag_url"
             :code="match.home_team?.code"
@@ -192,7 +209,23 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <div class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
+        <RouterLink
+          v-if="match.away_team?.code"
+          :to="`/tablas/equipo/${match.away_team.code}`"
+          class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center hover:text-mundial-accent"
+        >
+          <TeamFlag
+            :src="match.away_team?.flag_url"
+            :code="match.away_team?.code"
+            :alt="teamDisplayName(match.away_team, 'Visitante')"
+            size="lg"
+            img-class="h-12 w-12 sm:h-14 sm:w-14"
+          />
+          <span class="w-full truncate text-sm font-semibold sm:text-base">
+            {{ teamDisplayName(match.away_team, 'Visitante') }}
+          </span>
+        </RouterLink>
+        <div v-else class="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
           <TeamFlag
             :src="match.away_team?.flag_url"
             :code="match.away_team?.code"

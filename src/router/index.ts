@@ -52,6 +52,11 @@ const router = createRouter({
       meta: { layout: 'mobile', title: 'Tablas', wide: true },
     },
     {
+      path: '/tablas/equipo/:code',
+      component: () => import('@/views/TeamProfileView.vue'),
+      meta: { layout: 'mobile', title: 'Equipo', wide: true },
+    },
+    {
       path: '/perfil',
       component: () => import('@/views/ProfileView.vue'),
       meta: { layout: 'mobile', requiresAuth: true, title: 'Mi perfil', wide: true },

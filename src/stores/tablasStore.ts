@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { ACTIVE_COMPETITION_SLUG } from '@/constants/branding'
 import {
   CARD_MINUTE_BUCKETS,
   LIGA_MX_CLUBS,
@@ -8,10 +7,12 @@ import {
 } from '@/constants/tablas'
 import { teamNameFromCode } from '@/lib/teamDisplay'
 import { supabase } from '@/lib/supabase'
+import { buildStandings, type StandingsMatchSource, type StandingsTeamInfo } from '@/lib/standings'
 import type {
   CardJornadaBucket,
   CardMinuteBucket,
   CardTotals,
+  CompetitionOption,
   FairPlayClubRow,
   MenoresStandingRow,
   ScorerRow,
@@ -41,17 +42,6 @@ type MatchStandingSource = {
   away_score: number
   home_team_id: string
   away_team_id: string
-}
-
-type TeamStats = {
-  teamCode: string
-  teamName: string
-  played: number
-  won: number
-  drawn: number
-  lost: number
-  goalsFor: number
-  goalsAgainst: number
 }
 
 function minuteBucketLabel(minute: number, extraTime: number): string {
@@ -97,68 +87,7 @@ function emptyJornadaBuckets(): CardJornadaBucket[] {
   }))
 }
 
-function applyMatchResult(
-  stats: TeamStats,
-  goalsFor: number,
-  goalsAgainst: number,
-): void {
-  stats.played += 1
-  stats.goalsFor += goalsFor
-  stats.goalsAgainst += goalsAgainst
-  if (goalsFor > goalsAgainst) stats.won += 1
-  else if (goalsFor < goalsAgainst) stats.lost += 1
-  else stats.drawn += 1
-}
-
-/** Tabla general Liga MX: pts → DG → GF → nombre. Incluye partidos en vivo (provisional). */
-function buildStandings(
-  matches: MatchStandingSource[],
-  teamMap: Map<string, { code: string; name: string }>,
-): StandingRow[] {
-  const byCode = new Map<string, TeamStats>()
-  for (const club of LIGA_MX_CLUBS) {
-    byCode.set(club.code, {
-      teamCode: club.code,
-      teamName: club.name,
-      played: 0,
-      won: 0,
-      drawn: 0,
-      lost: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-    })
-  }
-
-  for (const match of matches) {
-    if (match.status !== 'finished' && match.status !== 'live') continue
-    const home = teamMap.get(match.home_team_id)
-    const away = teamMap.get(match.away_team_id)
-    if (!home || !away) continue
-
-    const homeStats = byCode.get(home.code)
-    const awayStats = byCode.get(away.code)
-    if (!homeStats || !awayStats) continue
-
-    applyMatchResult(homeStats, match.home_score, match.away_score)
-    applyMatchResult(awayStats, match.away_score, match.home_score)
-  }
-
-  return Array.from(byCode.values())
-    .map((row) => ({
-      ...row,
-      goalDiff: row.goalsFor - row.goalsAgainst,
-      points: row.won * 3 + row.drawn,
-      position: 0,
-    }))
-    .sort(
-      (a, b) =>
-        b.points - a.points ||
-        b.goalDiff - a.goalDiff ||
-        b.goalsFor - a.goalsFor ||
-        a.teamName.localeCompare(b.teamName, 'es'),
-    )
-    .map((row, index) => ({ ...row, position: index + 1 }))
-}
+const LIGA_MX_PARTICIPANTS = LIGA_MX_CLUBS.map((club) => ({ code: club.code, name: club.name }))
 
 export const useTablasStore = defineStore('tablas', () => {
   const loading = ref(false)
@@ -169,6 +98,10 @@ export const useTablasStore = defineStore('tablas', () => {
   const menoresStandings = ref<MenoresStandingRow[]>([])
   const menoresRequiredMinutes = ref<number | null>(1170)
   const menoresSyncedAt = ref<string | null>(null)
+
+  const competitions = ref<CompetitionOption[]>([])
+  const activeCompetitionId = ref<string | null>(null)
+  const selectedCompetitionId = ref<string | null>(null)
 
   const rawCardEvents = ref<CardEventRow[]>([])
   const rawGoalEvents = ref<GoalEventRow[]>([])
@@ -372,30 +305,89 @@ export const useTablasStore = defineStore('tablas', () => {
     }
   })
 
+  let teamMapPromise: Promise<Map<string, StandingsTeamInfo>> | null = null
+
+  function ensureTeamMap(): Promise<Map<string, StandingsTeamInfo>> {
+    if (!teamMapPromise) {
+      teamMapPromise = (async () => {
+        const { data } = await supabase.from('teams').select('id, code, name')
+        return new Map(
+          (data ?? []).map((t) => [t.id, { code: t.code, name: clubName(t.code, t.name) }]),
+        )
+      })()
+    }
+    return teamMapPromise
+  }
+
+  /** Tabla general de cualquier competencia (pasada o activa), no sólo la que está en curso. */
+  async function loadStandingsForCompetition(
+    competitionId: string,
+    teamMapOverride?: Map<string, StandingsTeamInfo>,
+  ): Promise<StandingRow[]> {
+    const teamMap = teamMapOverride ?? (await ensureTeamMap())
+    const { data: matches } = await supabase
+      .from('matches')
+      .select('id, status, home_score, away_score, home_team_id, away_team_id')
+      .eq('competition_id', competitionId)
+    const matchList = (matches ?? []) as StandingsMatchSource[]
+    const participants = competitionId === activeCompetitionId.value ? LIGA_MX_PARTICIPANTS : undefined
+    return buildStandings(matchList, teamMap, participants)
+  }
+
+  /** Carga todas las competencias (no sólo la activa) para el selector de torneo. */
+  async function fetchAllCompetitions(): Promise<void> {
+    const { data } = await supabase
+      .from('competitions')
+      .select(
+        'id, slug, name, season, is_active, menores_required_minutes, menores_synced_at, menores_footnote',
+      )
+      .order('created_at', { ascending: true })
+
+    const rows = data ?? []
+    competitions.value = rows.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      season: row.season,
+      isActive: row.is_active,
+    }))
+
+    const active = rows.find((row) => row.is_active) ?? null
+    activeCompetitionId.value = active?.id ?? null
+    if (active) {
+      menoresRequiredMinutes.value = active.menores_required_minutes ?? 1170
+      menoresSyncedAt.value = active.menores_synced_at ?? null
+    }
+    if (!selectedCompetitionId.value) selectedCompetitionId.value = activeCompetitionId.value
+  }
+
+  /** Cambia la competencia mostrada en Tabla General sin tocar goleo/menores/fair play. */
+  async function selectCompetition(competitionId: string): Promise<void> {
+    if (selectedCompetitionId.value === competitionId) return
+    selectedCompetitionId.value = competitionId
+    loading.value = true
+    try {
+      standings.value = await loadStandingsForCompetition(competitionId)
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function fetchTablas() {
     loading.value = true
     try {
-      const { data: competition, error: competitionError } = await supabase
-        .from('competitions')
-        .select(
-          'id, menores_required_minutes, menores_synced_at, menores_footnote',
-        )
-        .eq('slug', ACTIVE_COMPETITION_SLUG)
-        .eq('is_active', true)
-        .single()
+      await fetchAllCompetitions()
+      const competitionId = activeCompetitionId.value
 
-      if (competitionError || !competition) {
+      if (!competitionId) {
         standings.value = emptyStandings()
         menoresStandings.value = []
         return
       }
-      const competitionId = competition.id
-      menoresRequiredMinutes.value = competition.menores_required_minutes ?? 1170
-      menoresSyncedAt.value = competition.menores_synced_at ?? null
 
-      const [{ data: teams }, { data: matches }, { data: menoresRows }] =
+      const [teamMap, { data: matches }, { data: menoresRows }] =
         await Promise.all([
-          supabase.from('teams').select('id, code, name'),
+          ensureTeamMap(),
           supabase
             .from('matches')
             .select(
@@ -409,16 +401,13 @@ export const useTablasStore = defineStore('tablas', () => {
             .order('position', { ascending: true }),
         ])
 
-      const teamMap = new Map(
-        (teams ?? []).map((t) => [
-          t.id,
-          { code: t.code, name: clubName(t.code, t.name) },
-        ]),
-      )
       const matchList = (matches ?? []) as MatchStandingSource[]
       const matchIds = matchList.map((m) => m.id)
 
-      standings.value = buildStandings(matchList, teamMap)
+      standings.value =
+        selectedCompetitionId.value === competitionId
+          ? buildStandings(matchList, teamMap, LIGA_MX_PARTICIPANTS)
+          : await loadStandingsForCompetition(selectedCompetitionId.value ?? competitionId, teamMap)
       menoresStandings.value = (menoresRows ?? []).map((row) => ({
         position: row.position,
         teamCode: row.team_code,
@@ -517,6 +506,9 @@ export const useTablasStore = defineStore('tablas', () => {
     menoresStandings,
     menoresRequiredMinutes,
     menoresSyncedAt,
+    competitions,
+    activeCompetitionId,
+    selectedCompetitionId,
     fairPlayTable,
     minuteBuckets,
     jornadaBuckets,
@@ -530,5 +522,6 @@ export const useTablasStore = defineStore('tablas', () => {
     cardsPerMatch,
     cardFrequencyMinutes,
     fetchTablas,
+    selectCompetition,
   }
 })

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import type { StandingRow } from '@/types/tablas'
 
@@ -39,14 +40,17 @@ defineProps<{
           >
             <td class="px-3 py-2.5 tabular-nums text-app-muted">{{ row.position }}</td>
             <td class="px-3 py-2.5">
-              <div class="flex items-center gap-2.5">
+              <RouterLink
+                :to="`/tablas/equipo/${row.teamCode}`"
+                class="flex items-center gap-2.5 hover:text-mundial-accent"
+              >
                 <TeamFlag
                   :code="row.teamCode"
                   :alt="row.teamName"
                   size="sm"
                 />
                 <span class="font-medium text-app-text">{{ row.teamName }}</span>
-              </div>
+              </RouterLink>
             </td>
             <td class="px-2 py-2.5 text-center tabular-nums">{{ row.played }}</td>
             <td class="px-2 py-2.5 text-center tabular-nums">{{ row.won }}</td>

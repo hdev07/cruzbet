@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { MapPin, Radio } from '@lucide/vue'
 import BroadcastBadge from '@/components/shared/BroadcastBadge.vue'
 import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
@@ -68,15 +69,32 @@ const hasMeta = computed(
 
     <div class="mt-2 space-y-1.5">
       <div class="flex items-center gap-2">
-        <TeamFlag
-          :src="match.home_team?.flag_url"
-          :code="match.home_team?.code"
-          :alt="teamDisplayName(match.home_team, 'Local')"
-          size="sm"
-        />
-        <span class="min-w-0 flex-1 truncate text-sm font-medium">
-          {{ teamDisplayName(match.home_team, 'Local') }}
-        </span>
+        <RouterLink
+          v-if="match.home_team?.code"
+          :to="`/tablas/equipo/${match.home_team.code}`"
+          class="flex min-w-0 flex-1 items-center gap-2 hover:text-mundial-accent"
+        >
+          <TeamFlag
+            :src="match.home_team?.flag_url"
+            :code="match.home_team?.code"
+            :alt="teamDisplayName(match.home_team, 'Local')"
+            size="sm"
+          />
+          <span class="min-w-0 flex-1 truncate text-sm font-medium">
+            {{ teamDisplayName(match.home_team, 'Local') }}
+          </span>
+        </RouterLink>
+        <template v-else>
+          <TeamFlag
+            :src="match.home_team?.flag_url"
+            :code="match.home_team?.code"
+            :alt="teamDisplayName(match.home_team, 'Local')"
+            size="sm"
+          />
+          <span class="min-w-0 flex-1 truncate text-sm font-medium">
+            {{ teamDisplayName(match.home_team, 'Local') }}
+          </span>
+        </template>
         <span
           v-if="showScore"
           class="w-5 text-right text-sm font-bold tabular-nums"
@@ -85,15 +103,32 @@ const hasMeta = computed(
         </span>
       </div>
       <div class="flex items-center gap-2">
-        <TeamFlag
-          :src="match.away_team?.flag_url"
-          :code="match.away_team?.code"
-          :alt="teamDisplayName(match.away_team, 'Visitante')"
-          size="sm"
-        />
-        <span class="min-w-0 flex-1 truncate text-sm font-medium">
-          {{ teamDisplayName(match.away_team, 'Visitante') }}
-        </span>
+        <RouterLink
+          v-if="match.away_team?.code"
+          :to="`/tablas/equipo/${match.away_team.code}`"
+          class="flex min-w-0 flex-1 items-center gap-2 hover:text-mundial-accent"
+        >
+          <TeamFlag
+            :src="match.away_team?.flag_url"
+            :code="match.away_team?.code"
+            :alt="teamDisplayName(match.away_team, 'Visitante')"
+            size="sm"
+          />
+          <span class="min-w-0 flex-1 truncate text-sm font-medium">
+            {{ teamDisplayName(match.away_team, 'Visitante') }}
+          </span>
+        </RouterLink>
+        <template v-else>
+          <TeamFlag
+            :src="match.away_team?.flag_url"
+            :code="match.away_team?.code"
+            :alt="teamDisplayName(match.away_team, 'Visitante')"
+            size="sm"
+          />
+          <span class="min-w-0 flex-1 truncate text-sm font-medium">
+            {{ teamDisplayName(match.away_team, 'Visitante') }}
+          </span>
+        </template>
         <span
           v-if="showScore"
           class="w-5 text-right text-sm font-bold tabular-nums"
