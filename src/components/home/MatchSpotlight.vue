@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { MapPin, Radio } from '@lucide/vue'
 import BroadcastBadge from '@/components/shared/BroadcastBadge.vue'
@@ -90,10 +90,57 @@ function loadEvents() {
   }
 }
 
+// Countdown para el próximo partido (no en vivo, no finalizado, con fecha)
+const isPending = computed(
+  () => !props.isLive && props.match.status !== 'finished' && !!props.match.match_date,
+)
+
+const now = ref(Date.now())
+let clockTimer: ReturnType<typeof setInterval> | null = null
+
+function startClock() {
+  if (clockTimer) return
+  clockTimer = setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+}
+
+function stopClock() {
+  if (clockTimer) {
+    clearInterval(clockTimer)
+    clockTimer = null
+  }
+}
+
+const countdownLabel = computed(() => {
+  if (!isPending.value || !props.match.match_date) return null
+  const diffMs = new Date(props.match.match_date).getTime() - now.value
+  if (diffMs <= 0) return 'Comienza en instantes'
+
+  const totalSeconds = Math.floor(diffMs / 1000)
+  const days = Math.floor(totalSeconds / 86_400)
+  const hours = Math.floor((totalSeconds % 86_400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (days > 0) return `Comienza en ${days}d ${hours}h`
+  if (hours > 0) return `Comienza en ${hours}h ${minutes}m`
+  if (minutes > 0) return `Comienza en ${minutes}m ${seconds}s`
+  return `Comienza en ${seconds}s`
+})
+
+watch(isPending, (pending) => {
+  if (pending) startClock()
+  else stopClock()
+})
+
 onMounted(() => {
   loadEvents()
   if (props.isLive) {
     eventsTimer = setInterval(loadEvents, 30_000)
+  }
+  if (isPending.value) {
+    startClock()
   }
 })
 
@@ -117,6 +164,7 @@ watch(
 
 onUnmounted(() => {
   if (eventsTimer) clearInterval(eventsTimer)
+  stopClock()
 })
 </script>
 
@@ -206,6 +254,12 @@ onUnmounted(() => {
             class="mt-1 text-[11px] text-app-muted sm:text-xs"
           >
             {{ formatKickoff(match) }}
+          </p>
+          <p
+            v-if="countdownLabel"
+            class="mt-0.5 text-[11px] font-semibold tabular-nums text-mundial-accent sm:text-xs"
+          >
+            {{ countdownLabel }}
           </p>
         </div>
 

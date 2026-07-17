@@ -3,10 +3,14 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { ArrowLeft } from '@lucide/vue'
 import MatchRowCard from '@/components/home/MatchRowCard.vue'
+import MatchSpotlight from '@/components/home/MatchSpotlight.vue'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
+import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { friendlyLoadError } from '@/lib/offlineCache'
 import { fetchTeamHistory, type TeamHistory } from '@/lib/teamHistory'
+import { teamDisplayName } from '@/lib/teamDisplay'
+import type { Match } from '@/types'
 
 const route = useRoute()
 
@@ -30,6 +34,65 @@ async function load() {
 
 onMounted(load)
 watch(teamCode, load)
+
+const liveMatch = computed(() => history.value?.matches.find((m) => isEffectivelyLive(m)) ?? null)
+const nextMatch = computed(() => history.value?.matches.find((m) => m.status === 'scheduled') ?? null)
+const lastFinishedMatch = computed(() => {
+  const finished = history.value?.matches.filter((m) => m.status === 'finished') ?? []
+  return finished.length ? finished[finished.length - 1] : null
+})
+const featuredMatch = computed(() => liveMatch.value ?? nextMatch.value ?? lastFinishedMatch.value)
+const calendarMatches = computed(() =>
+  (history.value?.matches ?? []).filter((m) => m.id !== featuredMatch.value?.id),
+)
+
+const FORM_LABELS: Record<'G' | 'E' | 'P', string> = { G: 'Ganó', E: 'Empató', P: 'Perdió' }
+const FORM_CLASSES: Record<'G' | 'E' | 'P', string> = {
+  G: 'border-mundial-green/30 bg-mundial-green/10 text-mundial-green',
+  E: 'border-amber-400/30 bg-amber-400/10 text-amber-300',
+  P: 'border-red-500/30 bg-red-500/10 text-red-300',
+}
+
+const recentForm = computed(() => {
+  const code = history.value?.team.code
+  if (!code) return []
+  return history.value!.matches
+    .filter((m) => m.status === 'finished')
+    .slice(-5)
+    .reverse()
+    .map((m) => {
+      const isHome = m.home_team?.code === code
+      const goalsFor = isHome ? m.home_score : m.away_score
+      const goalsAgainst = isHome ? m.away_score : m.home_score
+      const opponent = isHome ? m.away_team : m.home_team
+      const result: 'G' | 'E' | 'P' =
+        goalsFor > goalsAgainst ? 'G' : goalsFor < goalsAgainst ? 'P' : 'E'
+      return { match: m, result, goalsFor, goalsAgainst, opponent }
+    })
+})
+
+const overallTotals = computed(() => {
+  const rows = history.value?.byCompetition ?? []
+  if (rows.length < 2) return null
+  return rows.reduce(
+    (acc, row) => ({
+      played: acc.played + row.played,
+      won: acc.won + row.won,
+      drawn: acc.drawn + row.drawn,
+      lost: acc.lost + row.lost,
+      goalsFor: acc.goalsFor + row.goalsFor,
+      goalsAgainst: acc.goalsAgainst + row.goalsAgainst,
+      goalDiff: acc.goalDiff + row.goalDiff,
+      points: acc.points + row.points,
+    }),
+    { played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDiff: 0, points: 0 },
+  )
+})
+
+function opponentName(match: Match, code: string) {
+  const opponent = match.home_team?.code === code ? match.away_team : match.home_team
+  return teamDisplayName(opponent, 'Rival')
+}
 </script>
 
 <template>
@@ -77,6 +140,37 @@ watch(teamCode, load)
         </div>
       </header>
 
+      <section v-if="featuredMatch" class="mb-8">
+        <MatchSpotlight :match="featuredMatch" :is-live="isEffectivelyLive(featuredMatch)" />
+      </section>
+
+      <section v-if="recentForm.length" class="mb-8">
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-accent">
+          Forma reciente
+        </h2>
+        <div class="flex flex-wrap gap-2">
+          <RouterLink
+            v-for="item in recentForm"
+            :key="item.match.id"
+            :to="item.opponent?.code ? `/tablas/equipo/${item.opponent.code}` : ''"
+            class="flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium"
+            :class="FORM_CLASSES[item.result]"
+            :title="`${FORM_LABELS[item.result]} ${item.goalsFor}-${item.goalsAgainst} vs ${opponentName(item.match, history.team.code)}`"
+          >
+            <span class="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-black/20 text-[11px] font-bold">
+              {{ item.result }}
+            </span>
+            <TeamFlag
+              :src="item.opponent?.flag_url"
+              :code="item.opponent?.code"
+              :alt="opponentName(item.match, history.team.code)"
+              size="sm"
+            />
+            <span class="tabular-nums">{{ item.goalsFor }}-{{ item.goalsAgainst }}</span>
+          </RouterLink>
+        </div>
+      </section>
+
       <section
         v-if="history.byCompetition.length"
         class="mb-8 overflow-hidden rounded-2xl border border-app-border bg-app-surface"
@@ -123,18 +217,33 @@ watch(teamCode, load)
                 </td>
               </tr>
             </tbody>
+            <tfoot v-if="overallTotals">
+              <tr class="border-t border-app-border bg-app-surface-elevated">
+                <td class="px-3 py-2.5 font-semibold text-app-text">Total</td>
+                <td class="px-2 py-2.5 text-center tabular-nums">{{ overallTotals.played }}</td>
+                <td class="px-2 py-2.5 text-center tabular-nums">{{ overallTotals.won }}</td>
+                <td class="px-2 py-2.5 text-center tabular-nums">{{ overallTotals.drawn }}</td>
+                <td class="px-2 py-2.5 text-center tabular-nums">{{ overallTotals.lost }}</td>
+                <td class="px-2 py-2.5 text-center tabular-nums">{{ overallTotals.goalsFor }}</td>
+                <td class="px-2 py-2.5 text-center tabular-nums">{{ overallTotals.goalsAgainst }}</td>
+                <td class="px-2 py-2.5 text-center tabular-nums">{{ overallTotals.goalDiff }}</td>
+                <td class="px-3 py-2.5 text-center text-base font-bold tabular-nums text-mundial-accent">
+                  {{ overallTotals.points }}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </section>
 
       <section>
         <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-accent">
-          Historial de partidos
+          Calendario
         </h2>
-        <div v-if="history.matches.length" class="space-y-2">
-          <MatchRowCard v-for="match in history.matches" :key="match.id" :match="match" />
+        <div v-if="calendarMatches.length" class="space-y-2">
+          <MatchRowCard v-for="match in calendarMatches" :key="match.id" :match="match" />
         </div>
-        <p v-else class="rounded-lg bg-white/5 px-3 py-2 text-sm text-app-muted">
+        <p v-else-if="!history.matches.length" class="rounded-lg bg-white/5 px-3 py-2 text-sm text-app-muted">
           Todavía no hay partidos registrados para este equipo.
         </p>
       </section>
