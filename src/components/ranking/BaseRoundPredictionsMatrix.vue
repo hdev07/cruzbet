@@ -176,6 +176,15 @@ function rivalryLabel(
   return `${diff}`
 }
 
+const rivalryByKey = computed(() => {
+  const map = new Map<string, string>()
+  for (const player of competitors.value) {
+    const label = rivalryLabel(player.user_id, player.entry_number, player.correct_count)
+    if (label) map.set(participantKey(player.user_id, player.entry_number), label)
+  }
+  return map
+})
+
 function matchTooltip(match: BaseQuinielaRoundMatch): string {
   if (!match.match) return `Partido #${match.position}`
   const home = teamDisplayName(match.match.home_team, 'Local')
@@ -207,17 +216,18 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
 
     <template v-else>
       <div class="theme-table-wrap" :class="{ 'overflow-visible border-0 bg-transparent': exportLayout }">
-        <table class="theme-table text-sm" :class="exportLayout ? 'min-w-max' : 'min-w-[48rem]'">
+        <table class="theme-table text-sm" :class="exportLayout ? 'min-w-max' : 'min-w-[40rem]'">
           <thead>
             <tr class="theme-table-head text-xs text-slate-400">
               <th
-                class="theme-table-sticky border border-white/10 px-3 py-2 text-left"
-                :class="exportLayout ? 'min-w-[10rem]' : 'md:sticky md:left-0 md:z-10 md:min-w-[10rem]'"
+                class="theme-table-sticky border border-white/10 px-2 py-2 text-left sm:px-3"
+                :class="
+                  exportLayout
+                    ? 'min-w-[10rem]'
+                    : 'sticky left-0 z-20 w-[6.75rem] max-w-[6.75rem] sm:w-auto sm:min-w-[10rem] sm:max-w-[12rem]'
+                "
               >
-                <div class="flex min-w-0 items-center gap-2 md:block">
-                  <span v-if="!exportLayout" class="w-7 shrink-0 md:hidden" aria-hidden="true" />
-                  <span class="whitespace-nowrap">Jugador</span>
-                </div>
+                <span class="whitespace-nowrap">Jugador</span>
               </th>
               <th
                 v-for="match in sortedMatches"
@@ -283,81 +293,103 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
               ]"
             >
               <td
-                class="border border-white/10 px-3 py-2"
+                class="border border-white/10 px-2 py-1.5 align-middle sm:px-3 sm:py-2"
                 :class="{
-                  'theme-table-sticky-mine md:sticky md:left-0 md:z-10 md:min-w-[8rem]':
+                  'theme-table-sticky-mine sticky left-0 z-10 w-[6.75rem] max-w-[6.75rem] sm:w-auto sm:min-w-[10rem] sm:max-w-[12rem]':
                     !exportLayout && isMyRow(player.user_id),
-                  'theme-table-sticky md:sticky md:left-0 md:z-10 md:min-w-[8rem]':
+                  'theme-table-sticky sticky left-0 z-10 w-[6.75rem] max-w-[6.75rem] sm:w-auto sm:min-w-[10rem] sm:max-w-[12rem]':
                     !exportLayout && !isMyRow(player.user_id),
                   'min-w-[10rem]': exportLayout,
                 }"
               >
-                <div class="flex min-w-0 items-start gap-2">
-                  <div
-                    class="order-1 flex shrink-0 items-center py-0.5"
-                    :class="
-                      exportLayout
-                        ? ''
-                        : [
-                            'sticky left-0 z-10 -ml-3 pl-3 pr-2 md:static md:order-2 md:ml-0 md:bg-transparent md:p-0',
-                            isMyRow(player.user_id)
-                              ? 'theme-table-sticky-mine'
-                              : 'theme-table-sticky',
-                          ]
-                    "
-                    :title="isPreviousWinner(player.user_id) ? 'Ganador de la jornada previa' : undefined"
-                  >
-                    <div class="relative shrink-0">
-                      <img
-                        v-if="player.profiles?.avatar"
-                        :src="player.profiles.avatar"
-                        :alt="player.profiles.username ?? 'Jugador'"
-                        class="h-7 w-7 shrink-0 rounded-full border border-white/20"
-                      />
-                      <span
-                        v-else
-                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full theme-cell-pending text-xs font-semibold"
-                      >
-                        {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
-                      </span>
-                      <Crown
-                        v-if="isPreviousWinner(player.user_id)"
-                        class="absolute -right-1 -top-1 h-3.5 w-3.5 text-amber-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]"
-                        fill="currentColor"
-                        aria-label="Ganador de la jornada previa"
-                      />
-                    </div>
-                  </div>
+                <div class="flex min-w-0 items-center gap-1.5 sm:gap-2">
                   <span
-                    class="order-2 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold md:order-1"
+                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[0.6rem] font-bold sm:h-6 sm:w-6 sm:text-[0.65rem]"
                     :class="index < 3 ? 'bg-mundial-accent text-white' : 'theme-cell-pending text-slate-400'"
                   >
                     {{ index + 1 }}
                   </span>
-                  <div class="order-3 min-w-0 max-w-[7.5rem] flex-1 md:max-w-[11rem]">
+
+                  <div
+                    class="relative shrink-0"
+                    :class="exportLayout ? '' : 'hidden sm:block'"
+                    :title="isPreviousWinner(player.user_id) ? 'Ganador de la jornada previa' : undefined"
+                  >
+                    <img
+                      v-if="player.profiles?.avatar"
+                      :src="player.profiles.avatar"
+                      :alt="player.profiles.username ?? 'Jugador'"
+                      class="h-7 w-7 rounded-full border border-white/20"
+                    />
+                    <span
+                      v-else
+                      class="flex h-7 w-7 items-center justify-center rounded-full theme-cell-pending text-xs font-semibold"
+                    >
+                      {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
+                    </span>
+                    <Crown
+                      v-if="isPreviousWinner(player.user_id)"
+                      class="absolute -right-1 -top-1 h-3.5 w-3.5 text-amber-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]"
+                      fill="currentColor"
+                      aria-label="Ganador de la jornada previa"
+                    />
+                  </div>
+
+                  <div class="min-w-0 flex-1">
                     <p
-                      class="truncate font-medium leading-tight"
+                      class="truncate text-[0.8rem] font-medium leading-tight sm:text-sm"
                       :class="isMyRow(player.user_id) ? 'text-mundial-accent' : 'text-slate-200'"
                       :title="player.profiles?.username ?? 'Anónimo'"
                     >
+                      <Crown
+                        v-if="!exportLayout && isPreviousWinner(player.user_id)"
+                        class="mr-0.5 inline h-3 w-3 text-amber-400 sm:hidden"
+                        fill="currentColor"
+                        aria-label="Ganador de la jornada previa"
+                      />
                       {{ player.profiles?.username ?? 'Anónimo' }}
                       <span v-if="player.entry_number > 1" class="text-slate-500">
-                        Q{{ player.entry_number }}
+                        ·Q{{ player.entry_number }}
                       </span>
                       <span v-if="isMyRow(player.user_id)" class="text-mundial-accent">
-                        (tú)
+                        ·tú
                       </span>
                     </p>
-                    <PaymentStatusChip class="mt-0.5" :verified="player.verified" compact />
-                    <p
-                      v-if="
-                        !exportLayout &&
-                        rivalryLabel(player.user_id, player.entry_number, player.correct_count)
-                      "
-                      class="mt-0.5 whitespace-nowrap text-[0.65rem] font-medium leading-tight text-amber-400/90"
-                    >
-                      {{ rivalryLabel(player.user_id, player.entry_number, player.correct_count) }} contigo
-                    </p>
+                    <div class="mt-0.5 flex min-w-0 items-center gap-1">
+                      <span
+                        v-if="!exportLayout"
+                        class="inline-flex shrink-0 items-center rounded px-1 py-px text-[0.55rem] font-semibold leading-none sm:hidden"
+                        :class="
+                          player.verified
+                            ? 'bg-mundial-green/20 text-mundial-green'
+                            : 'border border-amber-500/30 bg-amber-500/20 text-amber-200'
+                        "
+                        :title="player.verified ? 'Pagado' : 'Pago no verificado'"
+                      >
+                        {{ player.verified ? 'OK' : 'Sin pago' }}
+                      </span>
+                      <PaymentStatusChip
+                        class="mt-0"
+                        :class="exportLayout ? '' : 'hidden sm:inline-flex'"
+                        :verified="player.verified"
+                        compact
+                      />
+                      <span
+                        v-if="
+                          !exportLayout &&
+                          rivalryByKey.get(`${player.user_id}:${player.entry_number}`)
+                        "
+                        class="truncate text-[0.6rem] font-medium text-amber-400/90 sm:text-[0.65rem]"
+                        :title="`${rivalryByKey.get(`${player.user_id}:${player.entry_number}`)} contigo`"
+                      >
+                        <span class="sm:hidden">{{
+                          rivalryByKey.get(`${player.user_id}:${player.entry_number}`)
+                        }}</span>
+                        <span class="hidden sm:inline">
+                          {{ rivalryByKey.get(`${player.user_id}:${player.entry_number}`) }} contigo
+                        </span>
+                      </span>
+                    </div>
                   </div>
                 </div>
               </td>
