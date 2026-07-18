@@ -6,11 +6,36 @@ import MatchRowCard from '@/components/home/MatchRowCard.vue'
 import MatchSpotlight from '@/components/home/MatchSpotlight.vue'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
+import GroupedBarChart from '@/components/charts/GroupedBarChart.vue'
+import LineTrendChart from '@/components/charts/LineTrendChart.vue'
+import RadarChart from '@/components/charts/RadarChart.vue'
+import ScatterChart from '@/components/charts/ScatterChart.vue'
+import { LIGA_MX_CLUBS } from '@/constants/tablas'
 import { isEffectivelyLive } from '@/lib/matchLifecycle'
 import { friendlyLoadError } from '@/lib/offlineCache'
 import { fetchTeamHistory, type TeamHistory } from '@/lib/teamHistory'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import {
+  buildFormPoints,
+  buildGoalsByJornada,
+  buildGoalsByPeriod,
+  buildHomeAwaySplit,
+  fetchGoalEvents,
+  fetchJornadaByMatch,
+  fetchStandingsProgression,
+  type StandingsProgressionPoint,
+} from '@/lib/teamPerformance'
+import {
+  buildRadarAxes,
+  fetchLeagueSeasonAverages,
+  fetchTeamMatchStats,
+  summarizeSeasonAverages,
+  type RadarAxis,
+  type TeamMatchStatPoint,
+} from '@/lib/teamSeasonStats'
 import type { Match } from '@/types'
+
+const LIGA_MX_PARTICIPANTS = LIGA_MX_CLUBS.map((club) => ({ code: club.code, name: club.name }))
 
 const route = useRoute()
 
@@ -69,6 +94,192 @@ const recentForm = computed(() => {
         goalsFor > goalsAgainst ? 'G' : goalsFor < goalsAgainst ? 'P' : 'E'
       return { match: m, result, goalsFor, goalsAgainst, opponent }
     })
+})
+
+type PerformanceData = {
+  formPoints: ReturnType<typeof buildFormPoints>
+  homeAway: ReturnType<typeof buildHomeAwaySplit>
+  goalsByJornada: ReturnType<typeof buildGoalsByJornada>
+  goalsByPeriod: ReturnType<typeof buildGoalsByPeriod>
+  standingsProgression: StandingsProgressionPoint[]
+  radarAxes: RadarAxis[]
+  opponentRadarAxes: RadarAxis[] | null
+  opponentName: string | null
+  possessionScatter: Array<{ label: string; x: number; y: number }>
+}
+
+const performance = ref<PerformanceData | null>(null)
+const performanceLoading = ref(false)
+
+async function loadPerformance() {
+  performance.value = null
+  const currentHistory = history.value
+  if (!currentHistory) return
+
+  const currentCompetitionId = currentHistory.byCompetition[0]?.competitionId
+  if (!currentCompetitionId) return
+
+  performanceLoading.value = true
+  try {
+    const teamId = currentHistory.team.id
+    const seasonMatches = currentHistory.matches.filter(
+      (m) => m.competition_id === currentCompetitionId,
+    )
+    const matchIds = seasonMatches.map((m) => m.id)
+
+    const [jornadaByMatch, goalEvents, standingsProgression, teamStatPoints, leagueAveragesMap] =
+      await Promise.all([
+        fetchJornadaByMatch(currentCompetitionId),
+        fetchGoalEvents(matchIds),
+        fetchStandingsProgression(currentCompetitionId, currentHistory.team.code, LIGA_MX_PARTICIPANTS),
+        fetchTeamMatchStats(teamId, currentCompetitionId),
+        fetchLeagueSeasonAverages(currentCompetitionId),
+      ])
+
+    const leagueAverages = [...leagueAveragesMap.values()]
+    const teamAverages = summarizeSeasonAverages(teamId, teamStatPoints)
+    const radarAxes = buildRadarAxes(teamAverages, leagueAverages)
+
+    let opponentRadarAxes: RadarAxis[] | null = null
+    let opponentLabel: string | null = null
+    const upcoming = nextMatch.value
+    if (upcoming) {
+      const opponentTeam = upcoming.home_team?.id === teamId ? upcoming.away_team : upcoming.home_team
+      if (opponentTeam?.id) {
+        const opponentPoints = await fetchTeamMatchStats(opponentTeam.id, currentCompetitionId)
+        if (opponentPoints.length) {
+          const opponentAverages = summarizeSeasonAverages(opponentTeam.id, opponentPoints)
+          opponentRadarAxes = buildRadarAxes(opponentAverages, leagueAverages)
+          opponentLabel = teamDisplayName(opponentTeam, opponentTeam.name)
+        }
+      }
+    }
+
+    performance.value = {
+      formPoints: buildFormPoints(currentHistory.matches, teamId),
+      homeAway: buildHomeAwaySplit(currentHistory.matches, teamId),
+      goalsByJornada: buildGoalsByJornada(seasonMatches, jornadaByMatch, teamId),
+      goalsByPeriod: buildGoalsByPeriod(goalEvents, seasonMatches, teamId),
+      standingsProgression,
+      radarAxes,
+      opponentRadarAxes,
+      opponentName: opponentLabel,
+      possessionScatter: teamStatPoints
+        .filter((point): point is TeamMatchStatPoint & { possessionPct: number } => point.possessionPct !== null)
+        .map((point, index) => ({ label: `Partido ${index + 1}`, x: point.possessionPct, y: point.points })),
+    }
+  } finally {
+    performanceLoading.value = false
+  }
+}
+
+watch(history, (value) => {
+  if (value) loadPerformance()
+})
+
+const formPointsChart = computed(() => {
+  const points = performance.value?.formPoints ?? []
+  return {
+    categories: points.map((_, index) => `${index + 1}`),
+    series: [
+      {
+        key: 'points',
+        label: 'Puntos',
+        color: 'var(--color-mundial-accent)',
+        values: points.map((p) => p.points),
+      },
+    ],
+  }
+})
+
+const goalsByJornadaChart = computed(() => {
+  const rows = performance.value?.goalsByJornada ?? []
+  return {
+    categories: rows.map((row) => `J${row.jornada}`),
+    goals: [
+      { key: 'gf', label: 'A favor', color: 'var(--color-mundial-green)', values: rows.map((r) => r.goalsFor) },
+      { key: 'gc', label: 'En contra', color: 'var(--color-mundial-error)', values: rows.map((r) => r.goalsAgainst) },
+    ],
+    diff: [
+      {
+        key: 'diff',
+        label: 'Diferencia',
+        color: 'var(--color-mundial-accent)',
+        values: rows.map((r) => r.goalDiff),
+      },
+    ],
+  }
+})
+
+const goalsByPeriodChart = computed(() => {
+  const rows = performance.value?.goalsByPeriod ?? []
+  return {
+    categories: rows.map((row) => row.label),
+    series: [
+      { key: 'scored', label: 'Anotados', color: 'var(--color-mundial-green)', values: rows.map((r) => r.scored) },
+      { key: 'conceded', label: 'Recibidos', color: 'var(--color-mundial-error)', values: rows.map((r) => r.conceded) },
+    ],
+  }
+})
+
+const standingsProgressionChart = computed(() => {
+  const rows = performance.value?.standingsProgression ?? []
+  return {
+    categories: rows.map((row) => `J${row.jornada}`),
+    series: [
+      {
+        key: 'position',
+        label: 'Posición',
+        color: 'var(--color-mundial-accent)',
+        values: rows.map((row) => row.position),
+      },
+    ],
+  }
+})
+
+const homeAwayChart = computed(() => {
+  const split = performance.value?.homeAway
+  if (!split) return { categories: [] as string[], series: [] as { key: string; label: string; color: string; values: number[] }[] }
+  return {
+    categories: ['Local', 'Visitante'],
+    series: [
+      {
+        key: 'ppm',
+        label: 'Pts/partido',
+        color: 'var(--color-mundial-accent)',
+        values: [split.home.pointsPerMatch, split.away.pointsPerMatch],
+      },
+      {
+        key: 'gf',
+        label: 'GF/partido',
+        color: 'var(--color-mundial-green)',
+        values: [split.home.goalsForPerMatch, split.away.goalsForPerMatch],
+      },
+      {
+        key: 'gc',
+        label: 'GC/partido',
+        color: 'var(--color-mundial-error)',
+        values: [split.home.goalsAgainstPerMatch, split.away.goalsAgainstPerMatch],
+      },
+    ],
+  }
+})
+
+const radarSeries = computed(() => {
+  if (!performance.value) return []
+  const teamName = history.value?.team.name ?? 'Equipo'
+  const series = [
+    { key: 'team', label: teamName, color: 'var(--color-mundial-accent)', axes: performance.value.radarAxes },
+  ]
+  if (performance.value.opponentRadarAxes && performance.value.opponentName) {
+    series.push({
+      key: 'opponent',
+      label: performance.value.opponentName,
+      color: 'var(--color-mundial-error)',
+      axes: performance.value.opponentRadarAxes,
+    })
+  }
+  return series
 })
 
 const overallTotals = computed(() => {
@@ -168,6 +379,94 @@ function opponentName(match: Match, code: string) {
             />
             <span class="tabular-nums">{{ item.goalsFor }}-{{ item.goalsAgainst }}</span>
           </RouterLink>
+        </div>
+      </section>
+
+      <section v-if="performanceLoading || performance" class="mb-8 space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-mundial-accent">
+          Rendimiento
+        </h2>
+
+        <div v-if="performanceLoading" class="space-y-4">
+          <DataSkeleton variant="table" :rows="2" />
+        </div>
+
+        <div v-else-if="performance" class="grid gap-4 lg:grid-cols-2">
+          <div class="rounded-2xl border border-app-border bg-app-surface p-4">
+            <header class="mb-3">
+              <h3 class="text-sm font-semibold text-app-text">Radar de rendimiento</h3>
+              <p class="mt-1 text-xs text-app-muted">
+                Comparado contra el promedio de la liga
+                <span v-if="performance.opponentName"> · overlay vs. {{ performance.opponentName }}</span>
+              </p>
+            </header>
+            <RadarChart :labels="performance.radarAxes.map((a) => a.label)" :series="radarSeries" />
+          </div>
+
+          <div class="rounded-2xl border border-app-border bg-app-surface p-4">
+            <header class="mb-3">
+              <h3 class="text-sm font-semibold text-app-text">Puntos por partido</h3>
+              <p class="mt-1 text-xs text-app-muted">Últimos partidos jugados (3 = victoria, 1 = empate, 0 = derrota)</p>
+            </header>
+            <LineTrendChart
+              :categories="formPointsChart.categories"
+              :series="formPointsChart.series"
+              :y-domain="[0, 3]"
+            />
+          </div>
+
+          <div v-if="standingsProgressionChart.categories.length" class="rounded-2xl border border-app-border bg-app-surface p-4">
+            <header class="mb-3">
+              <h3 class="text-sm font-semibold text-app-text">Evolución en la tabla</h3>
+              <p class="mt-1 text-xs text-app-muted">Posición general acumulada por jornada</p>
+            </header>
+            <LineTrendChart
+              :categories="standingsProgressionChart.categories"
+              :series="standingsProgressionChart.series"
+              :invert-y="true"
+              :y-domain="[1, 18]"
+            />
+          </div>
+
+          <div v-if="homeAwayChart.categories.length" class="rounded-2xl border border-app-border bg-app-surface p-4">
+            <header class="mb-3">
+              <h3 class="text-sm font-semibold text-app-text">Local vs. visitante</h3>
+              <p class="mt-1 text-xs text-app-muted">Promedios por partido según la sede</p>
+            </header>
+            <GroupedBarChart :categories="homeAwayChart.categories" :series="homeAwayChart.series" />
+          </div>
+
+          <div v-if="goalsByJornadaChart.categories.length" class="rounded-2xl border border-app-border bg-app-surface p-4">
+            <header class="mb-3">
+              <h3 class="text-sm font-semibold text-app-text">Goles por jornada</h3>
+              <p class="mt-1 text-xs text-app-muted">Anotados vs. recibidos, con diferencia de goles</p>
+            </header>
+            <GroupedBarChart :categories="goalsByJornadaChart.categories" :series="goalsByJornadaChart.goals" />
+            <div class="mt-3 border-t border-app-border/60 pt-3">
+              <LineTrendChart :categories="goalsByJornadaChart.categories" :series="goalsByJornadaChart.diff" />
+            </div>
+          </div>
+
+          <div v-if="goalsByPeriodChart.categories.length" class="rounded-2xl border border-app-border bg-app-surface p-4">
+            <header class="mb-3">
+              <h3 class="text-sm font-semibold text-app-text">Goles por periodo del partido</h3>
+              <p class="mt-1 text-xs text-app-muted">Minutos en que el equipo anota y recibe goles</p>
+            </header>
+            <GroupedBarChart :categories="goalsByPeriodChart.categories" :series="goalsByPeriodChart.series" />
+          </div>
+
+          <div v-if="performance.possessionScatter.length" class="rounded-2xl border border-app-border bg-app-surface p-4">
+            <header class="mb-3">
+              <h3 class="text-sm font-semibold text-app-text">Posesión vs. resultado</h3>
+              <p class="mt-1 text-xs text-app-muted">Cada punto es un partido con datos de ESPN</p>
+            </header>
+            <ScatterChart
+              :points="performance.possessionScatter"
+              x-label="Posesión %"
+              y-label="Puntos"
+              :y-domain="[0, 3]"
+            />
+          </div>
         </div>
       </section>
 

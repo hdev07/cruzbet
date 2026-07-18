@@ -8,6 +8,7 @@ import type {
   EspnMatchSnapshot,
   MatchStatus,
   SyncedMatchEvent,
+  TeamMatchStats,
   TeamSide,
 } from './types.js'
 
@@ -74,10 +75,26 @@ interface EspnPlay {
   wallclock?: string
 }
 
+interface EspnBoxscoreStatEntry {
+  name?: string
+  value?: number
+  displayValue?: string
+}
+
+interface EspnBoxscoreTeam {
+  team?: { id?: string }
+  statistics?: EspnBoxscoreStatEntry[]
+}
+
+interface EspnBoxscore {
+  teams?: EspnBoxscoreTeam[]
+}
+
 interface EspnSummary {
   header?: { competitions?: EspnCompetition[] }
   keyEvents?: EspnPlay[]
   commentary?: Array<{ play?: EspnPlay }>
+  boxscore?: EspnBoxscore
 }
 
 const TEAM_ALIASES: Record<string, string> = {
@@ -346,6 +363,63 @@ export function eventsMatchScore(
   return goals === homeScore + awayScore
 }
 
+function statNumber(
+  entries: EspnBoxscoreStatEntry[],
+  name: string,
+): number | null {
+  const entry = entries.find((candidate) => candidate.name === name)
+  if (!entry) return null
+  if (typeof entry.value === 'number' && Number.isFinite(entry.value)) {
+    return entry.value
+  }
+  const parsed = Number.parseFloat(entry.displayValue ?? '')
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function espnTeamSide(
+  teamId: string | undefined,
+  homeTeamId: string,
+  awayTeamId: string,
+): TeamSide {
+  if (teamId === homeTeamId) return 'home'
+  if (teamId === awayTeamId) return 'away'
+  return null
+}
+
+export function extractTeamStats(
+  boxscore: EspnBoxscore | undefined,
+  homeTeamId: string,
+  awayTeamId: string,
+): TeamMatchStats[] {
+  const teams = boxscore?.teams ?? []
+
+  return teams.flatMap((entry): TeamMatchStats[] => {
+    const teamSide = espnTeamSide(entry.team?.id, homeTeamId, awayTeamId)
+    const statistics = entry.statistics ?? []
+    if (!teamSide || statistics.length === 0) return []
+
+    return [
+      {
+        team_side: teamSide,
+        possession_pct: statNumber(statistics, 'possessionPct'),
+        shots_total: statNumber(statistics, 'totalShots'),
+        shots_on_target: statNumber(statistics, 'shotsOnTarget'),
+        corners: statNumber(statistics, 'wonCorners'),
+        fouls: statNumber(statistics, 'foulsCommitted'),
+        saves: statNumber(statistics, 'saves'),
+        passes_total: statNumber(statistics, 'totalPasses'),
+        passes_accurate: statNumber(statistics, 'accuratePasses'),
+        tackles_total: statNumber(statistics, 'totalTackles'),
+        tackles_won: statNumber(statistics, 'effectiveTackles'),
+        interceptions: statNumber(statistics, 'interceptions'),
+        clearances: statNumber(statistics, 'effectiveClearance'),
+        crosses_total: statNumber(statistics, 'totalCrosses'),
+        crosses_accurate: statNumber(statistics, 'accurateCrosses'),
+      },
+    ]
+  })
+}
+
 async function fetchJson<T>(url: string): Promise<T | null> {
   for (let attempt = 0; attempt <= FETCH_RETRIES; attempt += 1) {
     const controller = new AbortController()
@@ -431,6 +505,11 @@ async function buildSnapshot(
     home.team.id,
     away.team.id,
   )
+  const teamStats = extractTeamStats(
+    summary?.boxscore,
+    home.team.id,
+    away.team.id,
+  )
 
   return {
     provider: 'espn',
@@ -449,6 +528,7 @@ async function buildSnapshot(
       normalizedEvents.complete &&
       eventsMatchScore(normalizedEvents.events, homeScore, awayScore),
     events: normalizedEvents.events,
+    team_stats: teamStats,
   }
 }
 

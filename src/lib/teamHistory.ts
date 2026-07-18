@@ -25,7 +25,7 @@ export type TeamCompetitionSummary = {
 }
 
 export type TeamHistory = {
-  team: { code: string; name: string; crestUrl: string | null }
+  team: { id: string; code: string; name: string; crestUrl: string | null }
   byCompetition: TeamCompetitionSummary[]
   matches: Match[]
 }
@@ -113,6 +113,7 @@ export async function fetchTeamHistory(teamCode: string): Promise<TeamHistory | 
 
   return {
     team: {
+      id: teamRow.id,
       code: teamRow.code,
       name: teamDisplayName(teamRow, teamRow.name),
       crestUrl: teamCrestUrl(teamRow.code) ?? teamRow.flag_url,

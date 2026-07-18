@@ -8,6 +8,9 @@
     },
     "api/sync-faltas.ts": {
       "maxDuration": 30
+    },
+    "api/backfill-match-stats.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

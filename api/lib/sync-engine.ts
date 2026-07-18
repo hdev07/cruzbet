@@ -205,6 +205,101 @@ export async function syncEspnMatches(options?: {
   return result
 }
 
+export async function backfillMatchTeamStats(): Promise<SyncResult> {
+  const supabase = getSupabaseAdmin()
+
+  const { data: competition, error: competitionError } = await supabase
+    .from('competitions')
+    .select('id')
+    .eq('slug', ACTIVE_COMPETITION_SLUG)
+    .eq('is_active', true)
+    .single()
+
+  if (competitionError || !competition) {
+    throw new Error(
+      competitionError?.message ??
+        `No existe la competencia activa ${ACTIVE_COMPETITION_SLUG}`,
+    )
+  }
+
+  const { data, error } = await supabase
+    .from('matches')
+    .select(MATCH_SELECT)
+    .eq('competition_id', competition.id)
+    .eq('status', 'finished')
+    .not('external_event_id', 'is', null)
+    .order('match_date')
+
+  if (error) throw new Error(error.message)
+
+  const finishedMatches = (data ?? []).map(normalizeMatchRow)
+
+  const { data: existingStats, error: existingStatsError } = await supabase
+    .from('match_team_stats')
+    .select('match_id')
+    .in(
+      'match_id',
+      finishedMatches.map((match) => match.id),
+    )
+
+  if (existingStatsError) throw new Error(existingStatsError.message)
+
+  const alreadySynced = new Set(
+    (existingStats ?? []).map((row) => row.match_id as string),
+  )
+  const pendingMatches = finishedMatches.filter(
+    (match) => !alreadySynced.has(match.id),
+  )
+
+  const result: SyncResult = {
+    processed: pendingMatches.length,
+    matched: 0,
+    updated: 0,
+    skipped: 0,
+    errors: [],
+  }
+
+  await mapWithConcurrency(pendingMatches, 3, async (match) => {
+    try {
+      const snapshot = await fetchEspnSnapshotForMatch(match)
+      if (!snapshot) {
+        result.skipped += 1
+        return
+      }
+
+      result.matched += 1
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        'apply_espn_snapshot',
+        {
+          p_match_id: match.id,
+          p_snapshot: snapshot,
+        },
+      )
+
+      if (rpcError) {
+        result.errors.push(`${match.id}: ${rpcError.message}`)
+        return
+      }
+
+      const applied = rpcResult as { ok?: boolean; error?: string } | null
+      if (!applied?.ok) {
+        result.errors.push(
+          `${match.id}: ${applied?.error ?? 'snapshot_not_applied'}`,
+        )
+        return
+      }
+
+      result.updated += 1
+    } catch (error) {
+      result.errors.push(
+        `${match.id}: ${error instanceof Error ? error.message : 'sync_error'}`,
+      )
+    }
+  })
+
+  return result
+}
+
 function staticTokenMatches(token: string): boolean {
   return [process.env.LIVE_SYNC_TOKEN, process.env.CRON_SECRET]
     .filter((value): value is string => Boolean(value))

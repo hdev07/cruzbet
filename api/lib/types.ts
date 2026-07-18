@@ -31,6 +31,24 @@ export interface SyncedMatchEvent {
   metadata: Record<string, unknown>
 }
 
+export interface TeamMatchStats {
+  team_side: TeamSide
+  possession_pct: number | null
+  shots_total: number | null
+  shots_on_target: number | null
+  corners: number | null
+  fouls: number | null
+  saves: number | null
+  passes_total: number | null
+  passes_accurate: number | null
+  tackles_total: number | null
+  tackles_won: number | null
+  interceptions: number | null
+  clearances: number | null
+  crosses_total: number | null
+  crosses_accurate: number | null
+}
+
 export interface EspnMatchSnapshot {
   provider: 'espn'
   external_event_id: string
@@ -43,6 +61,7 @@ export interface EspnMatchSnapshot {
   away_score: number
   events_complete: boolean
   events: SyncedMatchEvent[]
+  team_stats: TeamMatchStats[]
 }
 
 export interface SyncResult {

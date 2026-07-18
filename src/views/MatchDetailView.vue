@@ -8,6 +8,8 @@ import LiveMatchPulse from '@/components/shared/LiveMatchPulse.vue'
 import MatchCardsList from '@/components/shared/MatchCardsList.vue'
 import MatchGoalsList from '@/components/shared/MatchGoalsList.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
+import DuelBarRow from '@/components/charts/DuelBarRow.vue'
+import RadarChart from '@/components/charts/RadarChart.vue'
 import {
   formatLiveStatusLabel,
   formatScheduledStatusLabel,
@@ -21,6 +23,15 @@ import { formatKickoff } from '@/lib/matchRules'
 import { formatMatchVenue } from '@/lib/matchVenue'
 import { friendlyLoadError } from '@/lib/offlineCache'
 import { teamDisplayName } from '@/lib/teamDisplay'
+import {
+  buildRadarAxes,
+  fetchLeagueSeasonAverages,
+  fetchMatchBoxscore,
+  fetchTeamMatchStats,
+  summarizeSeasonAverages,
+  type MatchBoxscoreRow,
+  type RadarAxis,
+} from '@/lib/teamSeasonStats'
 import { useMatchStore } from '@/stores/matchStore'
 
 const route = useRoute()
@@ -100,6 +111,97 @@ const interruptedLabel = computed(() =>
 )
 
 const events = computed(() => (match.value ? matchStore.getEventsForMatch(match.value.id) : []))
+
+type ComparativeData = {
+  boxscore: { home: MatchBoxscoreRow | null; away: MatchBoxscoreRow | null } | null
+  radarSeries: Array<{ key: string; label: string; color: string; axes: RadarAxis[] }>
+  radarLabels: string[]
+}
+
+const comparative = ref<ComparativeData | null>(null)
+const comparativeLoading = ref(false)
+
+async function loadComparative() {
+  comparative.value = null
+  const current = match.value
+  if (!current?.home_team_id || !current?.away_team_id || !current?.competition_id) return
+
+  comparativeLoading.value = true
+  try {
+    const [boxscoreRows, leagueAveragesMap] = await Promise.all([
+      fetchMatchBoxscore(current.id),
+      fetchLeagueSeasonAverages(current.competition_id),
+    ])
+
+    const boxscore = boxscoreRows.length
+      ? {
+          home: boxscoreRows.find((row) => row.teamId === current.home_team_id) ?? null,
+          away: boxscoreRows.find((row) => row.teamId === current.away_team_id) ?? null,
+        }
+      : null
+
+    const leagueAverages = [...leagueAveragesMap.values()]
+    const [homeStatPoints, awayStatPoints] = await Promise.all([
+      fetchTeamMatchStats(current.home_team_id, current.competition_id),
+      fetchTeamMatchStats(current.away_team_id, current.competition_id),
+    ])
+
+    const radarSeries: ComparativeData['radarSeries'] = []
+    let radarLabels: string[] = []
+    if (homeStatPoints.length) {
+      const axes = buildRadarAxes(summarizeSeasonAverages(current.home_team_id, homeStatPoints), leagueAverages)
+      radarLabels = axes.map((axis) => axis.label)
+      radarSeries.push({
+        key: 'home',
+        label: teamDisplayName(current.home_team, 'Local'),
+        color: 'var(--color-mundial-accent)',
+        axes,
+      })
+    }
+    if (awayStatPoints.length) {
+      const axes = buildRadarAxes(summarizeSeasonAverages(current.away_team_id, awayStatPoints), leagueAverages)
+      radarLabels = radarLabels.length ? radarLabels : axes.map((axis) => axis.label)
+      radarSeries.push({
+        key: 'away',
+        label: teamDisplayName(current.away_team, 'Visitante'),
+        color: 'var(--color-mundial-error)',
+        axes,
+      })
+    }
+
+    comparative.value = { boxscore, radarSeries, radarLabels }
+  } finally {
+    comparativeLoading.value = false
+  }
+}
+
+watch(match, (value) => {
+  if (value) loadComparative()
+})
+
+function passAccuracy(row: MatchBoxscoreRow | null): number | null {
+  return row?.passesTotal && row.passesAccurate
+    ? Math.round((row.passesAccurate / row.passesTotal) * 100)
+    : null
+}
+
+const boxscoreRows = computed(() => {
+  const box = comparative.value?.boxscore
+  if (!box || (!box.home && !box.away)) return []
+  return [
+    { label: 'Posesión', unit: '%', home: box.home?.possessionPct ?? null, away: box.away?.possessionPct ?? null },
+    { label: 'Tiros', unit: '', home: box.home?.shotsTotal ?? null, away: box.away?.shotsTotal ?? null },
+    {
+      label: 'Tiros a puerta',
+      unit: '',
+      home: box.home?.shotsOnTarget ?? null,
+      away: box.away?.shotsOnTarget ?? null,
+    },
+    { label: 'Córners', unit: '', home: box.home?.corners ?? null, away: box.away?.corners ?? null },
+    { label: 'Faltas', unit: '', home: box.home?.fouls ?? null, away: box.away?.fouls ?? null },
+    { label: 'Precisión de pase', unit: '%', home: passAccuracy(box.home), away: passAccuracy(box.away) },
+  ]
+})
 </script>
 
 <template>
@@ -278,6 +380,35 @@ const events = computed(() => (match.value ? matchStore.getEventsForMatch(match.
         >
           Partido {{ interruptedLabel.toLowerCase() }}
         </p>
+      </div>
+
+      <div
+        v-if="comparativeLoading || boxscoreRows.length || comparative?.radarSeries.length"
+        class="space-y-4 border-t border-white/10 px-4 py-4 sm:px-5"
+      >
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-mundial-accent">Comparativa</h3>
+
+        <div v-if="comparativeLoading" class="space-y-2">
+          <DataSkeleton variant="list" :rows="3" />
+        </div>
+
+        <template v-else>
+          <div v-if="boxscoreRows.length" class="rounded-xl border border-app-border bg-app-surface-elevated p-3">
+            <DuelBarRow
+              v-for="row in boxscoreRows"
+              :key="row.label"
+              :label="row.label"
+              :unit="row.unit"
+              :home-value="row.home"
+              :away-value="row.away"
+            />
+          </div>
+
+          <div v-if="comparative?.radarSeries.length" class="rounded-xl border border-app-border bg-app-surface-elevated p-3">
+            <p class="mb-2 text-center text-xs text-app-muted">Radar de rendimiento de temporada</p>
+            <RadarChart :labels="comparative.radarLabels" :series="comparative.radarSeries" />
+          </div>
+        </template>
       </div>
 
       <MatchGoalsList :match="match" :events="events" :max-items="0" />
