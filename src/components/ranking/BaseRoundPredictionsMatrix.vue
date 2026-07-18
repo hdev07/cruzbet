@@ -197,6 +197,17 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
   const resultText = result ? ` → ${winnerCode(result)}` : ''
   return `#${match.position}: ${home} vs ${away}${score}${resultText}`
 }
+
+function playerCellTitle(player: BaseRoundParticipant): string {
+  const name = player.profiles?.username ?? 'Anónimo'
+  const parts = [name]
+  if (player.entry_number > 1) parts.push(`Q${player.entry_number}`)
+  parts.push(player.verified ? 'Pagado' : 'Pago no verificado')
+  if (isPreviousWinner(player.user_id)) parts.push('Ganador jornada previa')
+  const rivalry = rivalryByKey.value.get(participantKey(player.user_id, player.entry_number))
+  if (rivalry) parts.push(`${rivalry} contigo`)
+  return parts.join(' · ')
+}
 </script>
 
 <template>
@@ -223,8 +234,8 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                 class="theme-table-sticky border border-white/10 px-2 py-2 text-left sm:px-3"
                 :class="
                   exportLayout
-                    ? 'min-w-[10rem]'
-                    : 'sticky left-0 z-20 w-[6.75rem] max-w-[6.75rem] sm:w-auto sm:min-w-[10rem] sm:max-w-[12rem]'
+                    ? 'min-w-40'
+                    : 'sticky left-0 z-20 w-32 max-w-32 overflow-hidden sm:w-auto sm:min-w-40 sm:max-w-48'
                 "
               >
                 <span class="whitespace-nowrap">Jugador</span>
@@ -293,18 +304,70 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
               ]"
             >
               <td
-                class="border border-white/10 px-2 py-1.5 align-middle sm:px-3 sm:py-2"
+                class="overflow-hidden border border-white/10 px-1.5 py-1.5 align-middle sm:px-3 sm:py-2"
                 :class="{
-                  'theme-table-sticky-mine sticky left-0 z-10 w-[6.75rem] max-w-[6.75rem] sm:w-auto sm:min-w-[10rem] sm:max-w-[12rem]':
+                  'theme-table-sticky-mine sticky left-0 z-10 w-32 max-w-32 sm:w-auto sm:min-w-40 sm:max-w-48':
                     !exportLayout && isMyRow(player.user_id),
-                  'theme-table-sticky sticky left-0 z-10 w-[6.75rem] max-w-[6.75rem] sm:w-auto sm:min-w-[10rem] sm:max-w-[12rem]':
+                  'theme-table-sticky sticky left-0 z-10 w-32 max-w-32 sm:w-auto sm:min-w-40 sm:max-w-48':
                     !exportLayout && !isMyRow(player.user_id),
-                  'min-w-[10rem]': exportLayout,
+                  'min-w-40': exportLayout,
                 }"
               >
-                <div class="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                <!-- Mobile: una sola línea (# + avatar + nombre + punto de pago) -->
+                <div
+                  v-if="!exportLayout"
+                  class="flex min-w-0 items-center gap-1 sm:hidden"
+                  :title="playerCellTitle(player)"
+                >
                   <span
-                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[0.6rem] font-bold sm:h-6 sm:w-6 sm:text-[0.65rem]"
+                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[0.6rem] font-bold"
+                    :class="index < 3 ? 'bg-mundial-accent text-white' : 'theme-cell-pending text-slate-400'"
+                  >
+                    {{ index + 1 }}
+                  </span>
+                  <div class="relative shrink-0">
+                    <img
+                      v-if="player.profiles?.avatar"
+                      :src="player.profiles.avatar"
+                      :alt="player.profiles.username ?? 'Jugador'"
+                      class="h-6 w-6 rounded-full border border-white/20"
+                    />
+                    <span
+                      v-else
+                      class="flex h-6 w-6 items-center justify-center rounded-full theme-cell-pending text-[0.65rem] font-semibold"
+                    >
+                      {{ player.profiles?.username?.[0]?.toUpperCase() ?? '?' }}
+                    </span>
+                    <Crown
+                      v-if="isPreviousWinner(player.user_id)"
+                      class="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 text-amber-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <p
+                    class="min-w-0 flex-1 truncate text-[0.8rem] font-medium leading-none"
+                    :class="isMyRow(player.user_id) ? 'text-mundial-accent' : 'text-slate-200'"
+                  >
+                    {{ player.profiles?.username ?? 'Anónimo' }}
+                    <span v-if="player.entry_number > 1" class="text-slate-500">
+                      Q{{ player.entry_number }}
+                    </span>
+                  </p>
+                  <span
+                    class="h-1.5 w-1.5 shrink-0 rounded-full"
+                    :class="player.verified ? 'bg-mundial-green' : 'bg-amber-400'"
+                    :aria-label="player.verified ? 'Pagado' : 'Pago no verificado'"
+                  />
+                </div>
+
+                <!-- Desktop / export -->
+                <div
+                  class="min-w-0 items-center gap-2"
+                  :class="exportLayout ? 'flex' : 'hidden sm:flex'"
+                >
+                  <span
+                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold"
                     :class="index < 3 ? 'bg-mundial-accent text-white' : 'theme-cell-pending text-slate-400'"
                   >
                     {{ index + 1 }}
@@ -312,7 +375,6 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
 
                   <div
                     class="relative shrink-0"
-                    :class="exportLayout ? '' : 'hidden sm:block'"
                     :title="isPreviousWinner(player.user_id) ? 'Ganador de la jornada previa' : undefined"
                   >
                     <img
@@ -337,57 +399,28 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
 
                   <div class="min-w-0 flex-1">
                     <p
-                      class="truncate text-[0.8rem] font-medium leading-tight sm:text-sm"
+                      class="truncate text-sm font-medium leading-tight"
                       :class="isMyRow(player.user_id) ? 'text-mundial-accent' : 'text-slate-200'"
                       :title="player.profiles?.username ?? 'Anónimo'"
                     >
-                      <Crown
-                        v-if="!exportLayout && isPreviousWinner(player.user_id)"
-                        class="mr-0.5 inline h-3 w-3 text-amber-400 sm:hidden"
-                        fill="currentColor"
-                        aria-label="Ganador de la jornada previa"
-                      />
                       {{ player.profiles?.username ?? 'Anónimo' }}
                       <span v-if="player.entry_number > 1" class="text-slate-500">
-                        ·Q{{ player.entry_number }}
+                        Q{{ player.entry_number }}
                       </span>
                       <span v-if="isMyRow(player.user_id)" class="text-mundial-accent">
-                        ·tú
+                        (tú)
                       </span>
                     </p>
-                    <div class="mt-0.5 flex min-w-0 items-center gap-1">
-                      <span
-                        v-if="!exportLayout"
-                        class="inline-flex shrink-0 items-center rounded px-1 py-px text-[0.55rem] font-semibold leading-none sm:hidden"
-                        :class="
-                          player.verified
-                            ? 'bg-mundial-green/20 text-mundial-green'
-                            : 'border border-amber-500/30 bg-amber-500/20 text-amber-200'
-                        "
-                        :title="player.verified ? 'Pagado' : 'Pago no verificado'"
-                      >
-                        {{ player.verified ? 'OK' : 'Sin pago' }}
-                      </span>
-                      <PaymentStatusChip
-                        class="mt-0"
-                        :class="exportLayout ? '' : 'hidden sm:inline-flex'"
-                        :verified="player.verified"
-                        compact
-                      />
+                    <div class="mt-0.5 flex min-w-0 flex-wrap items-center gap-1">
+                      <PaymentStatusChip :verified="player.verified" compact />
                       <span
                         v-if="
                           !exportLayout &&
                           rivalryByKey.get(`${player.user_id}:${player.entry_number}`)
                         "
-                        class="truncate text-[0.6rem] font-medium text-amber-400/90 sm:text-[0.65rem]"
-                        :title="`${rivalryByKey.get(`${player.user_id}:${player.entry_number}`)} contigo`"
+                        class="text-[0.65rem] font-medium text-amber-400/90"
                       >
-                        <span class="sm:hidden">{{
-                          rivalryByKey.get(`${player.user_id}:${player.entry_number}`)
-                        }}</span>
-                        <span class="hidden sm:inline">
-                          {{ rivalryByKey.get(`${player.user_id}:${player.entry_number}`) }} contigo
-                        </span>
+                        {{ rivalryByKey.get(`${player.user_id}:${player.entry_number}`) }} contigo
                       </span>
                     </div>
                   </div>
@@ -449,6 +482,14 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
         <span class="inline-flex items-center gap-1">
           <span class="h-3 w-3 rounded theme-cell-pending" />
           Pendiente
+        </span>
+        <span v-if="!exportLayout" class="inline-flex items-center gap-1 sm:hidden">
+          <span class="h-1.5 w-1.5 rounded-full bg-mundial-green" />
+          Pagado
+        </span>
+        <span v-if="!exportLayout" class="inline-flex items-center gap-1 sm:hidden">
+          <span class="h-1.5 w-1.5 rounded-full bg-amber-400" />
+          Sin pago
         </span>
       </div>
     </template>
