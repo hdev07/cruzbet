@@ -311,6 +311,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
       <BaseRoundRankingPanel
         v-if="activeRoundId"
         :round-id="activeRoundId"
+        :round="selectedRound"
         :round-matches="baseStore.roundMatches"
         :loading="roundLoading"
         :previous-winner-user-ids="previousWinnerUserIds"

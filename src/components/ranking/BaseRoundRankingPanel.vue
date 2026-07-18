@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import AdminRoundTableExport from '@/components/admin/AdminRoundTableExport.vue'
 import BaseRoundPredictionsMatrix from '@/components/ranking/BaseRoundPredictionsMatrix.vue'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import { BASE_QUINIELA_MATCHES_PER_ROUND } from '@/constants/base-quiniela-rules'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
-import type { BaseQuinielaRoundMatch } from '@/types'
+import type { BaseQuinielaRound, BaseQuinielaRoundMatch } from '@/types'
 
 const props = defineProps<{
   roundId: string
@@ -19,6 +20,8 @@ const props = defineProps<{
   /** Limita filas visibles (p. ej. vista compacta en inicio). */
   maxRows?: number
   previousWinnerUserIds?: string[]
+  /** Jornada completa — necesaria para export PNG (solo admin). */
+  round?: BaseQuinielaRound | null
 }>()
 
 const auth = useAuthStore()
@@ -41,6 +44,15 @@ const visibleLeaderboard = computed(() => {
   if (props.maxRows == null || props.maxRows <= 0) return rows
   return rows.slice(0, props.maxRows)
 })
+
+const showAdminExport = computed(
+  () =>
+    auth.isAdmin &&
+    !!props.round &&
+    !props.standingsOnly &&
+    activeTab.value === 'predictions' &&
+    !props.loading,
+)
 </script>
 
 <template>
@@ -66,6 +78,14 @@ const visibleLeaderboard = computed(() => {
         Por aciertos
       </button>
     </div>
+
+    <AdminRoundTableExport
+      v-if="showAdminExport && round"
+      class="mb-3"
+      :round="round"
+      :round-matches="roundMatches"
+      :preview="false"
+    />
 
     <DataSkeleton
       v-if="activeTab === 'predictions' && !standingsOnly && loading"

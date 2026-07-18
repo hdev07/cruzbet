@@ -21,9 +21,12 @@ const props = withDefaults(
     roundMatches: BaseQuinielaRoundMatch[]
     /** Título corto encima del botón (p. ej. en Usuarios). */
     heading?: string
+    /** Si es false, solo muestra el botón (la card de export queda oculta). */
+    preview?: boolean
   }>(),
   {
     heading: 'Tabla comparativa',
+    preview: true,
   },
 )
 
@@ -82,9 +85,12 @@ defineExpose({ exportTableImage, exporting })
 </script>
 
 <template>
-  <div class="space-y-3">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <div class="min-w-0">
+  <div :class="preview ? 'space-y-3' : ''">
+    <div
+      class="flex flex-wrap items-center gap-2"
+      :class="preview ? 'justify-between' : 'justify-end'"
+    >
+      <div v-if="preview" class="min-w-0">
         <h3 class="text-sm font-semibold text-app-text">{{ heading }}</h3>
         <p class="mt-0.5 text-xs text-slate-500">
           Exporta la imagen lista para WhatsApp o redes.
@@ -102,14 +108,16 @@ defineExpose({ exportTableImage, exporting })
       </button>
     </div>
 
-    <p v-if="exportStatus" class="text-xs text-mundial-green">{{ exportStatus }}</p>
-    <p v-if="exportError" class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
+    <p v-if="exportStatus" class="mt-2 text-xs text-mundial-green">{{ exportStatus }}</p>
+    <p v-if="exportError" class="mt-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
       {{ exportError }}
     </p>
 
     <div
       ref="exportRoot"
       class="admin-share-export w-max max-w-none rounded-2xl border border-white/10 bg-[#151515] p-4 text-slate-100 shadow-xl"
+      :class="preview ? '' : 'pointer-events-none fixed left-[-10000px] top-0'"
+      :aria-hidden="preview ? undefined : 'true'"
     >
       <header class="mb-4 flex items-end justify-between gap-4 border-b border-white/10 pb-3">
         <div class="min-w-0">
