@@ -4,10 +4,8 @@ import {
   ArrowLeft,
   BarChart3,
   CalendarDays,
-  ImageDown,
   Radio,
   RefreshCw,
-  Users,
 } from '@lucide/vue'
 import AdminBasePaymentVerification from '@/components/admin/AdminBasePaymentVerification.vue'
 import AdminBaseRoundList from '@/components/admin/AdminBaseRoundList.vue'
@@ -19,14 +17,12 @@ import type {
 import AdminLiveSyncPanel from '@/components/admin/AdminLiveSyncPanel.vue'
 import AdminMatchDetail from '@/components/admin/AdminMatchDetail.vue'
 import AdminMatchList from '@/components/admin/AdminMatchList.vue'
-import AdminRoundSharePanel from '@/components/admin/AdminRoundSharePanel.vue'
 import { APP_NAME } from '@/constants/branding'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import { useMatchStore } from '@/stores/matchStore'
 
 type AdminTab = 'resumen' | 'jornadas' | 'partidos' | 'sync'
 type MobileScreen = 'list' | 'detail'
-type JornadaDetailTab = 'users' | 'share'
 
 const matchStore = useMatchStore()
 const baseStore = useBaseQuinielaStore()
@@ -41,7 +37,6 @@ const baseParticipantCounts = ref<Record<string, number>>({})
 const paymentStats = ref<AdminPaymentStats | null>(null)
 const statsLoading = ref(false)
 const mobileScreen = ref<MobileScreen>('list')
-const jornadaDetailTab = ref<JornadaDetailTab>('users')
 const jornadaPaymentFilter = ref<'all' | 'verified' | 'pending'>('all')
 
 const selectedMatch = computed(() =>
@@ -140,7 +135,6 @@ function openMatch(matchId: string) {
 
 function openRound(roundId: string) {
   selectedRoundId.value = roundId
-  jornadaDetailTab.value = 'users'
   mobileScreen.value = 'detail'
 }
 
@@ -184,7 +178,6 @@ function onDashboardNavigate(target: AdminNavigateTarget) {
     jornadaPaymentFilter.value = target.focus === 'pending' ? 'pending' : 'all'
     autoSelectFirstRound()
     if (selectedRoundId.value) {
-      jornadaDetailTab.value = 'users'
       if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
         mobileScreen.value = 'detail'
       }
@@ -328,34 +321,6 @@ watch(activeRoundId, async (id) => {
           <ArrowLeft class="h-4 w-4" />
           Jornadas
         </button>
-        <div class="px-4 pb-3">
-          <div class="theme-tab-bar flex gap-1">
-            <button
-              type="button"
-              class="flex-1 rounded-md px-3 py-2 text-xs font-semibold"
-              :class="
-                jornadaDetailTab === 'users'
-                  ? 'bg-mundial-accent text-mundial-dark'
-                  : 'text-slate-400'
-              "
-              @click="jornadaDetailTab = 'users'"
-            >
-              Usuarios
-            </button>
-            <button
-              type="button"
-              class="flex-1 rounded-md px-3 py-2 text-xs font-semibold"
-              :class="
-                jornadaDetailTab === 'share'
-                  ? 'bg-mundial-accent text-mundial-dark'
-                  : 'text-slate-400'
-              "
-              @click="jornadaDetailTab = 'share'"
-            >
-              Compartir
-            </button>
-          </div>
-        </div>
       </header>
 
       <div class="admin-split hidden md:flex">
@@ -367,51 +332,13 @@ watch(activeRoundId, async (id) => {
           :participant-counts="baseParticipantCounts"
           @select="openRound"
         />
-        <div class="admin-stack min-w-0">
-          <template v-if="selectedRound">
-            <div class="theme-tab-bar flex shrink-0 gap-1 self-start">
-              <button
-                type="button"
-                class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold"
-                :class="
-                  jornadaDetailTab === 'users'
-                    ? 'bg-mundial-accent text-mundial-dark'
-                    : 'text-slate-400'
-                "
-                @click="jornadaDetailTab = 'users'"
-              >
-                <Users class="h-3.5 w-3.5" />
-                Usuarios
-              </button>
-              <button
-                type="button"
-                class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold"
-                :class="
-                  jornadaDetailTab === 'share'
-                    ? 'bg-mundial-accent text-mundial-dark'
-                    : 'text-slate-400'
-                "
-                @click="jornadaDetailTab = 'share'"
-              >
-                <ImageDown class="h-3.5 w-3.5" />
-                Compartir tabla
-              </button>
-            </div>
-
-            <div class="min-h-0 flex-1">
-              <AdminBasePaymentVerification
-                v-if="jornadaDetailTab === 'users'"
-                :round="selectedRound"
-                :round-matches="baseStore.roundMatches"
-                :focus-filter="jornadaPaymentFilter"
-              />
-              <AdminRoundSharePanel
-                v-else
-                :round="selectedRound"
-                :round-matches="baseStore.roundMatches"
-              />
-            </div>
-          </template>
+        <div class="min-h-0 min-w-0 flex-1">
+          <AdminBasePaymentVerification
+            v-if="selectedRound"
+            :round="selectedRound"
+            :round-matches="baseStore.roundMatches"
+            :focus-filter="jornadaPaymentFilter"
+          />
           <p v-else class="theme-card admin-empty text-slate-500">
             Selecciona una jornada para ver participantes y exportar resultados.
           </p>
@@ -430,18 +357,10 @@ watch(activeRoundId, async (id) => {
         />
         <div v-else-if="selectedRound" class="admin-page flex min-h-0 flex-1 flex-col">
           <AdminBasePaymentVerification
-            v-if="jornadaDetailTab === 'users'"
             class="min-h-0 flex-1"
             :round="selectedRound"
             :round-matches="baseStore.roundMatches"
             :focus-filter="jornadaPaymentFilter"
-            mobile
-          />
-          <AdminRoundSharePanel
-            v-else
-            class="min-h-0 flex-1"
-            :round="selectedRound"
-            :round-matches="baseStore.roundMatches"
             mobile
           />
         </div>

@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Search,
 } from '@lucide/vue'
+import AdminRoundTableExport from '@/components/admin/AdminRoundTableExport.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import { BASE_ENTRY_FEE_MXN, computeRoundPool } from '@/constants/base-quiniela-rules'
@@ -318,6 +319,12 @@ const sortedRoundMatches = computed(() =>
         </label>
       </div>
     </header>
+
+    <div class="shrink-0 border-b border-app-border">
+      <div class="app-scrollbar overflow-x-auto p-4">
+        <AdminRoundTableExport :round="round" :round-matches="roundMatches" />
+      </div>
+    </div>
 
     <!-- Vista móvil: tarjetas -->
     <div v-if="mobile" class="app-scrollbar admin-panel-body">
