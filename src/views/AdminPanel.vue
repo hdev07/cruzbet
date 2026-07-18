@@ -328,6 +328,34 @@ watch(activeRoundId, async (id) => {
           <ArrowLeft class="h-4 w-4" />
           Jornadas
         </button>
+        <div class="px-4 pb-3">
+          <div class="theme-tab-bar flex gap-1">
+            <button
+              type="button"
+              class="flex-1 rounded-md px-3 py-2 text-xs font-semibold"
+              :class="
+                jornadaDetailTab === 'users'
+                  ? 'bg-mundial-accent text-mundial-dark'
+                  : 'text-slate-400'
+              "
+              @click="jornadaDetailTab = 'users'"
+            >
+              Usuarios
+            </button>
+            <button
+              type="button"
+              class="flex-1 rounded-md px-3 py-2 text-xs font-semibold"
+              :class="
+                jornadaDetailTab === 'share'
+                  ? 'bg-mundial-accent text-mundial-dark'
+                  : 'text-slate-400'
+              "
+              @click="jornadaDetailTab = 'share'"
+            >
+              Compartir
+            </button>
+          </div>
+        </div>
       </header>
 
       <div class="admin-split hidden md:flex">
@@ -400,33 +428,7 @@ watch(activeRoundId, async (id) => {
           :participant-counts="baseParticipantCounts"
           @select="openRound"
         />
-        <div v-else-if="selectedRound" class="admin-stack admin-page">
-          <div class="theme-tab-bar flex shrink-0 gap-1">
-            <button
-              type="button"
-              class="flex-1 rounded-md px-3 py-2 text-xs font-semibold"
-              :class="
-                jornadaDetailTab === 'users'
-                  ? 'bg-mundial-accent text-mundial-dark'
-                  : 'text-slate-400'
-              "
-              @click="jornadaDetailTab = 'users'"
-            >
-              Usuarios
-            </button>
-            <button
-              type="button"
-              class="flex-1 rounded-md px-3 py-2 text-xs font-semibold"
-              :class="
-                jornadaDetailTab === 'share'
-                  ? 'bg-mundial-accent text-mundial-dark'
-                  : 'text-slate-400'
-              "
-              @click="jornadaDetailTab = 'share'"
-            >
-              Compartir
-            </button>
-          </div>
+        <div v-else-if="selectedRound" class="admin-page flex min-h-0 flex-1 flex-col">
           <AdminBasePaymentVerification
             v-if="jornadaDetailTab === 'users'"
             class="min-h-0 flex-1"
