@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useContainerWidth } from '@/composables/useContainerWidth'
 
 type Series = {
   key: string
@@ -26,14 +27,29 @@ const props = withDefaults(
 )
 
 const GUTTER_LEFT = 28
-const PADDING_RIGHT = 12
+const PADDING_RIGHT = 8
 const PADDING_TOP = 16
 const CHART_HEIGHT = 130
-const LABELS_HEIGHT = 20
-const SLOT_WIDTH = 46
+const LABELS_HEIGHT = 22
+const MIN_SLOT = 28
+
+const containerRef = ref<HTMLElement | null>(null)
+const containerWidth = useContainerWidth(containerRef)
 
 const svgHeight = PADDING_TOP + CHART_HEIGHT + LABELS_HEIGHT
-const svgWidth = computed(() => GUTTER_LEFT + Math.max(1, props.categories.length - 1) * SLOT_WIDTH + PADDING_RIGHT + SLOT_WIDTH / 2)
+
+const slotWidth = computed(() => {
+  const n = props.categories.length
+  const available = Math.max(0, containerWidth.value - GUTTER_LEFT - PADDING_RIGHT)
+  if (n <= 1) return Math.max(MIN_SLOT, available)
+  return Math.max(MIN_SLOT, available / (n - 1))
+})
+
+const svgWidth = computed(() => {
+  const n = props.categories.length
+  if (n <= 1) return Math.max(containerWidth.value, GUTTER_LEFT + slotWidth.value + PADDING_RIGHT)
+  return GUTTER_LEFT + (n - 1) * slotWidth.value + PADDING_RIGHT
+})
 
 function niceCeil(value: number): number {
   if (value <= 0) return 4
@@ -67,7 +83,7 @@ function yFor(value: number): number {
 }
 
 function xFor(index: number): number {
-  return GUTTER_LEFT + index * SLOT_WIDTH
+  return GUTTER_LEFT + index * slotWidth.value
 }
 
 function linePath(series: Series): string {
@@ -79,6 +95,18 @@ function linePath(series: Series): string {
 }
 
 const hovered = ref<number | null>(null)
+
+function selectIndex(index: number) {
+  hovered.value = hovered.value === index ? null : index
+}
+
+function onPointerEnter(index: number, event: PointerEvent) {
+  if (event.pointerType === 'mouse') hovered.value = index
+}
+
+function onPointerLeave(event: PointerEvent) {
+  if (event.pointerType === 'mouse') hovered.value = null
+}
 
 const tooltip = computed(() => {
   const index = hovered.value
@@ -102,18 +130,19 @@ const tooltip = computed(() => {
 
 <template>
   <div class="w-full">
-    <div v-if="series.length > 1" class="mb-2 flex flex-wrap gap-4 text-xs text-app-muted">
+    <div v-if="series.length > 1" class="mb-2 flex flex-wrap gap-3 text-xs text-app-muted">
       <span v-for="s in series" :key="s.key" class="inline-flex items-center gap-1.5">
         <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: s.color }" />
         {{ s.label }}
       </span>
     </div>
 
-    <div class="overflow-x-auto app-scrollbar">
+    <div ref="containerRef" class="w-full overflow-x-auto app-scrollbar">
       <svg
         :width="svgWidth"
         :height="svgHeight"
         :viewBox="`0 0 ${svgWidth} ${svgHeight}`"
+        class="block max-w-none"
         role="img"
         :aria-label="`Gráfica de línea: ${series.map((s) => s.label).join(', ')}`"
       >
@@ -142,28 +171,26 @@ const tooltip = computed(() => {
           </text>
         </g>
 
-        <g
-          v-for="(category, ci) in categories"
-          :key="`hit-${ci}`"
-        >
+        <g v-for="(category, ci) in categories" :key="`hit-${ci}`">
           <rect
             v-if="hovered === ci"
-            :x="xFor(ci) - SLOT_WIDTH / 2"
+            :x="xFor(ci) - slotWidth / 2"
             :y="PADDING_TOP"
-            :width="SLOT_WIDTH"
+            :width="slotWidth"
             :height="CHART_HEIGHT"
             fill="var(--theme-hover)"
             rx="4"
           />
           <rect
-            :x="xFor(ci) - SLOT_WIDTH / 2"
+            :x="xFor(ci) - slotWidth / 2"
             :y="PADDING_TOP"
-            :width="SLOT_WIDTH"
+            :width="slotWidth"
             :height="CHART_HEIGHT"
             fill="transparent"
-            style="cursor: pointer"
-            @mouseenter="hovered = ci"
-            @mouseleave="hovered = null"
+            class="cursor-pointer"
+            @pointerenter="onPointerEnter(ci, $event)"
+            @pointerleave="onPointerLeave($event)"
+            @click="selectIndex(ci)"
           />
           <text
             :x="xFor(ci)"

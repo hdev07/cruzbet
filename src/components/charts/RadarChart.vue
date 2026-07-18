@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useContainerWidth } from '@/composables/useContainerWidth'
 
 type Axis = { key: string; label: string; value: number; rawLabel?: string }
 type Series = { key: string; label: string; color: string; axes: Axis[] }
@@ -10,10 +11,15 @@ const props = defineProps<{
   series: Series[]
 }>()
 
-const SIZE = 220
-const CENTER = SIZE / 2
+const BASE = 260
+const CENTER = BASE / 2
 const RADIUS = 82
 const RINGS = [0.25, 0.5, 0.75, 1]
+
+const containerRef = ref<HTMLElement | null>(null)
+const containerWidth = useContainerWidth(containerRef, BASE)
+
+const displaySize = computed(() => Math.min(BASE, Math.max(220, containerWidth.value)))
 
 const axisCount = computed(() => props.labels.length || 1)
 
@@ -41,7 +47,7 @@ function seriesPath(series: Series): string {
 }
 
 function labelPoint(index: number) {
-  const { x, y } = pointFor(index, 1.22)
+  const { x, y } = pointFor(index, 1.26)
   return { x, y }
 }
 
@@ -56,15 +62,22 @@ function anchorFor(index: number): 'start' | 'middle' | 'end' {
 
 <template>
   <div class="w-full">
-    <div v-if="series.length > 1" class="mb-2 flex flex-wrap gap-4 text-xs text-app-muted">
+    <div v-if="series.length > 1" class="mb-2 flex flex-wrap justify-center gap-3 text-xs text-app-muted">
       <span v-for="s in series" :key="s.key" class="inline-flex items-center gap-1.5">
         <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: s.color }" />
         {{ s.label }}
       </span>
     </div>
 
-    <div class="flex justify-center">
-      <svg :width="SIZE" :height="SIZE" :viewBox="`0 0 ${SIZE} ${SIZE}`" role="img" aria-label="Radar de rendimiento">
+    <div ref="containerRef" class="flex w-full justify-center">
+      <svg
+        :width="displaySize"
+        :height="displaySize"
+        :viewBox="`0 0 ${BASE} ${BASE}`"
+        class="max-w-full"
+        role="img"
+        aria-label="Radar de rendimiento"
+      >
         <g>
           <path
             v-for="ring in RINGS"
@@ -108,7 +121,7 @@ function anchorFor(index: number): 'start' | 'middle' | 'end' {
           :text-anchor="anchorFor(index)"
           dominant-baseline="middle"
           fill="var(--theme-muted)"
-          font-size="9.5"
+          font-size="10"
         >
           {{ label }}
         </text>

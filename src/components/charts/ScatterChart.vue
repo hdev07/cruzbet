@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useContainerWidth } from '@/composables/useContainerWidth'
 
 type Point = { label: string; x: number; y: number }
 
@@ -19,12 +20,16 @@ const props = withDefaults(
   },
 )
 
-const WIDTH = 280
 const HEIGHT = 180
-const PADDING_LEFT = 30
-const PADDING_BOTTOM = 24
+const PADDING_LEFT = 32
+const PADDING_BOTTOM = 28
 const PADDING_TOP = 10
-const PADDING_RIGHT = 10
+const PADDING_RIGHT = 12
+
+const containerRef = ref<HTMLElement | null>(null)
+const containerWidth = useContainerWidth(containerRef, 280)
+
+const width = computed(() => Math.max(220, containerWidth.value))
 
 function domainFor(values: number[], override?: [number, number]): [number, number] {
   if (override) return override
@@ -41,7 +46,7 @@ const yDomain = computed(() => domainFor(props.points.map((p) => p.y), props.yDo
 function xFor(value: number): number {
   const [min, max] = xDomain.value
   const ratio = (value - min) / (max - min || 1)
-  return PADDING_LEFT + ratio * (WIDTH - PADDING_LEFT - PADDING_RIGHT)
+  return PADDING_LEFT + ratio * (width.value - PADDING_LEFT - PADDING_RIGHT)
 }
 
 function yFor(value: number): number {
@@ -62,14 +67,21 @@ const yTicks = computed(() => {
 
 <template>
   <div class="w-full">
-    <div class="overflow-x-auto app-scrollbar">
-      <svg :width="WIDTH" :height="HEIGHT" :viewBox="`0 0 ${WIDTH} ${HEIGHT}`" role="img" :aria-label="`Dispersión ${xLabel} vs ${yLabel}`">
+    <div ref="containerRef" class="w-full">
+      <svg
+        :width="width"
+        :height="HEIGHT"
+        :viewBox="`0 0 ${width} ${HEIGHT}`"
+        class="block max-w-full"
+        role="img"
+        :aria-label="`Dispersión ${xLabel} vs ${yLabel}`"
+      >
         <g>
           <line
             v-for="(tick, i) in yTicks"
             :key="`ygrid-${i}`"
             :x1="PADDING_LEFT"
-            :x2="WIDTH - PADDING_RIGHT"
+            :x2="width - PADDING_RIGHT"
             :y1="yFor(tick)"
             :y2="yFor(tick)"
             stroke="var(--theme-border)"
@@ -102,7 +114,7 @@ const yTicks = computed(() => {
 
         <line
           :x1="PADDING_LEFT"
-          :x2="WIDTH - PADDING_RIGHT"
+          :x2="width - PADDING_RIGHT"
           :y1="HEIGHT - PADDING_BOTTOM"
           :y2="HEIGHT - PADDING_BOTTOM"
           stroke="var(--theme-border)"
@@ -131,16 +143,16 @@ const yTicks = computed(() => {
           <title>{{ point.label }}: {{ xLabel }} {{ point.x }}, {{ yLabel }} {{ point.y }}</title>
         </circle>
 
-        <text :x="WIDTH / 2" :y="HEIGHT - 2" text-anchor="middle" fill="var(--theme-muted)" font-size="9">
+        <text :x="width / 2" :y="HEIGHT - 4" text-anchor="middle" fill="var(--theme-muted)" font-size="9">
           {{ xLabel }}
         </text>
         <text
-          :x="10"
+          :x="11"
           :y="HEIGHT / 2"
           text-anchor="middle"
           fill="var(--theme-muted)"
           font-size="9"
-          :transform="`rotate(-90, 10, ${HEIGHT / 2})`"
+          :transform="`rotate(-90, 11, ${HEIGHT / 2})`"
         >
           {{ yLabel }}
         </text>

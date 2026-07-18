@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useContainerWidth } from '@/composables/useContainerWidth'
 
 type Series = {
   key: string
@@ -24,17 +25,29 @@ const props = withDefaults(
 
 const emit = defineEmits<{ select: [index: number] }>()
 
-const GUTTER_LEFT = 30
-const PADDING_RIGHT = 10
+const GUTTER_LEFT = 28
+const PADDING_RIGHT = 8
 const PADDING_TOP = 24
 const CHART_HEIGHT = 120
-const LABELS_HEIGHT = 20
-const SLOT_WIDTH = 42
+const LABELS_HEIGHT = 22
+const MIN_SLOT = 32
 const BAR_GAP = 3
-const GROUP_GAP = 10
+const GROUP_GAP = 8
+
+const containerRef = ref<HTMLElement | null>(null)
+const containerWidth = useContainerWidth(containerRef)
 
 const svgHeight = PADDING_TOP + CHART_HEIGHT + LABELS_HEIGHT
-const svgWidth = computed(() => GUTTER_LEFT + props.categories.length * SLOT_WIDTH + PADDING_RIGHT)
+
+const slotWidth = computed(() => {
+  const n = Math.max(1, props.categories.length)
+  const available = Math.max(0, containerWidth.value - GUTTER_LEFT - PADDING_RIGHT)
+  return Math.max(MIN_SLOT, available / n)
+})
+
+const svgWidth = computed(
+  () => GUTTER_LEFT + props.categories.length * slotWidth.value + PADDING_RIGHT,
+)
 
 function niceCeil(value: number): number {
   if (value <= 0) return 4
@@ -64,14 +77,14 @@ function yFor(value: number): number {
 
 const barW = computed(() => {
   const count = props.series.length || 1
-  const available = SLOT_WIDTH - GROUP_GAP - BAR_GAP * (count - 1)
-  return Math.max(4, Math.min(24, available / count))
+  const available = slotWidth.value - GROUP_GAP - BAR_GAP * (count - 1)
+  return Math.max(4, Math.min(28, available / count))
 })
 
 function barX(categoryIndex: number, seriesIndex: number): number {
   const count = props.series.length || 1
   const groupWidth = barW.value * count + BAR_GAP * (count - 1)
-  const groupStart = GUTTER_LEFT + categoryIndex * SLOT_WIDTH + (SLOT_WIDTH - groupWidth) / 2
+  const groupStart = GUTTER_LEFT + categoryIndex * slotWidth.value + (slotWidth.value - groupWidth) / 2
   return groupStart + seriesIndex * (barW.value + BAR_GAP)
 }
 
@@ -101,8 +114,17 @@ function barPath(categoryIndex: number, seriesIndex: number): string {
 const hovered = ref<number | null>(null)
 const activeIndex = computed(() => hovered.value ?? props.selectedIndex ?? null)
 
-function handleClick(index: number) {
+function selectIndex(index: number) {
+  hovered.value = hovered.value === index ? null : index
   emit('select', index)
+}
+
+function onPointerEnter(index: number, event: PointerEvent) {
+  if (event.pointerType === 'mouse') hovered.value = index
+}
+
+function onPointerLeave(event: PointerEvent) {
+  if (event.pointerType === 'mouse') hovered.value = null
 }
 
 const tooltip = computed(() => {
@@ -116,7 +138,7 @@ const tooltip = computed(() => {
   const boxWidth = 92
   const lineHeight = 13
   const boxHeight = 18 + lines.length * lineHeight
-  const groupCenter = GUTTER_LEFT + index * SLOT_WIDTH + SLOT_WIDTH / 2
+  const groupCenter = GUTTER_LEFT + index * slotWidth.value + slotWidth.value / 2
   let tx = groupCenter - boxWidth / 2
   tx = Math.max(2, Math.min(svgWidth.value - boxWidth - 2, tx))
   const highestBarTop = Math.min(
@@ -138,22 +160,22 @@ const tooltip = computed(() => {
 
 <template>
   <div class="w-full">
-    <div v-if="series.length > 1" class="mb-2 flex flex-wrap gap-4 text-xs text-app-muted">
+    <div v-if="series.length > 1" class="mb-2 flex flex-wrap gap-3 text-xs text-app-muted">
       <span v-for="s in series" :key="s.key" class="inline-flex items-center gap-1.5">
         <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: s.color }" />
         {{ s.label }}
       </span>
     </div>
 
-    <div class="overflow-x-auto app-scrollbar">
+    <div ref="containerRef" class="w-full overflow-x-auto app-scrollbar">
       <svg
         :width="svgWidth"
         :height="svgHeight"
         :viewBox="`0 0 ${svgWidth} ${svgHeight}`"
+        class="block max-w-none"
         role="img"
         :aria-label="`Gráfica de barras: ${series.map((s) => s.label).join(', ')}`"
       >
-        <!-- Gridlines + y ticks -->
         <g>
           <line
             v-for="(tick, i) in yTicks"
@@ -179,27 +201,26 @@ const tooltip = computed(() => {
           </text>
         </g>
 
-        <!-- Groups -->
         <g v-for="(category, ci) in categories" :key="`cat-${ci}`">
           <rect
             v-if="activeIndex === ci"
-            :x="GUTTER_LEFT + ci * SLOT_WIDTH"
+            :x="GUTTER_LEFT + ci * slotWidth"
             :y="PADDING_TOP"
-            :width="SLOT_WIDTH"
+            :width="slotWidth"
             :height="CHART_HEIGHT"
             fill="var(--theme-hover)"
             rx="4"
           />
           <rect
-            :x="GUTTER_LEFT + ci * SLOT_WIDTH"
+            :x="GUTTER_LEFT + ci * slotWidth"
             :y="PADDING_TOP"
-            :width="SLOT_WIDTH"
+            :width="slotWidth"
             :height="CHART_HEIGHT"
             fill="transparent"
-            style="cursor: pointer"
-            @mouseenter="hovered = ci"
-            @mouseleave="hovered = null"
-            @click="handleClick(ci)"
+            class="cursor-pointer"
+            @pointerenter="onPointerEnter(ci, $event)"
+            @pointerleave="onPointerLeave($event)"
+            @click="selectIndex(ci)"
           />
           <path
             v-for="(s, si) in series"
@@ -209,7 +230,7 @@ const tooltip = computed(() => {
             style="pointer-events: none"
           />
           <text
-            :x="GUTTER_LEFT + ci * SLOT_WIDTH + SLOT_WIDTH / 2"
+            :x="GUTTER_LEFT + ci * slotWidth + slotWidth / 2"
             :y="PADDING_TOP + CHART_HEIGHT + 14"
             text-anchor="middle"
             fill="var(--theme-muted)"
@@ -219,7 +240,6 @@ const tooltip = computed(() => {
           </text>
         </g>
 
-        <!-- Tooltip -->
         <g v-if="tooltip" style="pointer-events: none">
           <rect
             :x="tooltip.x"
