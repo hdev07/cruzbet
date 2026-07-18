@@ -13,9 +13,11 @@ import { firstKickoffFromRoundMatches, hasRoundStarted } from '@/lib/baseQuiniel
 import {
   compareBaseRoundRank,
   countLiveProvisionalHits,
+  formatEntryLabel,
 } from '@/lib/baseQuinielaStats'
 import { teamCrestUrl, teamDisplayName } from '@/lib/teamDisplay'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
+import MarqueeText from '@/components/shared/MarqueeText.vue'
 import PaymentStatusChip from '@/components/shared/PaymentStatusChip.vue'
 import TeamFlag from '@/components/shared/TeamFlag.vue'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -201,12 +203,18 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
 function playerCellTitle(player: BaseRoundParticipant): string {
   const name = player.profiles?.username ?? 'Anónimo'
   const parts = [name]
-  if (player.entry_number > 1) parts.push(`Q${player.entry_number}`)
+  if (hasEntryLabel(player)) {
+    parts.push(formatEntryLabel(player.entry_number, player.entry_name))
+  }
   parts.push(player.verified ? 'Pagado' : 'Pago no verificado')
   if (isPreviousWinner(player.user_id)) parts.push('Ganador jornada previa')
   const rivalry = rivalryByKey.value.get(participantKey(player.user_id, player.entry_number))
   if (rivalry) parts.push(`${rivalry} contigo`)
   return parts.join(' · ')
+}
+
+function hasEntryLabel(player: BaseRoundParticipant): boolean {
+  return player.entry_number > 1 || Boolean(player.entry_name?.trim())
 }
 </script>
 
@@ -235,7 +243,7 @@ function playerCellTitle(player: BaseRoundParticipant): string {
                 :class="
                   exportLayout
                     ? 'min-w-40'
-                    : 'sticky left-0 z-20 w-32 max-w-32 overflow-hidden sm:w-auto sm:min-w-40 sm:max-w-48'
+                    : 'sticky left-0 z-20 w-40 max-w-40 overflow-hidden sm:w-auto sm:min-w-44 sm:max-w-52'
                 "
               >
                 <span class="whitespace-nowrap">Jugador</span>
@@ -306,14 +314,14 @@ function playerCellTitle(player: BaseRoundParticipant): string {
               <td
                 class="overflow-hidden border border-white/10 px-1.5 py-1.5 align-middle sm:px-3 sm:py-2"
                 :class="{
-                  'theme-table-sticky-mine sticky left-0 z-10 w-32 max-w-32 sm:w-auto sm:min-w-40 sm:max-w-48':
+                  'theme-table-sticky-mine sticky left-0 z-10 w-40 max-w-40 sm:w-auto sm:min-w-44 sm:max-w-52':
                     !exportLayout && isMyRow(player.user_id),
-                  'theme-table-sticky sticky left-0 z-10 w-32 max-w-32 sm:w-auto sm:min-w-40 sm:max-w-48':
+                  'theme-table-sticky sticky left-0 z-10 w-40 max-w-40 sm:w-auto sm:min-w-44 sm:max-w-52':
                     !exportLayout && !isMyRow(player.user_id),
                   'min-w-40': exportLayout,
                 }"
               >
-                <!-- Mobile: una sola línea (# + avatar + nombre + punto de pago) -->
+                <!-- Mobile: # + avatar + nombre (y quiniela debajo si aplica) -->
                 <div
                   v-if="!exportLayout"
                   class="flex min-w-0 items-center gap-1 sm:hidden"
@@ -345,15 +353,21 @@ function playerCellTitle(player: BaseRoundParticipant): string {
                       aria-hidden="true"
                     />
                   </div>
-                  <p
-                    class="min-w-0 flex-1 truncate text-[0.8rem] font-medium leading-none"
-                    :class="isMyRow(player.user_id) ? 'text-mundial-accent' : 'text-slate-200'"
-                  >
-                    {{ player.profiles?.username ?? 'Anónimo' }}
-                    <span v-if="player.entry_number > 1" class="text-slate-500">
-                      Q{{ player.entry_number }}
-                    </span>
-                  </p>
+                  <div class="min-w-0 flex-1">
+                    <MarqueeText
+                      :text="player.profiles?.username ?? 'Anónimo'"
+                      class="text-[0.8rem] font-medium leading-tight"
+                      :class="isMyRow(player.user_id) ? 'text-mundial-accent' : 'text-slate-200'"
+                      :delay="(index % 6) * 0.35"
+                    />
+                    <MarqueeText
+                      v-if="hasEntryLabel(player)"
+                      :text="formatEntryLabel(player.entry_number, player.entry_name)"
+                      class="text-[0.6rem] leading-tight text-slate-500"
+                      :duration="3"
+                      :delay="(index % 6) * 0.35 + 0.2"
+                    />
+                  </div>
                   <span
                     class="h-1.5 w-1.5 shrink-0 rounded-full"
                     :class="player.verified ? 'bg-mundial-green' : 'bg-amber-400'"
@@ -404,14 +418,20 @@ function playerCellTitle(player: BaseRoundParticipant): string {
                       :title="player.profiles?.username ?? 'Anónimo'"
                     >
                       {{ player.profiles?.username ?? 'Anónimo' }}
-                      <span v-if="player.entry_number > 1" class="text-slate-500">
-                        Q{{ player.entry_number }}
-                      </span>
-                      <span v-if="isMyRow(player.user_id)" class="text-mundial-accent">
+                      <span
+                        v-if="isMyRow(player.user_id)"
+                        class="text-mundial-accent"
+                      >
                         (tú)
                       </span>
                     </p>
                     <div class="mt-0.5 flex min-w-0 flex-wrap items-center gap-1">
+                      <span
+                        v-if="hasEntryLabel(player)"
+                        class="truncate text-[0.65rem] text-slate-500"
+                      >
+                        {{ formatEntryLabel(player.entry_number, player.entry_name) }}
+                      </span>
                       <PaymentStatusChip :verified="player.verified" compact />
                       <span
                         v-if="
