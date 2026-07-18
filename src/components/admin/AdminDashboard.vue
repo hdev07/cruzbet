@@ -233,7 +233,7 @@ function onCardClick(card: StatCard) {
           <span class="font-semibold text-mundial-accent">pozo {{ formatMxn(pool.net) }}</span>
         </p>
         <p class="mt-1 text-slate-500">
-          5% con hasta {{ ADMIN_FEE_SMALL_GROUP_MAX }} verificados; 10% si hay más.
+          10% con hasta {{ ADMIN_FEE_SMALL_GROUP_MAX }} verificados; 15% si hay más.
         </p>
       </div>
 

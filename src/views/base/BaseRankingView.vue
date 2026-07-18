@@ -232,7 +232,7 @@ watch(activeRoundId, (roundId, prevRoundId) => {
           </p>
           <p class="mt-0.5 text-[0.65rem] text-slate-500">
             <template v-if="poolBreakdown.verifiedCount">
-              {{ poolBreakdown.verifiedCount }} pagados · −{{ poolBreakdown.feePercent }}% admin
+              {{ poolBreakdown.verifiedCount }} pagados ·
             </template>
             <template v-else>
               Solo depósitos verificados

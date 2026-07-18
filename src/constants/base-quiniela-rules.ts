@@ -23,11 +23,11 @@ export const BASE_PAYMENT_NOTES = [
 ] as const
 
 /** Hasta este # de depósitos verificados la comisión es la baja. */
-export const ADMIN_FEE_SMALL_GROUP_MAX = 20
+export const ADMIN_FEE_SMALL_GROUP_MAX = 10
 /** Comisión admin con ≤ ADMIN_FEE_SMALL_GROUP_MAX verificados (0–1). */
-export const ADMIN_FEE_RATE_SMALL = 0.05
+export const ADMIN_FEE_RATE_SMALL = 0.1
 /** Comisión admin con más de ADMIN_FEE_SMALL_GROUP_MAX verificados (0–1). */
-export const ADMIN_FEE_RATE_LARGE = 0.1
+export const ADMIN_FEE_RATE_LARGE = 0.15
 
 export type RoundPoolBreakdown = {
   verifiedCount: number
@@ -108,7 +108,7 @@ export function baseQuinielaSaveAlert(matchCount: number) {
 export const BASE_QUINIELA_LOGIC = {
   title: 'Quiniela Liga MX',
   summary:
-    'Marca L, E o V en cada partido. Entrada $50 MXN: el pozo se calcula solo con depósitos verificados (5% comisión hasta 20 jugadores, 10% si hay más).',
+    'Marca L, E o V en cada partido. Entrada $50 MXN: el pozo se calcula solo con depósitos verificados (10% comisión hasta 10 jugadores, 15% si hay más).',
   howItWorks: [
     'Cada jornada incluye los partidos programados de Liga MX.',
     'Marca L (local), E (empate) o V (visitante) para cada partido.',
