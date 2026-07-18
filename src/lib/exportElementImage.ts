@@ -45,43 +45,115 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
-/** Incrusta <img> como data URL para que html-to-image no pierda escudos (CORS / lazy). */
-async function inlineImagesForExport(element: HTMLElement): Promise<() => void> {
-  const imgs = Array.from(element.querySelectorAll('img'))
-  const restores: Array<() => void> = []
+function waitForImage(img: HTMLImageElement): Promise<void> {
+  if (img.complete && img.naturalWidth > 0) return Promise.resolve()
+  return new Promise((resolve) => {
+    const done = () => resolve()
+    img.addEventListener('load', done, { once: true })
+    img.addEventListener('error', done, { once: true })
+  })
+}
 
-  await Promise.all(
-    imgs.map(async (img) => {
-      const original = img.getAttribute('src')
-      if (!original || original.startsWith('data:')) return
+async function decodeImage(img: HTMLImageElement): Promise<void> {
+  await waitForImage(img)
+  if (typeof img.decode === 'function') {
+    try {
+      await img.decode()
+    } catch {
+      /* decode puede fallar si el recurso es inválido; seguimos */
+    }
+  }
+}
 
-      const href = absoluteUrl(original)
-      try {
-        if (!img.complete || img.naturalWidth === 0) {
-          await new Promise<void>((resolve) => {
-            const done = () => resolve()
-            img.addEventListener('load', done, { once: true })
-            img.addEventListener('error', done, { once: true })
-            // Si ya estaba cargada entre medias
-            if (img.complete) resolve()
-          })
-        }
+/** Escudos same-origin vía canvas (más fiable que fetch+html-to-image). */
+function canvasDataUrlFromImage(img: HTMLImageElement): string | null {
+  if (!img.naturalWidth || !img.naturalHeight) return null
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(img, 0, 0)
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  }
+}
 
-        const res = await fetch(href, { mode: 'cors', credentials: 'omit' })
-        if (!res.ok) return
-        const dataUrl = await blobToDataUrl(await res.blob())
-        img.setAttribute('src', dataUrl)
-        restores.push(() => {
-          if (original) img.setAttribute('src', original)
-        })
-      } catch {
-        // Escudo externo sin CORS: se queda como esté / fallback de código
-      }
-    }),
-  )
+async function fetchAsDataUrl(href: string): Promise<string | null> {
+  try {
+    const res = await fetch(href, { mode: 'cors', credentials: 'omit', cache: 'force-cache' })
+    if (!res.ok) return null
+    return blobToDataUrl(await res.blob())
+  } catch {
+    return null
+  }
+}
 
-  return () => {
-    for (const restore of restores) restore()
+async function resolveImageDataUrl(img: HTMLImageElement): Promise<string | null> {
+  const raw = img.currentSrc || img.getAttribute('src') || ''
+  if (!raw) return null
+  if (raw.startsWith('data:')) return raw
+
+  await decodeImage(img)
+
+  const fromCanvas = canvasDataUrlFromImage(img)
+  if (fromCanvas) return fromCanvas
+
+  return fetchAsDataUrl(absoluteUrl(raw))
+}
+
+/**
+ * Clona el nodo fuera del árbol de Vue, incrusta escudos como data URL
+ * y captura desde ese clon (evita que Vue restaure el src y que cors/lazy pierdan logos).
+ */
+async function prepareExportClone(element: HTMLElement): Promise<{
+  clone: HTMLElement
+  cleanup: () => void
+}> {
+  const sourceImgs = Array.from(element.querySelectorAll('img'))
+  await Promise.all(sourceImgs.map((img) => decodeImage(img)))
+
+  const dataUrls = await Promise.all(sourceImgs.map((img) => resolveImageDataUrl(img)))
+
+  // Fuera de pantalla (sin opacity: el valor se hereda y deja el PNG transparente)
+  const host = document.createElement('div')
+  host.setAttribute('data-export-host', '')
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;'
+
+  const clone = element.cloneNode(true) as HTMLElement
+  host.appendChild(clone)
+  document.body.appendChild(host)
+
+  const cloneImgs = Array.from(clone.querySelectorAll('img'))
+  cloneImgs.forEach((img, index) => {
+    const dataUrl = dataUrls[index]
+    img.removeAttribute('srcset')
+    img.loading = 'eager'
+    img.decoding = 'sync'
+    if (dataUrl) {
+      img.src = dataUrl
+      // Dimensiones explícitas ayudan a foreignObject de html-to-image
+      const source = sourceImgs[index]
+      const w = Math.max(1, source?.clientWidth || img.width || 16)
+      const h = Math.max(1, source?.clientHeight || img.height || 16)
+      img.width = w
+      img.height = h
+      img.style.width = `${w}px`
+      img.style.height = `${h}px`
+      img.style.maxWidth = 'none'
+      img.style.objectFit = 'contain'
+    }
+  })
+
+  await Promise.all(cloneImgs.map((img) => decodeImage(img)))
+
+  return {
+    clone,
+    cleanup: () => {
+      host.remove()
+    },
   }
 }
 
@@ -90,14 +162,12 @@ export async function exportElementToPng(
   options: ExportElementImageOptions = {},
 ): Promise<{ dataUrl: string; filename: string }> {
   const filename = options.filename ?? buildExportFilename([APP_NAME, 'tabla'])
-  const restoreImages = await inlineImagesForExport(element)
+  const { clone, cleanup } = await prepareExportClone(element)
 
   try {
-    // Un frame para que el navegador pinte los data URLs
-    await new Promise((r) => requestAnimationFrame(() => r(null)))
-
-    const dataUrl = await toPng(element, {
-      cacheBust: true,
+    const dataUrl = await toPng(clone, {
+      // cacheBust rompe data URLs al añadir ?t=...
+      cacheBust: false,
       pixelRatio: options.pixelRatio ?? 2,
       backgroundColor: options.backgroundColor ?? '#151515',
       style: {
@@ -106,7 +176,7 @@ export async function exportElementToPng(
     })
     return { dataUrl, filename }
   } finally {
-    restoreImages()
+    cleanup()
   }
 }
 

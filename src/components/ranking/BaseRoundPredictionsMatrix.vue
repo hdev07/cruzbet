@@ -236,7 +236,11 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     :alt="teamDisplayName(match.match.home_team, 'Local')"
                     size="md"
                     eager
-                    img-class="!h-3 !w-3 shrink-0 rounded-sm object-contain"
+                    :img-class="
+                      exportLayout
+                        ? '!h-4 !w-4 shrink-0 rounded-sm object-contain'
+                        : '!h-3 !w-3 shrink-0 rounded-sm object-contain'
+                    "
                   />
                   <span class="text-[0.4rem] text-slate-600">·</span>
                   <TeamFlag
@@ -245,7 +249,11 @@ function matchTooltip(match: BaseQuinielaRoundMatch): string {
                     :alt="teamDisplayName(match.match.away_team, 'Visitante')"
                     size="md"
                     eager
-                    img-class="!h-3 !w-3 shrink-0 rounded-sm object-contain"
+                    :img-class="
+                      exportLayout
+                        ? '!h-4 !w-4 shrink-0 rounded-sm object-contain'
+                        : '!h-3 !w-3 shrink-0 rounded-sm object-contain'
+                    "
                   />
                 </div>
                 <span
