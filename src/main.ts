@@ -30,7 +30,8 @@ setActivePinia(pinia)
 const pwa = usePwaStore()
 const updateSW = registerSW({
   immediate: true,
-  onRegisteredSW() {
+  onRegisteredSW(_swUrl, registration) {
+    pwa.setRegistration(registration)
     pwa.markRegistered()
   },
   onNeedRefresh() {

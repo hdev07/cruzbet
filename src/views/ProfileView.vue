@@ -104,8 +104,41 @@ async function loadStats() {
   }
 }
 
-async function applyPwaUpdate() {
-  await pwa.applyUpdate()
+const checkingUpdate = ref(false)
+const applyingUpdate = ref(false)
+const updateFeedback = ref<'uptodate' | 'unavailable' | null>(null)
+let feedbackTimer: ReturnType<typeof setTimeout> | null = null
+
+function showUpdateFeedback(kind: 'uptodate' | 'unavailable') {
+  updateFeedback.value = kind
+  if (feedbackTimer) clearTimeout(feedbackTimer)
+  feedbackTimer = setTimeout(() => {
+    updateFeedback.value = null
+  }, 3200)
+}
+
+async function checkAndUpdateApp() {
+  if (checkingUpdate.value || applyingUpdate.value) return
+  updateFeedback.value = null
+  checkingUpdate.value = true
+  try {
+    if (pwa.needRefresh) {
+      applyingUpdate.value = true
+      await pwa.applyUpdate()
+      return
+    }
+
+    const result = await pwa.checkForUpdate()
+    if (result === 'available') {
+      applyingUpdate.value = true
+      await pwa.applyUpdate()
+      return
+    }
+    showUpdateFeedback(result)
+  } finally {
+    checkingUpdate.value = false
+    applyingUpdate.value = false
+  }
 }
 
 watch(
@@ -364,7 +397,7 @@ async function handleLogout() {
     </section>
 
     <section
-      class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+      class="space-y-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3"
       aria-label="Acerca de la app"
     >
       <div class="flex items-center gap-2 text-xs text-slate-500">
@@ -374,24 +407,42 @@ async function handleLogout() {
         </span>
       </div>
 
-      <span
-        v-if="pwa.needRefresh"
-        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-mundial-accent px-3 py-1.5 text-xs font-semibold text-mundial-dark"
-        role="button"
-        tabindex="0"
-        @click="applyPwaUpdate"
-        @keyup.enter="applyPwaUpdate"
+      <button
+        type="button"
+        class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-50"
+        :class="pwa.needRefresh ? 'border-mundial-accent/40 bg-mundial-accent/15 text-mundial-accent' : ''"
+        :disabled="checkingUpdate || applyingUpdate"
+        @click="checkAndUpdateApp"
       >
-        <RefreshCw class="h-3.5 w-3.5" />
-        Actualizar
-      </span>
-      <span
-        v-else
-        class="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-mundial-green"
+        <RefreshCw
+          class="h-4 w-4"
+          :class="checkingUpdate || applyingUpdate ? 'animate-spin' : ''"
+        />
+        <span v-if="applyingUpdate || (checkingUpdate && pwa.needRefresh)">Actualizando...</span>
+        <span v-else-if="checkingUpdate">Verificando...</span>
+        <span v-else-if="pwa.needRefresh">Actualizar ahora</span>
+        <span v-else>Verificar actualización</span>
+      </button>
+
+      <p
+        v-if="updateFeedback === 'uptodate'"
+        class="inline-flex items-center gap-1.5 text-xs font-medium text-mundial-green"
       >
         <Check class="h-3.5 w-3.5" />
-        Estás al día
-      </span>
+        Estás al día con la última versión
+      </p>
+      <p
+        v-else-if="updateFeedback === 'unavailable'"
+        class="text-xs text-slate-400"
+      >
+        No se pudo verificar ahora. Intenta de nuevo en unos segundos.
+      </p>
+      <p
+        v-else-if="pwa.needRefresh"
+        class="text-xs text-mundial-accent/90"
+      >
+        Hay una versión nueva lista. Pulsa para instalarla.
+      </p>
     </section>
   </div>
 </template>
