@@ -56,7 +56,7 @@ externo con el mismo `Authorization: Bearer …`.
 ## Nota
 
 El HTML de ligamx.net trae `<br>` sin escapar dentro de `data-gfSubtitle`, lo
-que rompe un regex ingenuo de `<button ...>`. El parser (`api/lib/ligamx-faltas.ts`)
+que rompe un regex ingenuo de `<button ...>`. El parser (`api/_lib/ligamx-faltas.ts`)
 ubica el tag por el `id` fijo y no por un match de apertura/cierre completo;
 si ligamx.net cambia ese `id` (`btnresetGrafFTARxJor`) hay que actualizar el
 scraper.

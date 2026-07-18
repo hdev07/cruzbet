@@ -52,4 +52,4 @@ En `vercel.json` hay un cron diario (`0 14 * * *` UTC ≈ 8:00 CDMX) hacia
 
 La tabla solo incluye clubes que Liga MX lista y que mapeamos a códigos
 internos (`AME`, `GDL`, …). Si un nombre nuevo no matchea, revisar
-`api/lib/ligamx-menores.ts` (`CLUB_ALIASES`).
+`api/_lib/ligamx-menores.ts` (`CLUB_ALIASES`).

@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   isAuthorizedSyncRequest,
   syncEspnMatches,
-} from './lib/sync-engine.js'
+} from './_lib/sync-engine.js'
 
 export default async function handler(
   request: VercelRequest,

@@ -8,7 +8,7 @@ import {
   fetchLiveSnapshotForMatch,
   getEspnDateCandidates,
   mergeEspnEvents,
-} from '../api/lib/espn-provider.js'
+} from '../api/_lib/espn-provider.js'
 
 const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY

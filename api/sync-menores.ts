@@ -1,8 +1,8 @@
 /// <reference types="node" />
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
-import { fetchMenoresSnapshot } from './lib/ligamx-menores.js'
-import { isAuthorizedSyncRequest } from './lib/sync-engine.js'
+import { fetchMenoresSnapshot } from './_lib/ligamx-menores.js'
+import { isAuthorizedSyncRequest } from './_lib/sync-engine.js'
 
 const ACTIVE_COMPETITION_SLUG =
   process.env.ACTIVE_COMPETITION_SLUG ?? 'liga-mx-apertura-2026'
