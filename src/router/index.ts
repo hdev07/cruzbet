@@ -92,9 +92,19 @@ const router = createRouter({
   ],
 })
 
+// Máximo tiempo que un guard puede esperar a que Supabase confirme la sesión
+// antes de decidir la ruta. Sin este límite, una red móvil lenta congela
+// cualquier navegación mientras getSession() sigue pendiente.
+const AUTH_GUARD_TIMEOUT_MS = 4000
+
 router.beforeEach(async (to: RouteLocationNormalized) => {
   const auth = useAuthStore()
-  if (!auth.authReady) await auth.init()
+  if (!auth.authReady) {
+    await Promise.race([
+      auth.init(),
+      new Promise<void>((resolve) => setTimeout(resolve, AUTH_GUARD_TIMEOUT_MS)),
+    ])
+  }
   if (to.path === '/login' && auth.isLoggedIn) return '/'
   if (to.meta.requiresAuth && !auth.isLoggedIn) return '/login'
   if (to.meta.requiresAdmin && !auth.isAdmin) return '/'

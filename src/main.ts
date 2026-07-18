@@ -47,8 +47,10 @@ app.use(router)
 
 useThemeStore()
 
+// No bloquear el mount con getSession(): en datos móviles lentos
+// un refresh pendiente deja la app entera en el splash.
 const auth = useAuthStore()
-await auth.init()
+void auth.init()
 
 app.mount('#app')
 

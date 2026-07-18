@@ -22,12 +22,19 @@ export const BASE_PAYMENT_NOTES = [
   'En el concepto o referencia escribe tu nombre de usuario para identificar el pago.',
 ] as const
 
-/** Hasta este # de depósitos verificados la comisión es la baja. */
-export const ADMIN_FEE_SMALL_GROUP_MAX = 10
-/** Comisión admin con ≤ ADMIN_FEE_SMALL_GROUP_MAX verificados (0–1). */
-export const ADMIN_FEE_RATE_SMALL = 0.1
-/** Comisión admin con más de ADMIN_FEE_SMALL_GROUP_MAX verificados (0–1). */
-export const ADMIN_FEE_RATE_LARGE = 0.15
+/**
+ * Tramos de infraestructura (el % baja entre más jugadores).
+ * maxVerified inclusive; el último tramo usa Infinity.
+ */
+export const ADMIN_FEE_TIERS = [
+  { maxVerified: 10, rate: 0.12 },
+  { maxVerified: 20, rate: 0.1 },
+  { maxVerified: Infinity, rate: 0.08 },
+] as const
+
+/** Texto corto de tramos para UI / reglas. */
+export const ADMIN_FEE_TIERS_LABEL =
+  '12% (1–10), 10% (11–20), 8% (21+)' as const
 
 export type RoundPoolBreakdown = {
   verifiedCount: number
@@ -35,19 +42,22 @@ export type RoundPoolBreakdown = {
   gross: number
   feeRate: number
   feePercent: number
+  /** Monto a infraestructura (hosting, app). */
   adminFee: number
-  /** Pozo a repartir (bruto − comisión). */
+  /** Pozo a repartir (bruto − infraestructura). */
   net: number
 }
 
-/** % de comisión según # de depósitos verificados. */
+/** % de infraestructura según # de depósitos verificados. */
 export function adminFeeRateForVerifiedCount(verifiedCount: number): number {
-  return verifiedCount <= ADMIN_FEE_SMALL_GROUP_MAX
-    ? ADMIN_FEE_RATE_SMALL
-    : ADMIN_FEE_RATE_LARGE
+  const n = Math.max(0, Math.floor(verifiedCount))
+  for (const tier of ADMIN_FEE_TIERS) {
+    if (n <= tier.maxVerified) return tier.rate
+  }
+  return ADMIN_FEE_TIERS[ADMIN_FEE_TIERS.length - 1]!.rate
 }
 
-/** Pozo automático: bruto, comisión y neto a repartir. */
+/** Pozo automático: bruto, infraestructura y neto a repartir. */
 export function computeRoundPool(verifiedCount: number): RoundPoolBreakdown {
   const safeCount = Math.max(0, Math.floor(verifiedCount))
   const feeRate = adminFeeRateForVerifiedCount(safeCount)
@@ -108,13 +118,13 @@ export function baseQuinielaSaveAlert(matchCount: number) {
 export const BASE_QUINIELA_LOGIC = {
   title: 'Quiniela Liga MX',
   summary:
-    'Marca L, E o V en cada partido. Entrada $50 MXN: el pozo se calcula solo con depósitos verificados (10% comisión hasta 10 jugadores, 15% si hay más).',
+    `Marca L, E o V en cada partido. Entrada $50 MXN: del recaudado, un % va a infraestructura (hosting y app) y el resto al pozo. Tramos: ${ADMIN_FEE_TIERS_LABEL}. Entre más jugadores, menor %.`,
   howItWorks: [
     'Cada jornada incluye los partidos programados de Liga MX.',
     'Marca L (local), E (empate) o V (visitante) para cada partido.',
     'Puedes cambiar tus picks mientras no hayas guardado la quiniela.',
     'Al guardar la quiniela completa, tus picks quedan bloqueados.',
     'Al terminar cada partido se revisa tu pick automáticamente.',
-    'El pozo a repartir se calcula solo: no hay que capturarlo a mano.',
+    `Del recaudado (solo depósitos verificados): % a infraestructura, el resto al pozo. Tramos ${ADMIN_FEE_TIERS_LABEL}.`,
   ],
 } as const

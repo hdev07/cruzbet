@@ -12,7 +12,7 @@ import {
   Users,
 } from '@lucide/vue'
 import {
-  ADMIN_FEE_SMALL_GROUP_MAX,
+  ADMIN_FEE_TIERS_LABEL,
   BASE_ENTRY_FEE_MXN,
   type RoundPoolBreakdown,
 } from '@/constants/base-quiniela-rules'
@@ -228,12 +228,12 @@ function onCardClick(card: StatCard) {
         class="theme-card border-mundial-accent/25 bg-mundial-accent/10 px-4 py-3 text-xs text-slate-300"
       >
         <p>
-          Recaudado {{ formatMxn(pool.gross) }} · comisión {{ pool.feePercent }}%
-          ({{ formatMxn(pool.adminFee) }}) ·
+          Recaudado {{ formatMxn(pool.gross) }} ·
+          infra {{ pool.feePercent }}% ({{ formatMxn(pool.adminFee) }}) ·
           <span class="font-semibold text-mundial-accent">pozo {{ formatMxn(pool.net) }}</span>
         </p>
         <p class="mt-1 text-slate-500">
-          10% con hasta {{ ADMIN_FEE_SMALL_GROUP_MAX }} verificados; 15% si hay más.
+          Tramos infra: {{ ADMIN_FEE_TIERS_LABEL }}. Entre más jugadores, menor %.
         </p>
       </div>
 

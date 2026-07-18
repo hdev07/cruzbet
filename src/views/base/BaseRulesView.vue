@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PaymentInfoCard from '@/components/shared/PaymentInfoCard.vue'
 import {
+  ADMIN_FEE_TIERS_LABEL,
   BASE_ENTRY_FEE_MXN,
   BASE_QUINIELA_LOGIC,
   BASE_QUINIELA_POINTS_PER_HIT,
@@ -33,6 +34,25 @@ import { QUINIELA_SUMMARY } from '@/constants/nav'
           <p class="text-sm text-slate-300">{{ step }}</p>
         </li>
       </ol>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-mundial-green">
+        Pozo e infraestructura
+      </h2>
+      <ul class="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
+        <li class="text-sm text-slate-300">
+          Del recaudado (solo depósitos verificados), un porcentaje cubre
+          <strong class="text-slate-200"> infraestructura</strong>
+          (hosting y app) y el resto va al
+          <strong class="text-mundial-accent"> pozo</strong>.
+        </li>
+        <li class="text-sm text-slate-300">
+          Tramos:
+          <strong class="text-mundial-green">{{ ADMIN_FEE_TIERS_LABEL }}</strong>.
+          Entre más jugadores, menor %.
+        </li>
+      </ul>
     </section>
 
     <section class="mb-8">

@@ -104,8 +104,42 @@ export default defineConfig(({ mode }) => ({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
-          // Nunca cachear la API de Supabase: NetworkFirst sin timeout
-          // cuelga el splash en datos móviles lentos / flaky.
+          // Auth: NUNCA cachear. Tokens y sesiones deben ir siempre a la red.
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          // Realtime (websockets): NetworkOnly, workbox no debe interferir.
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/realtime\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          // Storage: los objetos son grandes y pueden cachearse.
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'supabase-storage-public',
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // REST y RPC de solo lectura: NetworkFirst con timeout corto,
+          // así en datos móviles lentos servimos cache mientras la red responde,
+          // pero seguimos priorizando datos frescos cuando la red es rápida.
+          {
+            urlPattern: ({ url, request }) =>
+              /^https:\/\/.*\.supabase\.co\/(rest|graphql)\/.*/i.test(url.href) &&
+              request.method === 'GET',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-rest',
+              networkTimeoutSeconds: 8,
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 5 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Mutaciones (POST/PUT/PATCH/DELETE) siempre a la red.
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkOnly',

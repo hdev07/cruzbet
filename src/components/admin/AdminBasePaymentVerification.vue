@@ -269,7 +269,8 @@ const sortedRoundMatches = computed(() =>
         <span class="text-amber-300">{{ stats.pending }}</span> pendientes ·
         <span class="text-mundial-accent">{{ formatMxn(stats.pool.net) }}</span> en el pozo
         <span class="text-slate-500">
-          ({{ stats.pool.feePercent }}% comisión · recaudado {{ formatMxn(stats.pool.gross) }})
+          ({{ formatMxn(stats.pool.adminFee) }} infra {{ stats.pool.feePercent }}% ·
+          recaudado {{ formatMxn(stats.pool.gross) }})
         </span>
       </p>
 

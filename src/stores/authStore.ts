@@ -19,7 +19,8 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const profile = ref<Profile | null>(null)
   const authReady = ref(false)
-  let initialized = false
+  let initPromise: Promise<void> | null = null
+  let onlineListenerAttached = false
 
   const isLoggedIn = computed(() => !!user.value)
 
@@ -41,57 +42,56 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function init() {
-    if (initialized) {
-      if (!authReady.value) await waitForAuthReady()
-      return
-    }
-    initialized = true
+  function init(): Promise<void> {
+    if (initPromise) return initPromise
 
-    try {
-      const oauthCallback = hasOAuthCallbackInUrl()
+    initPromise = (async () => {
+      try {
+        const oauthCallback = hasOAuthCallbackInUrl()
 
-      const { data, error } = await supabase.auth.getSession()
-      if (error) console.error('Error al restaurar sesión:', error.message)
+        const { data, error } = await supabase.auth.getSession()
+        if (error) console.error('Error al restaurar sesión:', error.message)
 
-      user.value = data.session?.user ?? null
-      // No bloquear el arranque: en redes móviles lentas await fetchProfile
-      // deja la app en el splash sin montar.
-      if (user.value) void fetchProfile(user.value.id)
+        user.value = data.session?.user ?? null
+        // No bloquear el arranque: en redes móviles lentas await fetchProfile
+        // deja la app en el splash sin montar.
+        if (user.value) void fetchProfile(user.value.id)
 
-      if (oauthCallback && data.session) {
-        cleanupOAuthUrl()
-      }
-
-      // No usar async/await aquí: bloquea getSession() y deja la app sin montar tras OAuth.
-      supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
-        user.value = session?.user ?? null
-        if (user.value) {
-          void fetchProfile(user.value.id)
-        } else {
-          profile.value = null
-        }
-
-        if (oauthCallback && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+        if (oauthCallback && data.session) {
           cleanupOAuthUrl()
         }
-      })
-    } finally {
-      authReady.value = true
-    }
+
+        // No usar async/await aquí: bloquea getSession() y deja la app sin montar tras OAuth.
+        supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+          user.value = session?.user ?? null
+          if (user.value) {
+            void fetchProfile(user.value.id)
+          } else {
+            profile.value = null
+          }
+
+          if (oauthCallback && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+            cleanupOAuthUrl()
+          }
+        })
+
+        // Al recuperar red (típico al cambiar WiFi <-> datos móviles) forzamos
+        // una relectura de sesión para reintegrar el JWT sin depender del
+        // auto-refresh interno, que puede haber quedado abortado.
+        if (typeof window !== 'undefined' && !onlineListenerAttached) {
+          onlineListenerAttached = true
+          window.addEventListener('online', () => {
+            void supabase.auth.getSession()
+          })
+        }
+      } finally {
+        authReady.value = true
+      }
+    })()
+
+    return initPromise
   }
 
-  function waitForAuthReady(): Promise<void> {
-    if (authReady.value) return Promise.resolve()
-    return new Promise((resolve) => {
-      const stop = setInterval(() => {
-        if (authReady.value) {
-          clearInterval(stop)
-          resolve()
-        }
-      }, 10)
-    })
-  }
 
   async function loginWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
