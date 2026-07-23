@@ -17,6 +17,7 @@ import {
 } from '@lucide/vue'
 import { JORNADAS_PATH } from '@/constants/nav'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
+import PushReminderCard from '@/components/shared/PushReminderCard.vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 import { usePwaStore } from '@/stores/pwaStore'
@@ -347,6 +348,8 @@ async function handleLogout() {
         </div>
       </template>
     </section>
+
+    <PushReminderCard v-if="auth.user" class="mb-8" :user-id="auth.user.id" />
 
     <section class="mb-8 space-y-2">
       <RouterLink
