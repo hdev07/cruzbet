@@ -116,6 +116,18 @@ export function isRoundPastHalfway(matchCount: number, startedCount: number): bo
   return startedCount >= Math.ceil(matchCount / 2)
 }
 
+/** Momento (ms) en que se abre la siguiente jornada: mitad del intervalo entre kickoffs. */
+export function nextRoundOpensAtMs(
+  activeRoundId: string,
+  nextRoundId: string,
+  firstKickoffByRoundId: Record<string, number | null>,
+): number | null {
+  const activeStart = firstKickoffByRoundId[activeRoundId]
+  const nextStart = firstKickoffByRoundId[nextRoundId]
+  if (activeStart == null || nextStart == null) return null
+  return activeStart + (nextStart - activeStart) / 2
+}
+
 /** Mitad del intervalo entre el primer partido de la jornada activa y el de la siguiente. */
 export function isActiveRoundPastHalfwayByKickoff(
   activeRoundId: string,
@@ -124,10 +136,65 @@ export function isActiveRoundPastHalfwayByKickoff(
   now = Date.now(),
 ): boolean {
   const activeStart = firstKickoffByRoundId[activeRoundId]
-  const nextStart = firstKickoffByRoundId[nextRoundId]
-  if (activeStart == null || nextStart == null) return false
-  if (now < activeStart) return false
+  if (activeStart == null || now < activeStart) return false
 
-  const midpoint = activeStart + (nextStart - activeStart) / 2
-  return now >= midpoint
+  const midpoint = nextRoundOpensAtMs(activeRoundId, nextRoundId, firstKickoffByRoundId)
+  return midpoint != null && now >= midpoint
+}
+
+export type RoundFillState = {
+  /** ¿Se pueden marcar picks en esta jornada ahora mismo? */
+  open: boolean
+  /** Solo para la jornada siguiente: cuándo se abre (ms), si se conoce. */
+  opensAtMs: number | null
+}
+
+/**
+ * Regla de llenado: solo se llenan la jornada activa y la siguiente,
+ * y la siguiente se abre a mitad de la jornada activa (punto medio entre
+ * kickoffs). Jornadas posteriores quedan bloqueadas.
+ *
+ * La jornada activa y las pasadas se consideran abiertas aquí: sus candados
+ * reales son por partido (kickoff). Si faltan datos para resolver la regla,
+ * no se bloquea — los candados por partido siguen aplicando.
+ */
+export function resolveRoundFillState(
+  roundId: string,
+  rounds: BaseQuinielaRound[],
+  firstKickoffByRoundId: Record<string, number | null>,
+  now = Date.now(),
+): RoundFillState {
+  const active = resolveActiveBaseRound(rounds, firstKickoffByRoundId, now)
+  const target = rounds.find((r) => r.id === roundId)
+  if (!active || !target) return { open: true, opensAtMs: null }
+
+  if (target.round_number <= active.round_number) {
+    return { open: true, opensAtMs: null }
+  }
+
+  const next = resolveNextBaseRound(rounds, active)
+  if (next && target.id === next.id) {
+    return {
+      open: isActiveRoundPastHalfwayByKickoff(
+        active.id,
+        next.id,
+        firstKickoffByRoundId,
+        now,
+      ),
+      opensAtMs: nextRoundOpensAtMs(active.id, next.id, firstKickoffByRoundId),
+    }
+  }
+
+  return { open: false, opensAtMs: null }
+}
+
+/** Etiqueta legible de cuándo se abre una jornada (ej. "lunes 3 nov, 08:00 p.m."). */
+export function formatRoundOpensAt(ms: number): string {
+  return new Date(ms).toLocaleString('es-MX', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }

@@ -8,6 +8,8 @@ import {
 import {
   buildFirstKickoffByRoundId,
   resolveActiveBaseRound,
+  resolveRoundFillState,
+  type RoundFillState,
 } from '@/lib/baseQuinielaRound'
 import { getOfficialLeaderboardEntries, getTiedFirstPlaceEntries, sortLeaderboardEntries } from '@/lib/baseQuinielaWinners'
 import { compareBaseRoundRank } from '@/lib/baseQuinielaStats'
@@ -447,6 +449,11 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     return myPredictions.value.find((p) => p.match_id === matchId)
   }
 
+  /** Regla de llenado: jornada activa + la siguiente (a mitad de la activa). */
+  function roundFillState(roundId: string): RoundFillState {
+    return resolveRoundFillState(roundId, rounds.value, roundFirstKickoff.value)
+  }
+
   function isRoundOpenForPredictions(): boolean {
     return roundMatches.value.some(
       (rm) => rm.match && isMatchOpenForPredictions(rm.match),
@@ -467,6 +474,10 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
   ): Promise<BasePrediction> {
     if (isQuinielaSubmitted()) {
       throw new Error('Tu quiniela ya está guardada. No puedes cambiar tus picks.')
+    }
+
+    if (!roundFillState(roundId).open) {
+      throw new Error('Esta jornada aún no está abierta para marcar picks')
     }
 
     if (!isMatchOpenForPredictions(match)) {
@@ -838,6 +849,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     getPredictionForMatch,
     isQuinielaSubmitted,
     isRoundOpenForPredictions,
+    roundFillState,
     myProgress,
     savePrediction,
     submitQuiniela,

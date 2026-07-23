@@ -1,31 +1,39 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ChevronRight, Medal, Table2, Target } from '@lucide/vue'
-import PaymentInfoCard from '@/components/shared/PaymentInfoCard.vue'
+import { BookOpen, ChevronRight, Medal, Table2, Target } from '@lucide/vue'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
-import { BASE_QUINIELA_LOGIC } from '@/constants/base-quiniela-rules'
+import {
+  BASE_ENTRY_FEE_MXN,
+  BASE_QUINIELA_LOGIC,
+} from '@/constants/base-quiniela-rules'
 import { QUINIELA_SUMMARY } from '@/constants/nav'
-import { resolveUpcomingBaseRounds } from '@/lib/baseQuinielaRound'
+import {
+  formatRoundOpensAt,
+  resolveNextBaseRound,
+} from '@/lib/baseQuinielaRound'
 import { useAuthStore } from '@/stores/authStore'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
 
 const auth = useAuthStore()
 const baseStore = useBaseQuinielaStore()
 
-const quickStartSteps = [
-  'Marca L, E o V en cada partido antes de que empiece.',
-  'Completa todos los partidos de la jornada.',
-  'Guarda tu quiniela cuando esté lista.',
-] as const
-
 const activeRound = computed(() => baseStore.activeRound)
 const activeRoundHref = computed(() =>
   activeRound.value ? `/jornadas/${activeRound.value.id}` : null,
 )
 
-const upcomingRounds = computed(() =>
-  resolveUpcomingBaseRounds(baseStore.rounds, activeRound.value),
+/** Solo se muestra la siguiente jornada; se abre a mitad de la actual. */
+const nextRound = computed(() =>
+  resolveNextBaseRound(baseStore.rounds, activeRound.value),
+)
+const nextRoundFill = computed(() =>
+  nextRound.value ? baseStore.roundFillState(nextRound.value.id) : null,
+)
+const nextRoundOpensLabel = computed(() =>
+  nextRoundFill.value?.opensAtMs != null
+    ? formatRoundOpensAt(nextRoundFill.value.opensAtMs)
+    : null,
 )
 
 onMounted(async () => {
@@ -37,92 +45,45 @@ onMounted(async () => {
 
 const progress = computed(() => baseStore.myProgress())
 const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
+
+/** Enlaces secundarios: info y navegación, siempre al final de la vista. */
+const secondaryLinks = [
+  {
+    to: '/reglas',
+    icon: BookOpen,
+    title: 'Reglas y pagos',
+    subtitle: `Cómo funciona · $${BASE_ENTRY_FEE_MXN} MXN por quiniela · cuenta y CLABE`,
+  },
+  {
+    to: '/resultados',
+    icon: Medal,
+    title: 'Resultados de todos',
+    subtitle: 'Tabla comparativa L/E/V por jugador',
+  },
+  {
+    to: '/tablas',
+    icon: Table2,
+    title: 'Tablas Liga MX',
+    subtitle: 'General · Goleo · Menores · Fair Play',
+  },
+] as const
 </script>
 
 <template>
   <div>
-    <header class="mb-6">
+    <header class="mb-5">
       <p class="text-xs font-semibold uppercase tracking-widest text-mundial-accent">
         Liga MX
       </p>
       <h1 class="mt-1 text-2xl font-bold lg:text-3xl">Quiniela L · E · V</h1>
-      <p class="mt-2 max-w-lg text-sm text-slate-400 lg:text-base">
+      <p class="mt-1 max-w-lg text-sm text-slate-400">
         {{ QUINIELA_SUMMARY.tagline }}
       </p>
     </header>
 
-    <div class="mb-6 grid gap-3 sm:grid-cols-2">
-      <RouterLink
-        to="/resultados"
-        class="flex items-center gap-3 rounded-2xl border border-mundial-green/40 bg-mundial-green/10 px-4 py-3 transition hover:border-mundial-green/60 hover:bg-mundial-green/15"
-      >
-        <span
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-mundial-green/20 text-mundial-green"
-        >
-          <Medal class="h-5 w-5" :stroke-width="2" />
-        </span>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-semibold text-mundial-green">Resultados de todos</p>
-          <p class="text-xs text-app-muted">
-            Tabla comparativa L/E/V por jugador
-          </p>
-        </div>
-        <ChevronRight class="h-4 w-4 shrink-0 text-mundial-green" />
-      </RouterLink>
-
-      <RouterLink
-        to="/tablas"
-        class="flex items-center gap-3 rounded-2xl border border-mundial-accent/30 bg-mundial-accent/10 px-4 py-3 transition hover:border-mundial-accent/50 hover:bg-mundial-accent/15"
-      >
-        <span
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-mundial-accent/20 text-mundial-accent"
-        >
-          <Table2 class="h-5 w-5" :stroke-width="2" />
-        </span>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-semibold text-mundial-accent">Tablas Liga MX</p>
-          <p class="text-xs text-app-muted">
-            General · Goleo · Menores · Fair Play
-          </p>
-        </div>
-        <ChevronRight class="h-4 w-4 shrink-0 text-mundial-accent" />
-      </RouterLink>
-    </div>
-
-    <section
-      class="mb-6 rounded-xl border border-white/10 bg-white/5 p-4"
-      aria-label="Cómo funciona"
-    >
-      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-mundial-green">
-        ¿Cómo funciona?
-      </p>
-      <ol class="space-y-2">
-        <li
-          v-for="(step, index) in quickStartSteps"
-          :key="index"
-          class="flex gap-3 text-sm text-slate-300"
-        >
-          <span
-            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mundial-green/15 text-xs font-bold text-mundial-green"
-          >
-            {{ index + 1 }}
-          </span>
-          {{ step }}
-        </li>
-      </ol>
-      <RouterLink
-        to="/reglas"
-        class="mt-3 inline-flex text-xs font-semibold text-mundial-green hover:underline"
-      >
-        Ver reglas completas
-      </RouterLink>
-    </section>
-
-    <PaymentInfoCard class="mb-6" />
-
     <div
       v-if="!auth.isLoggedIn"
-      class="mb-6 rounded-xl border border-mundial-green/30 bg-mundial-green/10 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4"
+      class="mb-5 rounded-xl border border-mundial-green/30 bg-mundial-green/10 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4"
     >
       <div class="mb-3 sm:mb-0">
         <p class="text-sm font-medium text-slate-200">Entra para marcar tu quiniela</p>
@@ -162,7 +123,7 @@ const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
               {{ activeRound.title }}
             </p>
             <p class="mt-1 text-sm text-slate-400">
-              {{ activeRound.match_count }} partidos
+              {{ activeRound.match_count }} partidos · ${{ BASE_ENTRY_FEE_MXN }} MXN por quiniela
             </p>
 
             <div
@@ -192,10 +153,10 @@ const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
       </RouterLink>
     </section>
 
-    <section v-if="upcomingRounds.length">
+    <section v-if="nextRound" class="mb-8">
       <div class="mb-3 flex items-center justify-between gap-2">
         <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Otras jornadas
+          Siguiente jornada
         </p>
         <RouterLink
           to="/jornadas/todas"
@@ -205,19 +166,52 @@ const isSubmitted = computed(() => baseStore.isQuinielaSubmitted())
         </RouterLink>
       </div>
 
+      <RouterLink
+        :to="`/jornadas/${nextRound.id}`"
+        class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-mundial-green/30 hover:bg-mundial-green/5"
+      >
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-slate-300">
+          {{ nextRound.round_number }}
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-slate-200">{{ nextRound.title }}</p>
+          <p class="text-xs text-slate-500">{{ nextRound.match_count }} partidos</p>
+        </div>
+        <span
+          v-if="nextRoundFill?.open"
+          class="shrink-0 rounded-lg border border-mundial-green/30 bg-mundial-green/10 px-2.5 py-1 text-xs font-semibold text-mundial-green"
+        >
+          Ya puedes llenarla
+        </span>
+        <span
+          v-else
+          class="shrink-0 rounded-lg border border-white/10 bg-black/20 px-2.5 py-1 text-xs text-slate-400"
+        >
+          {{ nextRoundOpensLabel ? `Se abre el ${nextRoundOpensLabel}` : 'Se abre pronto' }}
+        </span>
+        <ChevronRight class="h-4 w-4 shrink-0 text-slate-500" />
+      </RouterLink>
+    </section>
+
+    <section aria-label="Más información">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        Más información
+      </p>
       <div class="space-y-2">
         <RouterLink
-          v-for="round in upcomingRounds"
-          :key="round.id"
-          :to="`/jornadas/${round.id}`"
-          class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-mundial-green/30 hover:bg-mundial-green/5"
+          v-for="link in secondaryLinks"
+          :key="link.to"
+          :to="link.to"
+          class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-mundial-accent/30 hover:bg-mundial-accent/5"
         >
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-slate-300">
-            {{ round.round_number }}
+          <span
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-slate-300"
+          >
+            <component :is="link.icon" class="h-4 w-4" :stroke-width="2" />
           </span>
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-slate-200">{{ round.title }}</p>
-            <p class="text-xs text-slate-500">{{ round.match_count }} partidos</p>
+            <p class="text-sm font-medium text-slate-200">{{ link.title }}</p>
+            <p class="truncate text-xs text-slate-500">{{ link.subtitle }}</p>
           </div>
           <ChevronRight class="h-4 w-4 shrink-0 text-slate-500" />
         </RouterLink>
