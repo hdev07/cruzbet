@@ -5,7 +5,6 @@ import { BarChart3, Table2 } from '@lucide/vue'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import FairPlayPanel from '@/components/tablas/FairPlayPanel.vue'
 import GoleoTable from '@/components/tablas/GoleoTable.vue'
-import LoMejorDelTorneo from '@/components/tablas/LoMejorDelTorneo.vue'
 import MenoresTable from '@/components/tablas/MenoresTable.vue'
 import StandingsTable from '@/components/tablas/StandingsTable.vue'
 import GoleoStatsPanel from '@/components/estadisticas/GoleoStatsPanel.vue'
@@ -31,7 +30,6 @@ const {
   menoresSyncedAt,
   competitions,
   selectedCompetitionId,
-  highlights,
 } = storeToRefs(store)
 
 const activeTab = ref<TablasTab>('tablas')
@@ -64,6 +62,8 @@ const sectionHint = computed(() => {
       return 'Regla de menores: minutos oficiales publicados por Liga MX'
     case 'fair-play':
       return 'Disciplina, tarjetas y faltas del torneo'
+    default:
+      return ''
   }
 })
 
@@ -169,7 +169,6 @@ onActivated(refresh)
       <p class="mb-4 text-sm text-app-muted">{{ sectionHint }}</p>
 
       <div v-if="showSkeleton" class="space-y-8">
-        <DataSkeleton v-if="activeSection === 'general'" variant="highlights" />
         <DataSkeleton
           variant="table"
           :rows="activeSection === 'goleo' ? 10 : 18"
@@ -182,8 +181,7 @@ onActivated(refresh)
       </div>
 
       <template v-else>
-        <div v-show="activeSection === 'general'" class="space-y-8">
-          <LoMejorDelTorneo :items="highlights" />
+        <div v-show="activeSection === 'general'">
           <StandingsTable :rows="standings" title="Tabla General" />
         </div>
 

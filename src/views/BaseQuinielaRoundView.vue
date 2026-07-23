@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { ArrowLeft, Lock, Medal, Wallet } from '@lucide/vue'
 import BaseQuinielaEntrySelector from '@/components/predictions/BaseQuinielaEntrySelector.vue'
 import BaseQuinielaGrid from '@/components/predictions/BaseQuinielaGrid.vue'
+import PaymentReceiptUpload from '@/components/predictions/PaymentReceiptUpload.vue'
 import PaymentInfoCard from '@/components/shared/PaymentInfoCard.vue'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
 import SkeletonBone from '@/components/shared/SkeletonBone.vue'
@@ -26,6 +27,11 @@ const entrySelectorError = ref<string | null>(null)
 
 const matchCount = computed(
   () => baseStore.currentRound?.match_count ?? BASE_QUINIELA_MATCHES_PER_ROUND,
+)
+
+/** Comprobante: solo cuando la quiniela actual ya se guardó. */
+const showReceiptCard = computed(
+  () => auth.isLoggedIn && !!auth.user && baseStore.isQuinielaSubmitted(),
 )
 
 /** Regla: solo la jornada activa y la siguiente (a mitad de la activa) se llenan. */
@@ -124,6 +130,13 @@ watch(roundId, loadRound)
         v-model:error="entrySelectorError"
         :round-id="roundId"
         :user-id="auth.user?.id"
+      />
+
+      <PaymentReceiptUpload
+        v-if="showReceiptCard && auth.user"
+        class="mb-5"
+        :round-id="roundId"
+        :user-id="auth.user.id"
       />
 
       <section class="mb-6">

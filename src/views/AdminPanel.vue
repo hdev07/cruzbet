@@ -15,6 +15,7 @@ import type {
   AdminPaymentStats,
 } from '@/components/admin/AdminDashboard.vue'
 import AdminLiveSyncPanel from '@/components/admin/AdminLiveSyncPanel.vue'
+import AdminPinReset from '@/components/admin/AdminPinReset.vue'
 import AdminMatchDetail from '@/components/admin/AdminMatchDetail.vue'
 import AdminMatchList from '@/components/admin/AdminMatchList.vue'
 import { APP_NAME } from '@/constants/branding'
@@ -305,6 +306,7 @@ watch(activeRoundId, async (id) => {
         :loading="statsLoading"
         @navigate="onDashboardNavigate"
       />
+      <AdminPinReset class="mx-4 mb-6 mt-4 md:mx-6" />
     </div>
 
     <!-- ========== JORNADAS ========== -->

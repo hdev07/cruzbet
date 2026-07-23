@@ -5,9 +5,11 @@ import {
   CheckCircle2,
   CircleDashed,
   Loader2,
+  ReceiptText,
   RotateCcw,
   Search,
 } from '@lucide/vue'
+import { supabase } from '@/lib/supabase'
 import AdminRoundTableExport from '@/components/admin/AdminRoundTableExport.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import DataSkeleton from '@/components/shared/DataSkeleton.vue'
@@ -198,6 +200,28 @@ async function confirmResetQuiniela() {
     error.value = e instanceof Error ? e.message : 'Error al reestablecer quiniela'
   } finally {
     resettingKey.value = null
+  }
+}
+
+const openingReceiptKey = ref<string | null>(null)
+
+/** Abre el comprobante subido por el jugador (URL firmada, bucket privado). */
+async function viewReceipt(participant: BaseRoundParticipant) {
+  if (!participant.receipt_path) return
+  openingReceiptKey.value = participantKey(participant)
+  error.value = ''
+  try {
+    const { data, error: signErr } = await supabase.storage
+      .from('payment-receipts')
+      .createSignedUrl(participant.receipt_path, 300)
+    if (signErr || !data?.signedUrl) {
+      throw signErr ?? new Error('No se pudo abrir el comprobante')
+    }
+    window.open(data.signedUrl, '_blank', 'noopener')
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'No se pudo abrir el comprobante'
+  } finally {
+    openingReceiptKey.value = null
   }
 }
 
@@ -392,6 +416,21 @@ const sortedRoundMatches = computed(() =>
               </button>
 
               <button
+                v-if="participant.receipt_path"
+                type="button"
+                class="inline-flex min-w-[7rem] items-center justify-center gap-1.5 rounded-xl border border-mundial-accent/40 bg-mundial-accent/10 px-3 py-2 text-xs font-semibold text-mundial-accent hover:bg-mundial-accent/15 disabled:opacity-50"
+                :disabled="openingReceiptKey === participantKey(participant)"
+                @click="viewReceipt(participant)"
+              >
+                <Loader2
+                  v-if="openingReceiptKey === participantKey(participant)"
+                  class="h-3.5 w-3.5 animate-spin"
+                />
+                <ReceiptText v-else class="h-3.5 w-3.5 shrink-0" />
+                Comprobante
+              </button>
+
+              <button
                 type="button"
                 class="inline-flex min-w-[7rem] items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/15 disabled:opacity-50"
                 :disabled="resettingKey === participantKey(participant) || togglingKey === participantKey(participant)"
@@ -507,6 +546,22 @@ const sortedRoundMatches = computed(() =>
                 <CheckCircle2 v-else-if="participant.verified" class="h-3.5 w-3.5 shrink-0" />
                 <CircleDashed v-else class="h-3.5 w-3.5 shrink-0" />
                 <span class="truncate">{{ participant.verified ? 'OK' : 'Pend.' }}</span>
+              </button>
+
+              <button
+                v-if="participant.receipt_path"
+                type="button"
+                class="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-mundial-accent/40 bg-mundial-accent/10 px-2 py-1 text-[10px] font-semibold text-mundial-accent hover:bg-mundial-accent/15 disabled:opacity-50"
+                :disabled="openingReceiptKey === participantKey(participant)"
+                title="Ver comprobante de pago subido por el jugador"
+                @click="viewReceipt(participant)"
+              >
+                <Loader2
+                  v-if="openingReceiptKey === participantKey(participant)"
+                  class="h-3 w-3 animate-spin"
+                />
+                <ReceiptText v-else class="h-3 w-3 shrink-0" />
+                Recibo
               </button>
 
               <button

@@ -18,7 +18,6 @@ import type {
   MenoresStandingRow,
   ScorerRow,
   StandingRow,
-  TournamentHighlight,
 } from '@/types/tablas'
 
 type CardEventRow = {
@@ -216,66 +215,6 @@ export const useTablasStore = defineStore('tablas', () => {
   })
 
   const staffCards = ref({ yellow: 0, red: 0 })
-
-  const highlights = computed<TournamentHighlight[]>(() => {
-    const topScorer = scorers.value[0]
-    const bestAttack = [...standings.value].sort(
-      (a, b) => b.goalsFor - a.goalsFor || b.points - a.points,
-    )[0]
-    const bestDefense =
-      [...standings.value]
-        .filter((row) => row.played > 0)
-        .sort((a, b) => a.goalsAgainst - b.goalsAgainst || b.points - a.points)[0] ??
-      standings.value[0]
-    const fairest = fairPlayTable.value[0]
-    const totalMinutes = rawMatchesMeta.value.reduce((sum, m) => sum + m.minutesPlayed, 0)
-
-    return [
-      {
-        title: 'Lo Mejor del Torneo',
-        subtitle: 'Goleador',
-        value: topScorer?.goals ?? 0,
-        unit: 'Goles',
-        secondaryLabel: 'Anota Cada',
-        secondaryValue:
-          topScorer && topScorer.goals > 0 ? Math.round(totalMinutes / topScorer.goals) : 0,
-        secondaryUnit: 'Minutos',
-        entityName: topScorer?.playerName ?? 'Por definir',
-        entityKind: 'player',
-        teamCode: topScorer?.teamCode ?? null,
-      },
-      {
-        title: 'Ofensiva',
-        subtitle: 'Goles a Favor',
-        value: bestAttack?.goalsFor ?? 0,
-        unit: 'Goles',
-        entityName: bestAttack?.teamName ?? 'Por definir',
-        entityKind: 'club',
-        teamCode: bestAttack?.teamCode ?? null,
-      },
-      {
-        title: 'Defensiva',
-        subtitle: 'Goles en Contra',
-        value: bestDefense?.goalsAgainst ?? 0,
-        unit: 'Goles',
-        entityName: bestDefense?.teamName ?? 'Por definir',
-        entityKind: 'club',
-        teamCode: bestDefense?.teamCode ?? null,
-      },
-      {
-        title: 'Fair play',
-        subtitle: 'Disciplina',
-        value: fairest?.yellow ?? 0,
-        unit: 'Amarillas',
-        secondaryLabel: 'Rojas',
-        secondaryValue: fairest?.red ?? 0,
-        secondaryUnit: 'Tarjetas',
-        entityName: fairest?.teamName ?? 'Torneo',
-        entityKind: 'club',
-        teamCode: fairest?.teamCode ?? null,
-      },
-    ]
-  })
 
   const jornadaOptions = computed(() => [
     { value: 'torneo' as const, label: 'Torneo' },
@@ -533,7 +472,6 @@ export const useTablasStore = defineStore('tablas', () => {
     cardTotals,
     playerCards,
     staffCards,
-    highlights,
     jornadaOptions,
     clubOptions,
     selectedJornadaLabel,

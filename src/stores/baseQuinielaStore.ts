@@ -540,6 +540,79 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     }
   }
 
+  /**
+   * Copia los picks de otra entrada del mismo usuario a la entrada actual
+   * (solo partidos aún abiertos y sin pick previo). Devuelve cuántos copió.
+   */
+  async function copyEntryPredictions(
+    roundId: string,
+    userId: string,
+    fromEntry: number,
+  ): Promise<number> {
+    const toEntry = currentEntryNumber.value
+    if (fromEntry === toEntry) return 0
+    if (isQuinielaSubmitted()) {
+      throw new Error('Tu quiniela ya está guardada. No puedes cambiar tus picks.')
+    }
+    if (!roundFillState(roundId).open) {
+      throw new Error('Esta jornada aún no está abierta para marcar picks')
+    }
+
+    saving.value = true
+    try {
+      const { data, error } = await supabase
+        .from('base_predictions')
+        .select('match_id, predicted_winner')
+        .eq('round_id', roundId)
+        .eq('user_id', userId)
+        .eq('entry_number', fromEntry)
+
+      if (error) throw error
+
+      const openMatchIds = new Set(
+        roundMatches.value
+          .filter((rm) => rm.match && isMatchOpenForPredictions(rm.match))
+          .map((rm) => rm.match_id),
+      )
+      const alreadyPicked = new Set(myPredictions.value.map((p) => p.match_id))
+
+      const rows = (data ?? [])
+        .filter(
+          (row) => openMatchIds.has(row.match_id) && !alreadyPicked.has(row.match_id),
+        )
+        .map((row) => ({
+          user_id: userId,
+          round_id: roundId,
+          entry_number: toEntry,
+          match_id: row.match_id,
+          predicted_winner: row.predicted_winner,
+        }))
+
+      if (!rows.length) return 0
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from('base_predictions')
+        .insert(rows)
+        .select()
+
+      if (insertErr) throw insertErr
+
+      myPredictions.value = [...myPredictions.value, ...((inserted ?? []) as BasePrediction[])]
+
+      const entryIdx = myEntries.value.findIndex((e) => e.entry_number === toEntry)
+      if (entryIdx >= 0) {
+        myEntries.value[entryIdx] = {
+          ...myEntries.value[entryIdx]!,
+          prediction_count: myPredictions.value.length,
+        }
+      }
+
+      return rows.length
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function submitQuiniela(
     roundId: string,
     userId: string,
@@ -586,6 +659,56 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     }
   }
 
+  const RECEIPT_MAX_BYTES = 8 * 1024 * 1024
+
+  /** Sube el comprobante de pago de la entrada actual y lo liga al registro de pago. */
+  async function uploadPaymentReceipt(
+    roundId: string,
+    userId: string,
+    file: File,
+  ): Promise<void> {
+    if (!file.type.startsWith('image/')) {
+      throw new Error('El comprobante debe ser una imagen (foto o captura)')
+    }
+    if (file.size > RECEIPT_MAX_BYTES) {
+      throw new Error('La imagen pesa más de 8 MB. Usa una captura más ligera.')
+    }
+
+    const entryNumber = currentEntryNumber.value
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+    const path = `${userId}/${roundId}-${entryNumber}.${ext}`
+
+    const { error: uploadErr } = await supabase.storage
+      .from('payment-receipts')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (uploadErr) throw uploadErr
+
+    const { error: rpcErr } = await supabase.rpc('set_base_payment_receipt', {
+      p_round_id: roundId,
+      p_entry_number: entryNumber,
+      p_path: path,
+    })
+    if (rpcErr) throw rpcErr
+
+    const uploadedAt = new Date().toISOString()
+    if (mySubmission.value) {
+      mySubmission.value = {
+        ...mySubmission.value,
+        receipt_path: path,
+        receipt_uploaded_at: uploadedAt,
+      }
+    } else {
+      mySubmission.value = {
+        user_id: userId,
+        round_id: roundId,
+        entry_number: entryNumber,
+        verified: false,
+        receipt_path: path,
+        receipt_uploaded_at: uploadedAt,
+      }
+    }
+  }
+
   async function fetchParticipantCountsByRound(): Promise<Record<string, number>> {
     const { data, error } = await supabase
       .from('base_predictions')
@@ -620,7 +743,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
       supabase.from('base_predictions').select('*').eq('round_id', roundId).order('created_at'),
       supabase
         .from('base_round_payments')
-        .select('user_id, entry_number, verified, entry_name')
+        .select('user_id, entry_number, verified, entry_name, receipt_path')
         .eq('round_id', roundId),
     ])
 
@@ -630,7 +753,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     const typedPreds = preds as BasePrediction[]
     const paymentMetaMap = new Map<
       string,
-      { verified: boolean; entry_name: string | null }
+      { verified: boolean; entry_name: string | null; receipt_path: string | null }
     >(
       (payments ?? []).map(
         (p: {
@@ -638,7 +761,15 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
           entry_number: number
           verified: boolean
           entry_name?: string | null
-        }) => [`${p.user_id}:${p.entry_number}`, { verified: p.verified, entry_name: p.entry_name ?? null }],
+          receipt_path?: string | null
+        }) => [
+          `${p.user_id}:${p.entry_number}`,
+          {
+            verified: p.verified,
+            entry_name: p.entry_name ?? null,
+            receipt_path: p.receipt_path ?? null,
+          },
+        ],
       ),
     )
     const userIds = [...new Set(typedPreds.map((p) => p.user_id))]
@@ -674,6 +805,7 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
           entry_number,
           entry_name: paymentMeta?.entry_name ?? null,
           verified: paymentMeta?.verified ?? false,
+          receipt_path: paymentMeta?.receipt_path ?? null,
           profiles: profile
             ? { username: profile.username, avatar: profile.avatar }
             : undefined,
@@ -852,6 +984,8 @@ export const useBaseQuinielaStore = defineStore('baseQuiniela', () => {
     roundFillState,
     myProgress,
     savePrediction,
+    copyEntryPredictions,
     submitQuiniela,
+    uploadPaymentReceipt,
   }
 })

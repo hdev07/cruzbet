@@ -28,11 +28,6 @@ const router = createRouter({
       meta: { layout: 'mobile', title: 'Quiniela', wide: true },
     },
     {
-      path: '/jornadas/todas',
-      component: () => import('@/views/BaseQuinielaAllRoundsView.vue'),
-      meta: { layout: 'mobile', title: 'Todas las jornadas', wide: true },
-    },
-    {
       path: '/jornadas/:id',
       component: () => import('@/views/BaseQuinielaRoundView.vue'),
       meta: { layout: 'mobile', title: 'Jornada', wide: true },

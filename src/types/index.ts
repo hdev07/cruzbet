@@ -169,6 +169,8 @@ export interface BaseRoundPayment {
   verified: boolean
   verified_at?: string | null
   submitted_at?: string | null
+  receipt_path?: string | null
+  receipt_uploaded_at?: string | null
   created_at?: string
 }
 
@@ -185,6 +187,7 @@ export interface BaseRoundParticipant {
   entry_number: number
   entry_name?: string | null
   verified: boolean
+  receipt_path?: string | null
   profiles?: Pick<Profile, 'username' | 'avatar'>
   predictions: BasePrediction[]
   total_points: number

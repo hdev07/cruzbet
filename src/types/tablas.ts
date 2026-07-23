@@ -44,19 +44,6 @@ export type ScorerRow = {
   goals: number
 }
 
-export type TournamentHighlight = {
-  title: string
-  subtitle: string
-  value: number
-  unit: string
-  secondaryLabel?: string
-  secondaryValue?: number
-  secondaryUnit?: string
-  entityName: string
-  entityKind: 'player' | 'club' | 'generic'
-  teamCode?: string | null
-}
-
 export type FairPlayClubRow = {
   position: number
   teamCode: string

@@ -154,17 +154,9 @@ const secondaryLinks = [
     </section>
 
     <section v-if="nextRound" class="mb-8">
-      <div class="mb-3 flex items-center justify-between gap-2">
-        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Siguiente jornada
-        </p>
-        <RouterLink
-          to="/jornadas/todas"
-          class="text-xs text-mundial-accent hover:underline"
-        >
-          Ver todas
-        </RouterLink>
-      </div>
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        Siguiente jornada
+      </p>
 
       <RouterLink
         :to="`/jornadas/${nextRound.id}`"

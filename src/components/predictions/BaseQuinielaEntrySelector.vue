@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Check, Pencil, Plus, X } from '@lucide/vue'
+import { Check, Copy, Pencil, Plus, X } from '@lucide/vue'
 import { BASE_ENTRY_FEE_MXN } from '@/constants/base-quiniela-rules'
 import { formatEntryLabel, validateEntryName } from '@/lib/baseQuinielaStats'
 import { useBaseQuinielaStore } from '@/stores/baseQuinielaStore'
@@ -58,6 +58,36 @@ function createNewEntry() {
     emit('changed')
   } catch (err) {
     formError.value = err instanceof Error ? err.message : 'No se pudo crear otra quiniela'
+  }
+}
+
+/** Fuente para copiar picks: otra entrada con picks, cuando la actual está vacía. */
+const copySource = computed(() => {
+  const current = currentEntryData.value
+  if (!current || current.prediction_count > 0 || current.is_submitted) return null
+  const candidates = entries.value.filter(
+    (entry) => entry.entry_number !== currentEntry.value && entry.prediction_count > 0,
+  )
+  return candidates[candidates.length - 1] ?? null
+})
+
+const copying = ref(false)
+
+async function copyFromSource() {
+  if (!props.userId || !copySource.value || copying.value) return
+  formError.value = null
+  copying.value = true
+  try {
+    await baseStore.copyEntryPredictions(
+      props.roundId,
+      props.userId,
+      copySource.value.entry_number,
+    )
+    emit('changed')
+  } catch (err) {
+    formError.value = err instanceof Error ? err.message : 'No se pudieron copiar los picks'
+  } finally {
+    copying.value = false
   }
 }
 
@@ -154,6 +184,17 @@ async function saveEntryName() {
         Nueva quiniela
       </button>
     </div>
+
+    <button
+      v-if="copySource"
+      type="button"
+      class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-mundial-accent/40 hover:text-mundial-accent disabled:opacity-50"
+      :disabled="copying || baseStore.saving"
+      @click="copyFromSource"
+    >
+      <Copy class="h-3.5 w-3.5" />
+      {{ copying ? 'Copiando...' : `Copiar picks de ${formatEntryLabel(copySource.entry_number, copySource.entry_name)}` }}
+    </button>
 
     <div
       v-if="currentEntryData && userId"
