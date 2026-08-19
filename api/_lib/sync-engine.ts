@@ -7,6 +7,11 @@ import {
   mergeEspnEvents,
 } from './espn-provider.js'
 import type { DbMatchRow, SyncResult } from './types.js'
+import {
+  resolveSyncWindow,
+  type SyncWindow,
+  type SyncWindowOptions,
+} from './sync-window.js'
 
 const ACTIVE_COMPETITION_SLUG =
   process.env.ACTIVE_COMPETITION_SLUG ?? 'liga-mx-apertura-2026'
@@ -80,10 +85,77 @@ async function mapWithConcurrency<T>(
   )
 }
 
-export async function syncEspnMatches(options?: {
-  matchId?: string
-}): Promise<SyncResult> {
+function matchesBaseQuery(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  competitionId: string,
+) {
+  return supabase
+    .from('matches')
+    .select(MATCH_SELECT)
+    .eq('competition_id', competitionId)
+    .eq('auto_sync_enabled', true)
+}
+
+async function fetchMatchesForWindow(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  competitionId: string,
+  window: SyncWindow,
+): Promise<DbMatchRow[]> {
+  const base = () => matchesBaseQuery(supabase, competitionId)
+
+  if (window.mode === 'single') {
+    const { data, error } = await base().eq('id', window.matchId)
+    if (error) throw new Error(error.message)
+    return (data ?? []).map(normalizeMatchRow)
+  }
+
+  if (window.mode === 'range') {
+    const { data, error } = await base()
+      .gte('match_date', window.fromIso)
+      .lte('match_date', window.toIso)
+      .order('match_date')
+    if (error) throw new Error(error.message)
+    return (data ?? []).map(normalizeMatchRow)
+  }
+
+  const [live, catchupPending, catchupNeverSynced] = await Promise.all([
+    base()
+      .gte('match_date', window.liveFromIso)
+      .lte('match_date', window.liveToIso),
+    base()
+      .gte('match_date', window.catchupFromIso)
+      .lt('match_date', window.catchupToIso)
+      .in('status', ['scheduled', 'live']),
+    base()
+      .gte('match_date', window.catchupFromIso)
+      .lt('match_date', window.catchupToIso)
+      .is('live_sync_at', null),
+  ])
+
+  if (live.error) throw new Error(live.error.message)
+  if (catchupPending.error) throw new Error(catchupPending.error.message)
+  if (catchupNeverSynced.error) throw new Error(catchupNeverSynced.error.message)
+
+  const byId = new Map<string, DbMatchRow>()
+  for (const row of [
+    ...(live.data ?? []),
+    ...(catchupPending.data ?? []),
+    ...(catchupNeverSynced.data ?? []),
+  ]) {
+    const match = normalizeMatchRow(row)
+    byId.set(match.id, match)
+  }
+
+  return [...byId.values()].sort((a, b) =>
+    (a.match_date ?? '').localeCompare(b.match_date ?? ''),
+  )
+}
+
+export async function syncEspnMatches(
+  options?: SyncWindowOptions,
+): Promise<SyncResult> {
   const supabase = getSupabaseAdmin()
+  const syncWindow = resolveSyncWindow(new Date(), options)
 
   const { data: competition, error: competitionError } = await supabase
     .from('competitions')
@@ -99,25 +171,11 @@ export async function syncEspnMatches(options?: {
     )
   }
 
-  let matchQuery = supabase
-    .from('matches')
-    .select(MATCH_SELECT)
-    .eq('competition_id', competition.id)
-    .eq('auto_sync_enabled', true)
-
-  if (options?.matchId) {
-    matchQuery = matchQuery.eq('id', options.matchId)
-  } else {
-    const now = Date.now()
-    matchQuery = matchQuery
-      .gte('match_date', new Date(now - 12 * 60 * 60 * 1000).toISOString())
-      .lte('match_date', new Date(now + 2 * 60 * 60 * 1000).toISOString())
-  }
-
-  const { data, error } = await matchQuery.order('match_date')
-  if (error) throw new Error(error.message)
-
-  const matches = (data ?? []).map(normalizeMatchRow)
+  const matches = await fetchMatchesForWindow(
+    supabase,
+    competition.id,
+    syncWindow,
+  )
   const result: SyncResult = {
     processed: matches.length,
     matched: 0,

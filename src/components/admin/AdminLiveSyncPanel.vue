@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { RefreshCw, Radio, Zap, ZapOff } from '@lucide/vue'
+import { CalendarDays, Radio, RefreshCw, Zap, ZapOff } from '@lucide/vue'
 import { hasMatchesInSyncWindow, triggerLiveSync } from '@/lib/liveSync'
 import { supabase } from '@/lib/supabase'
 import { useMatchStore } from '@/stores/matchStore'
@@ -40,18 +40,48 @@ function formatSyncTime(iso: string | null | undefined) {
   })
 }
 
-async function syncAllNow() {
+function formatSyncResult(result: {
+  processed?: number
+  updated?: number
+  skipped?: number
+}) {
+  const processed = result.processed ?? 0
+  const updated = result.updated ?? 0
+  const skipped = result.skipped ?? 0
+  return `${updated} actualizados de ${processed} procesados` +
+    (skipped ? ` (${skipped} sin cambios)` : '')
+}
+
+async function runSync(
+  options?: Parameters<typeof triggerLiveSync>[0],
+  emptyMessage = 'No había partidos para sincronizar',
+) {
   saving.value = true
   message.value = ''
   error.value = ''
-  const result = await triggerLiveSync()
+  const result = await triggerLiveSync(options)
   saving.value = false
   if (!result.ok) {
     error.value = result.error ?? 'No se pudo sincronizar'
+    if ((result.updated ?? 0) > 0) {
+      await matchStore.fetchMatches({ force: true })
+    }
     return
   }
-  message.value = 'Todos los partidos en ventana sincronizados'
+  message.value =
+    (result.processed ?? 0) === 0 ? emptyMessage : formatSyncResult(result)
   await matchStore.fetchMatches({ force: true })
+}
+
+async function syncAllNow() {
+  await runSync(undefined, 'No había partidos en ventana ni pendientes de catch-up')
+}
+
+async function recoverLastWeek() {
+  await runSync(
+    { days: 8 },
+    'No había partidos en los últimos 8 días',
+  )
 }
 
 async function setAutoSyncForAll(enabled: boolean) {
@@ -84,19 +114,30 @@ async function setAutoSyncForAll(enabled: boolean) {
             Sync en vivo — todos los partidos
           </h2>
           <p class="mt-1 max-w-xl text-xs text-slate-400">
-            cron-job.org actualiza cada minuto. Aquí puedes forzar sync global o activar/pausar
-            automático en lote.
+            cron-job.org llama cada minuto al mismo endpoint. Si una jornada ya salió de la
+            ventana en vivo, usa recuperar para traer marcadores y eventos desde ESPN.
           </p>
         </div>
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 rounded-xl bg-mundial-green px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-50"
-          :disabled="saving"
-          @click="syncAllNow"
-        >
-          <RefreshCw class="h-3.5 w-3.5" :class="saving ? 'animate-spin' : ''" />
-          Sync todos ahora
-        </button>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-xs font-semibold text-slate-200 disabled:opacity-50"
+            :disabled="saving"
+            @click="recoverLastWeek"
+          >
+            <CalendarDays class="h-3.5 w-3.5" />
+            Recuperar últimos 8 días
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-xl bg-mundial-green px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-50"
+            :disabled="saving"
+            @click="syncAllNow"
+          >
+            <RefreshCw class="h-3.5 w-3.5" :class="saving ? 'animate-spin' : ''" />
+            Sync todos ahora
+          </button>
+        </div>
       </div>
     </header>
 

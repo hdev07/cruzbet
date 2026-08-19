@@ -180,13 +180,16 @@ async function syncNow() {
   saving.value = true
   error.value = ''
   message.value = ''
-  const result = await triggerLiveSync()
+  const result = await triggerLiveSync({ matchId: props.match.id })
   saving.value = false
   if (!result.ok) {
     error.value = result.error ?? 'No se pudo sincronizar'
     return
   }
-  message.value = 'Partido sincronizado'
+  message.value =
+    result.updated === 0
+      ? 'ESPN no devolvió cambios para este partido'
+      : 'Partido sincronizado'
   await refreshMatch()
 }
 

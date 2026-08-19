@@ -18,15 +18,41 @@ export function hasMatchesInSyncWindow(matches: Match[], now = Date.now()): bool
   return matches.some((m) => isMatchInSyncWindow(m, now))
 }
 
-function getSyncUrl(): string {
-  if (typeof window !== 'undefined') {
-    return `${window.location.origin}/api/sync-live`
-  }
-  const site = import.meta.env.VITE_SITE_URL
-  return site ? `${site.replace(/\/$/, '')}/api/sync-live` : '/api/sync-live'
+export type LiveSyncOptions = {
+  matchId?: string
+  from?: string
+  to?: string
+  days?: number
 }
 
-export async function triggerLiveSync(): Promise<{ ok: boolean; error?: string }> {
+export type LiveSyncResponse = {
+  ok: boolean
+  error?: string
+  processed?: number
+  matched?: number
+  updated?: number
+  skipped?: number
+  errors?: string[]
+}
+
+function getSyncUrl(options?: LiveSyncOptions): string {
+  const origin =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') ?? ''
+  const base = origin ? `${origin}/api/sync-live` : '/api/sync-live'
+  const params = new URLSearchParams()
+  if (options?.matchId) params.set('matchId', options.matchId)
+  if (options?.from) params.set('from', options.from)
+  if (options?.to) params.set('to', options.to)
+  if (options?.days != null) params.set('days', String(options.days))
+  const query = params.toString()
+  return query ? `${base}?${query}` : base
+}
+
+export async function triggerLiveSync(
+  options?: LiveSyncOptions,
+): Promise<LiveSyncResponse> {
   const { data } = await supabase.auth.getSession()
   const bearer = data.session?.access_token ?? import.meta.env.VITE_LIVE_SYNC_TOKEN
   if (!bearer) {
@@ -34,18 +60,27 @@ export async function triggerLiveSync(): Promise<{ ok: boolean; error?: string }
   }
 
   try {
-    const res = await fetch(getSyncUrl(), {
+    const res = await fetch(getSyncUrl(options), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${bearer}`,
         'Content-Type': 'application/json',
       },
     })
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { error?: string }
-      return { ok: false, error: body.error ?? `HTTP ${res.status}` }
+    const body = (await res.json().catch(() => ({}))) as LiveSyncResponse & {
+      error?: string
     }
-    return { ok: true }
+    if (!res.ok) {
+      return { ok: false, error: body.error ?? `HTTP ${res.status}`, ...body }
+    }
+    if (body.errors?.length) {
+      return {
+        ok: false,
+        error: `${body.updated ?? 0} actualizados, ${body.errors.length} con error`,
+        ...body,
+      }
+    }
+    return { ok: true, ...body }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'Error de red' }
   }
