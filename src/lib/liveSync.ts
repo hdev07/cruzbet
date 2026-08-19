@@ -71,16 +71,16 @@ export async function triggerLiveSync(
       error?: string
     }
     if (!res.ok) {
-      return { ok: false, error: body.error ?? `HTTP ${res.status}`, ...body }
+      return { ...body, ok: false, error: body.error ?? `HTTP ${res.status}` }
     }
     if (body.errors?.length) {
       return {
+        ...body,
         ok: false,
         error: `${body.updated ?? 0} actualizados, ${body.errors.length} con error`,
-        ...body,
       }
     }
-    return { ok: true, ...body }
+    return { ...body, ok: true }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'Error de red' }
   }
