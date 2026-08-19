@@ -33,6 +33,8 @@ export type LiveSyncResponse = {
   updated?: number
   skipped?: number
   errors?: string[]
+  scoreboard_dates?: string[]
+  scoreboard_events?: number
 }
 
 function getSyncUrl(options?: LiveSyncOptions): string {

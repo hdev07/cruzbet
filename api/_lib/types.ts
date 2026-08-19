@@ -70,4 +70,6 @@ export interface SyncResult {
   updated: number
   skipped: number
   errors: string[]
+  scoreboard_dates?: string[]
+  scoreboard_events?: number
 }

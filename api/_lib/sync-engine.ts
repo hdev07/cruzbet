@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { createClient } from '@supabase/supabase-js'
 import {
+  espnScoreboardDateRange,
   fetchEspnScoreboard,
   fetchEspnSnapshotForMatch,
   getEspnDateCandidates,
@@ -186,29 +187,50 @@ export async function syncEspnMatches(
 
   const scoreboardDates = new Set<string>()
   for (const match of matches) {
-    if (match.external_event_id || !match.match_date) continue
+    if (!match.match_date) continue
     for (const date of getEspnDateCandidates(match.match_date)) {
       scoreboardDates.add(date)
     }
   }
 
-  const scoreboardLists = await Promise.all(
-    [...scoreboardDates].map(async (date) => {
-      try {
-        return await fetchEspnScoreboard(date)
-      } catch (error) {
-        result.errors.push(
-          `${date}: ${error instanceof Error ? error.message : 'ESPN error'}`,
-        )
-        return []
-      }
-    }),
-  )
+  const scoreboardLists: Awaited<ReturnType<typeof fetchEspnScoreboard>>[] = []
+  const dateRange = espnScoreboardDateRange(scoreboardDates)
+  if (dateRange) {
+    try {
+      scoreboardLists.push(await fetchEspnScoreboard(dateRange))
+    } catch (error) {
+      result.errors.push(
+        `${dateRange}: ${error instanceof Error ? error.message : 'ESPN error'}`,
+      )
+    }
+  }
+
+  if (scoreboardLists.every((list) => list.length === 0)) {
+    const daily = await Promise.all(
+      [...scoreboardDates].map(async (date) => {
+        try {
+          return await fetchEspnScoreboard(date)
+        } catch (error) {
+          result.errors.push(
+            `${date}: ${error instanceof Error ? error.message : 'ESPN error'}`,
+          )
+          return []
+        }
+      }),
+    )
+    scoreboardLists.push(...daily)
+  }
+
   const scoreboard = mergeEspnEvents(...scoreboardLists)
+  result.scoreboard_dates = dateRange ? [dateRange] : [...scoreboardDates].sort()
+  result.scoreboard_events = scoreboard.length
 
   await mapWithConcurrency(matches, 3, async (match) => {
     try {
-      const snapshot = await fetchEspnSnapshotForMatch(match, scoreboard)
+      const snapshot = await fetchEspnSnapshotForMatch(
+        match,
+        scoreboard.length ? scoreboard : undefined,
+      )
       if (!snapshot) {
         result.skipped += 1
         const kickoff = match.match_date ? Date.parse(match.match_date) : NaN
@@ -217,7 +239,9 @@ export async function syncEspnMatches(
           (Number.isFinite(kickoff) &&
             kickoff <= Date.now() + 30 * 60 * 1000)
         ) {
-          result.errors.push(`${match.id}: espn_event_not_found`)
+          result.errors.push(
+            `${match.id}: espn_event_not_found (${match.home_team.name} vs ${match.away_team.name}; espn_events=${scoreboard.length})`,
+          )
         }
         return
       }

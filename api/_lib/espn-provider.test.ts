@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { parseClockDisplay } from './clock.js'
 import {
   canonicalTeamName,
+  espnScoreboardDateRange,
   eventsMatchScore,
   findEspnEvent,
+  getEspnDateCandidates,
   isHalftimeStatus,
   normalizeEspnClock,
   normalizeEspnEvents,
@@ -129,6 +131,34 @@ describe('identificación de equipos', () => {
 
     expect(findEspnEvent([event], 'Necaxa', 'Atlante')?.id).toBe('401')
     expect(findEspnEvent([event], 'Atlante', 'Necaxa')).toBeNull()
+  })
+
+  it('empareja por código interno aunque la abreviatura ESPN sea distinta', () => {
+    const event: EspnEvent = {
+      id: 'nec-leon',
+      date: '2026-08-18T01:00:00Z',
+      competitions: [
+        {
+          status: { type: { state: 'post', completed: true } },
+          competitors: [
+            {
+              homeAway: 'home',
+              score: '1',
+              team: { id: '229', abbreviation: 'NCX', displayName: 'Necaxa' },
+            },
+            {
+              homeAway: 'away',
+              score: '2',
+              team: { id: '228', abbreviation: 'LEO', displayName: 'León' },
+            },
+          ],
+        },
+      ],
+    }
+
+    expect(findEspnEvent([event], 'Necaxa', 'León', 'NEC', 'LEO')?.id).toBe(
+      'nec-leon',
+    )
   })
 })
 
@@ -270,5 +300,19 @@ describe('normalización de eventos', () => {
 
     expect(eventsMatchScore(result.events, 2, 0)).toBe(false)
     expect(eventsMatchScore(result.events, 1, 0)).toBe(true)
+  })
+})
+
+describe('fechas del scoreboard ESPN', () => {
+  it('incluye el día local de México cuando el kickoff cae al día siguiente en UTC', () => {
+    const dates = getEspnDateCandidates('2026-08-18T01:00:00.000Z')
+    expect(dates).toContain('20260817')
+    expect(dates).toContain('20260818')
+  })
+
+  it('arma un rango YYYYMMDD para pedir toda la jornada en una sola llamada', () => {
+    expect(espnScoreboardDateRange(['20260817', '20260815', '20260816'])).toBe(
+      '20260815-20260817',
+    )
   })
 })

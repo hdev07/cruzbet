@@ -19,6 +19,13 @@ const ESPN_SUMMARY =
 
 const FETCH_TIMEOUT_MS = 12_000
 const FETCH_RETRIES = 2
+const ESPN_HEADERS = {
+  Accept: 'application/json',
+  'Accept-Language': 'es-MX,es;q=0.9,en;q=0.8',
+  Referer: 'https://www.espn.com/soccer/',
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+}
 
 interface EspnTeam {
   id: string
@@ -115,6 +122,14 @@ const TEAM_ALIASES: Record<string, string> = {
   'tigres uanl': 'tigres',
 }
 
+/** Abreviatura ESPN → código interno Liga MX cuando no coinciden. */
+const ESPN_ABBR_TO_CODE: Record<string, string> = {
+  ATL: 'ATN',
+  NCX: 'NEC',
+  UANL: 'TIG',
+  UNAM: 'PUM',
+}
+
 export function canonicalTeamName(value: string): string {
   const normalized = value
     .normalize('NFD')
@@ -132,11 +147,28 @@ function espnTeamNames(team: EspnTeam): string[] {
     team.shortDisplayName,
     team.name,
     team.location,
+    team.abbreviation,
   ].filter((value): value is string => Boolean(value))
 }
 
-function teamMatches(team: EspnTeam, expectedName: string): boolean {
+function espnTeamCode(team: EspnTeam): string | null {
+  const abbr = team.abbreviation?.trim().toUpperCase()
+  if (!abbr) return null
+  return ESPN_ABBR_TO_CODE[abbr] ?? abbr
+}
+
+function teamMatches(
+  team: EspnTeam,
+  expectedName: string,
+  expectedCode?: string,
+): boolean {
+  if (expectedCode) {
+    const code = expectedCode.trim().toUpperCase()
+    if (code && espnTeamCode(team) === code) return true
+  }
+
   const expected = canonicalTeamName(expectedName)
+  if (!expected) return false
   return espnTeamNames(team).some(
     (candidate) => canonicalTeamName(candidate) === expected,
   )
@@ -146,6 +178,8 @@ export function findEspnEvent(
   events: EspnEvent[],
   homeName: string,
   awayName: string,
+  homeCode?: string,
+  awayCode?: string,
 ): EspnEvent | null {
   return (
     events.find((event) => {
@@ -159,8 +193,8 @@ export function findEspnEvent(
 
       return (
         Boolean(home && away) &&
-        teamMatches(home!.team, homeName) &&
-        teamMatches(away!.team, awayName)
+        teamMatches(home!.team, homeName, homeCode) &&
+        teamMatches(away!.team, awayName, awayCode)
       )
     }) ?? null
   )
@@ -421,23 +455,31 @@ export function extractTeamStats(
 }
 
 async function fetchJson<T>(url: string): Promise<T | null> {
+  let lastError = 'espn_unreachable'
+
   for (let attempt = 0; attempt <= FETCH_RETRIES; attempt += 1) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
     try {
       const response = await fetch(url, {
-        headers: {
-          Accept: 'application/json',
-          'User-Agent': 'CruzBet/1.0',
-        },
+        headers: ESPN_HEADERS,
         signal: controller.signal,
       })
 
-      if (response.ok) return (await response.json()) as T
       if (response.status === 404) return null
+      if (!response.ok) {
+        lastError = `espn_http_${response.status}`
+      } else {
+        const text = await response.text()
+        try {
+          return JSON.parse(text) as T
+        } catch {
+          lastError = 'espn_invalid_json'
+        }
+      }
     } catch {
-      // El siguiente intento usa una espera incremental.
+      lastError = 'espn_timeout'
     } finally {
       clearTimeout(timeout)
     }
@@ -447,28 +489,65 @@ async function fetchJson<T>(url: string): Promise<T | null> {
     }
   }
 
-  return null
+  throw new Error(lastError)
 }
 
-export async function fetchEspnScoreboard(dateYmd: string): Promise<EspnEvent[]> {
+export async function fetchEspnScoreboard(dates: string): Promise<EspnEvent[]> {
+  const params = new URLSearchParams({
+    dates,
+    limit: '100',
+    lang: 'es',
+    region: 'mx',
+  })
   const data = await fetchJson<{ events?: EspnEvent[] }>(
-    `${ESPN_SCOREBOARD}?dates=${dateYmd}`,
+    `${ESPN_SCOREBOARD}?${params.toString()}`,
   )
   return data?.events ?? []
 }
 
 async function fetchEspnSummary(eventId: string): Promise<EspnSummary | null> {
-  return fetchJson<EspnSummary>(`${ESPN_SUMMARY}?event=${eventId}`)
+  try {
+    return await fetchJson<EspnSummary>(`${ESPN_SUMMARY}?event=${eventId}`)
+  } catch {
+    return null
+  }
 }
 
-function dateYmd(timestamp: number): string {
+function dateYmdUtc(timestamp: number): string {
   return new Date(timestamp).toISOString().slice(0, 10).replaceAll('-', '')
+}
+
+function dateYmdInTimeZone(timestamp: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(timestamp))
+  const year = parts.find((part) => part.type === 'year')?.value
+  const month = parts.find((part) => part.type === 'month')?.value
+  const day = parts.find((part) => part.type === 'day')?.value
+  return year && month && day ? `${year}${month}${day}` : dateYmdUtc(timestamp)
 }
 
 export function getEspnDateCandidates(isoDate: string): string[] {
   const timestamp = Date.parse(isoDate)
   if (!Number.isFinite(timestamp)) return []
-  return [-1, 0, 1].map((offset) => dateYmd(timestamp + offset * 86_400_000))
+
+  const dates = new Set<string>()
+  for (const offset of [-1, 0, 1]) {
+    const shifted = timestamp + offset * 86_400_000
+    dates.add(dateYmdUtc(shifted))
+    dates.add(dateYmdInTimeZone(shifted, 'America/Mexico_City'))
+  }
+  return [...dates]
+}
+
+export function espnScoreboardDateRange(dates: Iterable<string>): string | null {
+  const sorted = [...new Set(dates)].sort()
+  if (sorted.length === 0) return null
+  if (sorted.length === 1) return sorted[0]!
+  return `${sorted[0]}-${sorted[sorted.length - 1]}`
 }
 
 export function mergeEspnEvents(...lists: EspnEvent[][]): EspnEvent[] {
@@ -539,21 +618,26 @@ export async function fetchEspnSnapshotForMatch(
   let event: EspnEvent | null = null
 
   if (match.external_event_id) {
-    const summary = await fetchEspnSummary(match.external_event_id)
-    const competition = summary?.header?.competitions?.[0]
-    if (competition) {
-      event = {
-        id: match.external_event_id,
-        date: competition.date ?? match.match_date ?? '',
-        competitions: [competition],
+    try {
+      const summary = await fetchEspnSummary(match.external_event_id)
+      const competition = summary?.header?.competitions?.[0]
+      if (competition) {
+        event = {
+          id: match.external_event_id,
+          date: competition.date ?? match.match_date ?? '',
+          competitions: [competition],
+        }
+        return buildSnapshot(event, summary)
       }
-      return buildSnapshot(event, summary)
+    } catch {
+      // El id ESPN guardado puede estar obsoleto; se busca de nuevo en el scoreboard.
     }
   }
 
   if (!match.match_date) return null
 
-  let events = cachedScoreboard
+  const cachedEvents = cachedScoreboard?.length ? cachedScoreboard : undefined
+  let events = cachedEvents
   if (!events) {
     const lists = await Promise.all(
       getEspnDateCandidates(match.match_date).map(fetchEspnScoreboard),
@@ -561,7 +645,13 @@ export async function fetchEspnSnapshotForMatch(
     events = mergeEspnEvents(...lists)
   }
 
-  event = findEspnEvent(events, match.home_team.name, match.away_team.name)
+  event = findEspnEvent(
+    events,
+    match.home_team.name,
+    match.away_team.name,
+    match.home_team.code,
+    match.away_team.code,
+  )
   if (!event) return null
 
   const summary = await fetchEspnSummary(event.id)

@@ -44,12 +44,15 @@ function formatSyncResult(result: {
   processed?: number
   updated?: number
   skipped?: number
+  scoreboard_events?: number
 }) {
   const processed = result.processed ?? 0
   const updated = result.updated ?? 0
   const skipped = result.skipped ?? 0
+  const espn = result.scoreboard_events
   return `${updated} actualizados de ${processed} procesados` +
-    (skipped ? ` (${skipped} sin cambios)` : '')
+    (skipped ? ` (${skipped} sin cambios)` : '') +
+    (espn != null ? `. ESPN: ${espn} eventos` : '')
 }
 
 async function runSync(
