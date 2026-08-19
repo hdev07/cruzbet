@@ -120,9 +120,25 @@ async function prepareExportClone(element: HTMLElement): Promise<{
   // Fuera de pantalla (sin opacity: el valor se hereda y deja el PNG transparente)
   const host = document.createElement('div')
   host.setAttribute('data-export-host', '')
+  const theme = document.documentElement.getAttribute('data-theme')
+  if (theme) host.setAttribute('data-theme', theme)
   host.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;'
 
   const clone = element.cloneNode(true) as HTMLElement
+  // `position:fixed` + left negativo se copia en el clon; en el SVG de html-to-image
+  // el contenido se pinta fuera del viewBox y el PNG queda solo el fondo (negro).
+  clone.style.position = 'static'
+  clone.style.left = 'auto'
+  clone.style.top = 'auto'
+  clone.style.right = 'auto'
+  clone.style.bottom = 'auto'
+  clone.style.inset = 'auto'
+  clone.style.transform = 'none'
+  clone.style.opacity = '1'
+  clone.style.visibility = 'visible'
+  clone.style.pointerEvents = 'none'
+  clone.style.margin = '0'
+
   host.appendChild(clone)
   document.body.appendChild(host)
 
@@ -148,6 +164,10 @@ async function prepareExportClone(element: HTMLElement): Promise<{
   })
 
   await Promise.all(cloneImgs.map((img) => decodeImage(img)))
+  await new Promise((r) => requestAnimationFrame(() => r(null)))
+
+  const width = Math.ceil(Math.max(clone.scrollWidth, clone.offsetWidth, 1))
+  clone.style.width = `${width}px`
 
   return {
     clone,
@@ -165,13 +185,24 @@ export async function exportElementToPng(
   const { clone, cleanup } = await prepareExportClone(element)
 
   try {
+    const width = Math.ceil(Math.max(clone.scrollWidth, clone.offsetWidth, 1))
+    const height = Math.ceil(Math.max(clone.scrollHeight, clone.offsetHeight, 1))
+
     const dataUrl = await toPng(clone, {
       // cacheBust rompe data URLs al añadir ?t=...
       cacheBust: false,
       pixelRatio: options.pixelRatio ?? 2,
       backgroundColor: options.backgroundColor ?? '#151515',
+      width,
+      height,
       style: {
         overflow: 'visible',
+        position: 'static',
+        left: '0px',
+        top: '0px',
+        transform: 'none',
+        opacity: '1',
+        visibility: 'visible',
       },
     })
     return { dataUrl, filename }

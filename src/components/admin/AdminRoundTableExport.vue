@@ -113,42 +113,48 @@ defineExpose({ exportTableImage, exporting })
       {{ exportError }}
     </p>
 
+    <!-- El nodo capturado no debe ser position:fixed off-screen: html-to-image
+         lo pinta fuera del canvas y el PNG queda negro. El wrapper sí puede
+         estar fuera de pantalla; exportRoot queda en flujo normal. -->
     <div
-      ref="exportRoot"
-      class="admin-share-export w-max max-w-none rounded-2xl border border-white/10 bg-[#151515] p-4 text-slate-100 shadow-xl"
       :class="preview ? '' : 'pointer-events-none fixed left-[-10000px] top-0'"
       :aria-hidden="preview ? undefined : 'true'"
     >
-      <header class="mb-4 flex items-end justify-between gap-4 border-b border-white/10 pb-3">
-        <div class="min-w-0">
-          <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#00c3b4]">
-            {{ APP_NAME }}
-          </p>
-          <h3 class="mt-1 text-lg font-bold leading-tight text-white">
-            {{ round.title }}
-          </h3>
-          <p class="mt-0.5 text-xs text-slate-400">{{ APP_TAGLINE }} · Tabla comparativa</p>
-        </div>
-        <div class="shrink-0 text-right">
-          <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Actualizado</p>
-          <p class="text-xs font-medium tabular-nums text-slate-300">{{ updatedLabel }}</p>
-        </div>
-      </header>
+      <div
+        ref="exportRoot"
+        class="admin-share-export w-max max-w-none rounded-2xl border border-white/10 bg-[#151515] p-4 text-slate-100 shadow-xl"
+      >
+        <header class="mb-4 flex items-end justify-between gap-4 border-b border-white/10 pb-3">
+          <div class="min-w-0">
+            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#00c3b4]">
+              {{ APP_NAME }}
+            </p>
+            <h3 class="mt-1 text-lg font-bold leading-tight text-white">
+              {{ round.title }}
+            </h3>
+            <p class="mt-0.5 text-xs text-slate-400">{{ APP_TAGLINE }} · Tabla comparativa</p>
+          </div>
+          <div class="shrink-0 text-right">
+            <p class="text-[0.65rem] uppercase tracking-wider text-slate-500">Actualizado</p>
+            <p class="text-xs font-medium tabular-nums text-slate-300">{{ updatedLabel }}</p>
+          </div>
+        </header>
 
-      <BaseRoundPredictionsMatrix
-        :round-id="round.id"
-        :round-matches="roundMatches"
-        hide-intro
-        export-layout
-      />
+        <BaseRoundPredictionsMatrix
+          :round-id="round.id"
+          :round-matches="roundMatches"
+          hide-intro
+          export-layout
+        />
 
-      <footer class="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-[0.65rem] text-slate-500">
-        <span>{{ APP_URL.replace(/^https?:\/\//, '') }}</span>
-        <span class="inline-flex items-center gap-1 text-slate-400">
-          <Download class="h-3 w-3" />
-          Resultados al momento
-        </span>
-      </footer>
+        <footer class="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-[0.65rem] text-slate-500">
+          <span>{{ APP_URL.replace(/^https?:\/\//, '') }}</span>
+          <span class="inline-flex items-center gap-1 text-slate-400">
+            <Download class="h-3 w-3" />
+            Resultados al momento
+          </span>
+        </footer>
+      </div>
     </div>
   </div>
 </template>
