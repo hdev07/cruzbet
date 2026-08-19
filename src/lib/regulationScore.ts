@@ -31,12 +31,37 @@ export function winnerFromRegulationScores(
   return 'draw'
 }
 
+/**
+ * El trigger de finish corre BEFORE UPDATE y lee el marcador viejo (0-0) si
+ * aún no hay goles. ESPN luego escribe el 6-1 real y el 0-0 reglamentario
+ * queda stale: la tabla muestra E en todos los partidos.
+ */
+export function isStaleRegulationScore(
+  match: Pick<
+    Match,
+    'home_score' | 'away_score' | 'regulation_home_score' | 'regulation_away_score'
+  >,
+): boolean {
+  if (match.regulation_home_score == null || match.regulation_away_score == null) {
+    return false
+  }
+  return (
+    match.regulation_home_score === 0 &&
+    match.regulation_away_score === 0 &&
+    (match.home_score !== 0 || match.away_score !== 0)
+  )
+}
+
 /** Marcador al pitido final del 2.º tiempo + agregado (sin prórroga). */
 export function regulationScoresForMatch(
   match: Match,
   events?: readonly MatchEvent[],
 ): { home: number; away: number } {
-  if (match.regulation_home_score != null && match.regulation_away_score != null) {
+  if (
+    match.regulation_home_score != null &&
+    match.regulation_away_score != null &&
+    !isStaleRegulationScore(match)
+  ) {
     return {
       home: match.regulation_home_score,
       away: match.regulation_away_score,
