@@ -12,10 +12,10 @@ import type {
   TeamSide,
 } from './types.js'
 
-const ESPN_SCOREBOARD =
-  'https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard'
-const ESPN_SUMMARY =
-  'https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/summary'
+const ESPN_SITE_BASES = [
+  'https://site.web.api.espn.com/apis/site/v2/sports/soccer/mex.1',
+  'https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1',
+] as const
 
 const FETCH_TIMEOUT_MS = 12_000
 const FETCH_RETRIES = 2
@@ -470,6 +470,8 @@ async function fetchJson<T>(url: string): Promise<T | null> {
       if (response.status === 404) return null
       if (!response.ok) {
         lastError = `espn_http_${response.status}`
+        // 403/401 suelen ser WAF por host; reintentar el mismo URL no sirve.
+        if (response.status === 401 || response.status === 403) break
       } else {
         const text = await response.text()
         try {
@@ -492,6 +494,18 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   throw new Error(lastError)
 }
 
+async function fetchEspnJson<T>(path: string): Promise<T | null> {
+  let lastError = 'espn_unreachable'
+  for (const base of ESPN_SITE_BASES) {
+    try {
+      return await fetchJson<T>(`${base}${path}`)
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'espn_unreachable'
+    }
+  }
+  throw new Error(lastError)
+}
+
 export async function fetchEspnScoreboard(dates: string): Promise<EspnEvent[]> {
   const params = new URLSearchParams({
     dates,
@@ -499,15 +513,17 @@ export async function fetchEspnScoreboard(dates: string): Promise<EspnEvent[]> {
     lang: 'es',
     region: 'mx',
   })
-  const data = await fetchJson<{ events?: EspnEvent[] }>(
-    `${ESPN_SCOREBOARD}?${params.toString()}`,
+  const data = await fetchEspnJson<{ events?: EspnEvent[] }>(
+    `/scoreboard?${params.toString()}`,
   )
   return data?.events ?? []
 }
 
 async function fetchEspnSummary(eventId: string): Promise<EspnSummary | null> {
   try {
-    return await fetchJson<EspnSummary>(`${ESPN_SUMMARY}?event=${eventId}`)
+    return await fetchEspnJson<EspnSummary>(
+      `/summary?event=${encodeURIComponent(eventId)}`,
+    )
   } catch {
     return null
   }
@@ -636,9 +652,8 @@ export async function fetchEspnSnapshotForMatch(
 
   if (!match.match_date) return null
 
-  const cachedEvents = cachedScoreboard?.length ? cachedScoreboard : undefined
-  let events = cachedEvents
-  if (!events) {
+  let events = cachedScoreboard
+  if (events === undefined) {
     const lists = await Promise.all(
       getEspnDateCandidates(match.match_date).map(fetchEspnScoreboard),
     )

@@ -195,17 +195,18 @@ export async function syncEspnMatches(
 
   const scoreboardLists: Awaited<ReturnType<typeof fetchEspnScoreboard>>[] = []
   const dateRange = espnScoreboardDateRange(scoreboardDates)
+  let rangeForbidden = false
   if (dateRange) {
     try {
       scoreboardLists.push(await fetchEspnScoreboard(dateRange))
     } catch (error) {
-      result.errors.push(
-        `${dateRange}: ${error instanceof Error ? error.message : 'ESPN error'}`,
-      )
+      const message = error instanceof Error ? error.message : 'ESPN error'
+      result.errors.push(`${dateRange}: ${message}`)
+      rangeForbidden = message.includes('espn_http_403')
     }
   }
 
-  if (scoreboardLists.every((list) => list.length === 0)) {
+  if (!rangeForbidden && scoreboardLists.every((list) => list.length === 0)) {
     const daily = await Promise.all(
       [...scoreboardDates].map(async (date) => {
         try {
@@ -227,10 +228,7 @@ export async function syncEspnMatches(
 
   await mapWithConcurrency(matches, 3, async (match) => {
     try {
-      const snapshot = await fetchEspnSnapshotForMatch(
-        match,
-        scoreboard.length ? scoreboard : undefined,
-      )
+      const snapshot = await fetchEspnSnapshotForMatch(match, scoreboard)
       if (!snapshot) {
         result.skipped += 1
         const kickoff = match.match_date ? Date.parse(match.match_date) : NaN
